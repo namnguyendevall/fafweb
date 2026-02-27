@@ -164,10 +164,11 @@ const WorkDetail = () => {
                                                     <div className="flex items-center gap-3 mb-2">
                                                         <span className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-widest">MILESTONE 0{idx + 1}</span>
                                                         <span className={`px-2 py-0.5 rounded border text-[9px] font-black font-mono tracking-widest uppercase ${
-                                                            cp.status === 'COMPLETED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' :
-                                                            cp.status === 'IN_PROGRESS' ? 'bg-amber-900/30 text-amber-400 border-amber-500/30' :
+                                                            cp.status === 'COMPLETED' || cp.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' :
+                                                            cp.status === 'SUBMITTED' ? 'bg-amber-900/30 text-amber-400 border-amber-500/30' :
+                                                            cp.status === 'IN_PROGRESS' ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/30' :
                                                             'bg-slate-800 text-slate-400 border-slate-600'
-                                                        }`}>{cp.status || 'PENDING'}</span>
+                                                        }`}>{cp.status === 'SUBMITTED' ? 'WAITING REVIEW' : (cp.status || 'PENDING')}</span>
                                                     </div>
                                                     <h3 className="text-sm font-black text-white tracking-wide uppercase">{cp.name || `Phase ${idx+1}`}</h3>
                                                     {cp.description && <p className="text-[12px] text-slate-400 font-mono mt-2">{cp.description}</p>}
@@ -178,6 +179,46 @@ const WorkDetail = () => {
                                                     </div>
                                                 )}
                                             </div>
+                                            
+                                            {/* Submission Details */}
+                                            {cp.submission_url && (
+                                                <div className="mt-4 pt-4 border-t border-slate-700/50 bg-slate-900/30 rounded-lg p-3">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                                        <span className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono">OPERATOR_PAYLOAD</span>
+                                                    </div>
+                                                    <div className="bg-[#02040a] border border-cyan-500/20 p-2.5 rounded text-[11px] font-mono mb-3 break-all">
+                                                        <a href={cp.submission_url} target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors">
+                                                            {cp.submission_url}
+                                                        </a>
+                                                    </div>
+                                                    {cp.submission_notes && (
+                                                        <div className="mb-3 border-l-2 border-slate-600 pl-3">
+                                                            <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase block mb-1">LOGS:</span>
+                                                            <p className="text-sm text-slate-300 font-mono whitespace-pre-wrap">{cp.submission_notes}</p>
+                                                        </div>
+                                                    )}
+                                                    {cp.submitted_at && (
+                                                        <div className="text-[9px] font-mono text-slate-500 tracking-widest uppercase mt-2 border-t border-slate-700/50 pt-2 flex items-center gap-1.5">
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                            TX_TIME: {new Date(cp.submitted_at).toLocaleString()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Review details */}
+                                            {cp.review_notes && (
+                                                <div className={`mt-3 border-l-[3px] p-3 rounded-r-lg ${cp.status === 'APPROVED' ? 'border-emerald-500 bg-emerald-900/10' : 'border-rose-500 bg-rose-900/10'}`}>
+                                                    <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono block mb-1">COMMAND_REVIEW:</span>
+                                                    <p className="text-sm text-slate-300 font-mono">{cp.review_notes}</p>
+                                                    {cp.reviewed_at && (
+                                                        <p className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">
+                                                            VERIFIED: {new Date(cp.reviewed_at).toLocaleString()}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
