@@ -637,14 +637,32 @@ const CheckpointWorkspace = () => {
                         {/* Submit Footer */}
                         {canWork && (
                             <div className="p-4 bg-[#090e17] border-t border-slate-800">
+                                {isSubmitted && (
+                                    <div className="mb-4 p-3 bg-amber-900/20 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 text-amber-400 font-mono text-[11px] uppercase tracking-widest">
+                                        <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                        STATUS: ĐANG CHỜ XÁC NHẬN (WAITING FOR CONFIRMATION)
+                                    </div>
+                                )}
                                 <button onClick={() => setShowSubmitModal(true)}
-                                    className="w-full py-4 rounded-xl font-black text-[13px] tracking-widest uppercase font-mono bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] border border-cyan-400/50 transition-all hover:scale-[1.01] flex items-center justify-center gap-3">
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    {isSubmitted ? 'OVERRIDE_PAYLOAD' : 'TRANSMIT_PAYLOAD'}
+                                    className={`w-full py-4 rounded-xl font-black text-[13px] tracking-widest uppercase font-mono text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all hover:scale-[1.01] flex items-center justify-center gap-3 ${
+                                        isSubmitted 
+                                        ? 'bg-slate-800 hover:bg-slate-700 border border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.2)] text-amber-400' 
+                                        : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 border border-cyan-400/50'
+                                    }`}>
+                                    {isSubmitted ? (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                            CHỈNH SỬA LẠI (EDIT PAYLOAD)
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            TRANSMIT_PAYLOAD
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         )}
-                        {isSubmitted && <div className="px-4 pb-4 pt-1 text-center"><span className="inline-block px-3 py-1 bg-amber-900/20 border border-amber-500/30 rounded text-[10px] text-amber-400 font-mono uppercase tracking-widest">STATUS: AWAITING CLIENT VALIDATION. UPDATES PERMITTED.</span></div>}
                         {isApproved && <div className="px-4 p-4 text-center bg-emerald-900/10"><span className="inline-block px-3 py-1 bg-emerald-900/20 border border-emerald-500/30 rounded text-[10px] text-emerald-400 font-mono uppercase tracking-widest">STATUS: VALIDATED AND SEALED.</span></div>}
                     </div>
                 </div>
