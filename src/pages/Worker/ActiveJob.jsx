@@ -498,75 +498,86 @@ const ActiveJob = () => {
                                 return (
                                     <div 
                                         key={checkpoint.id}
-                                        className={`border border-gray-100 rounded-2xl p-6 transition-all shadow-sm group hover:shadow-md ${
-                                            checkpoint.status === 'APPROVED' ? 'bg-gradient-to-r from-green-50/50 to-emerald-50/50' :
-                                            checkpoint.status === 'SUBMITTED' ? 'bg-gradient-to-r from-yellow-50/50 to-amber-50/50' :
-                                            canSubmit ? 'bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-blue-200' :
-                                            'bg-gray-50/30 hover:bg-white'
-                                        }`}
+                                        className="rounded-2xl border p-6 relative overflow-hidden flex flex-col transition-all hover:bg-slate-800/20"
+                                        style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(51,65,85,0.7)' }}
                                     >
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-start gap-3">
-                                                {getStatusIcon(checkpoint.status)}
+                                        {/* Status glow border top */}
+                                        <div className={`absolute top-0 inset-x-0 h-1 bg-gradient-to-r ${
+                                            checkpoint.status === 'APPROVED' ? 'from-emerald-600 via-emerald-400 to-emerald-600' :
+                                            checkpoint.status === 'SUBMITTED' ? 'from-amber-600 via-amber-400 to-amber-600' :
+                                            checkpoint.status === 'IN_PROGRESS' || canSubmit ? 'from-cyan-600 via-cyan-400 to-cyan-600' :
+                                            'from-slate-700 via-slate-600 to-slate-700'
+                                        }`}></div>
+
+                                        <div className="flex justify-between items-start gap-5">
+                                            <div className="flex items-start gap-4">
+                                                <div className={`flex items-center justify-center w-10 h-10 rounded shrink-0 border bg-[#02040a] ${
+                                                    checkpoint.status === 'APPROVED' ? 'text-emerald-400 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]' :
+                                                    checkpoint.status === 'SUBMITTED' ? 'text-amber-400 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.2)]' :
+                                                    checkpoint.status === 'IN_PROGRESS' || canSubmit ? 'text-cyan-400 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.2)]' :
+                                                    'text-slate-500 border-slate-700'
+                                                }`}>
+                                                    {checkpoint.status === 'APPROVED' ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg> :
+                                                     checkpoint.status === 'SUBMITTED' ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> :
+                                                     checkpoint.status === 'IN_PROGRESS' || canSubmit ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> :
+                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+                                                </div>
                                                 <div>
-                                                    <h3 className="font-bold text-gray-900 text-lg">
-                                                        Checkpoint {checkpoint.checkpoint_index}: {checkpoint.title}
-                                                    </h3>
-                                                    <p className="text-sm text-gray-600 mt-1">{checkpoint.description}</p>
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <span className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-widest">NODE 0{index + 1}</span>
+                                                        <span className={`px-2 py-0.5 rounded border text-[9px] font-black font-mono tracking-widest uppercase ${
+                                                            checkpoint.status === 'COMPLETED' || checkpoint.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' :
+                                                            checkpoint.status === 'SUBMITTED' ? 'bg-amber-900/30 text-amber-400 border-amber-500/30' :
+                                                            checkpoint.status === 'IN_PROGRESS' || canSubmit ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/30' :
+                                                            'bg-slate-800 text-slate-400 border-slate-600'
+                                                        }`}>{checkpoint.status === 'SUBMITTED' ? 'WAITING REVIEW' : (checkpoint.status || 'PENDING')}</span>
+                                                    </div>
+                                                    <h3 className="text-sm font-black text-white tracking-wide uppercase">{checkpoint.title || `Phase ${index+1}`}</h3>
+                                                    {checkpoint.description && <p className="text-[12px] text-slate-400 font-mono mt-2">{checkpoint.description}</p>}
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-gray-900">${Number(checkpoint.amount).toLocaleString()}</p>
-                                                <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(checkpoint.status)}`}>
-                                                    {checkpoint.status}
-                                                </span>
-                                            </div>
+                                            {checkpoint.amount && (
+                                                <div className="text-right shrink-0">
+                                                    <div className="text-lg font-black text-cyan-400 font-mono">${Number(checkpoint.amount).toLocaleString()}</div>
+                                                </div>
+                                            )}
                                         </div>
-
-                                        {checkpoint.due_date && (
-                                            <p className="text-xs text-gray-500 mb-3 flex items-center gap-1.5">
-                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                </svg>
-                                                Due: {new Date(checkpoint.due_date).toLocaleDateString()}
-                                            </p>
-                                        )}
-
-                                        {/* Submission Info */}
+                                        
+                                        {/* Submission Details */}
                                         {checkpoint.submission_url && (
-                                            <div className="bg-white rounded-lg p-3 mt-3 border border-gray-200">
-                                                <p className="text-xs font-semibold text-gray-600 mb-1">Your Submission:</p>
-                                                <a 
-                                                    href={checkpoint.submission_url} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
-                                                    className="text-blue-600 hover:text-blue-700 text-sm underline break-all"
-                                                >
-                                                    {checkpoint.submission_url}
-                                                </a>
+                                            <div className="mt-4 pt-4 border-t border-slate-700/50 bg-slate-900/30 rounded-lg p-3">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+                                                    <span className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono">OPERATOR_PAYLOAD</span>
+                                                </div>
+                                                <div className="bg-[#02040a] border border-cyan-500/20 p-2.5 rounded text-[11px] font-mono mb-3 break-all">
+                                                    <a href={checkpoint.submission_url} target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors">
+                                                        {checkpoint.submission_url}
+                                                    </a>
+                                                </div>
                                                 {checkpoint.submission_notes && (
-                                                    <p className="text-sm text-gray-700 mt-2">{checkpoint.submission_notes}</p>
+                                                    <div className="mb-3 border-l-2 border-slate-600 pl-3">
+                                                        <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase block mb-1">LOGS:</span>
+                                                        <p className="text-sm text-slate-300 font-mono whitespace-pre-wrap">{checkpoint.submission_notes}</p>
+                                                    </div>
                                                 )}
                                                 {checkpoint.submitted_at && (
-                                                    <p className="text-xs text-gray-500 mt-1">
-                                                        Submitted on {new Date(checkpoint.submitted_at).toLocaleString()}
-                                                    </p>
+                                                    <div className="text-[9px] font-mono text-slate-500 tracking-widest uppercase mt-2 border-t border-slate-700/50 pt-2 flex items-center gap-1.5">
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                        TX_TIME: {new Date(checkpoint.submitted_at).toLocaleString()}
+                                                    </div>
                                                 )}
                                             </div>
                                         )}
 
-                                        {/* Review Notes */}
+                                        {/* Review details */}
                                         {checkpoint.review_notes && (
-                                            <div className={`rounded-lg p-3 mt-3 border ${
-                                                checkpoint.status === 'APPROVED' 
-                                                    ? 'bg-green-50 border-green-200' 
-                                                    : 'bg-red-50 border-red-200'
-                                            }`}>
-                                                <p className="text-xs font-semibold text-gray-700 mb-1">Client Review:</p>
-                                                <p className="text-sm text-gray-800">{checkpoint.review_notes}</p>
+                                            <div className={`mt-3 border-l-[3px] p-3 rounded-r-lg ${checkpoint.status === 'APPROVED' ? 'border-emerald-500 bg-emerald-900/10' : 'border-rose-500 bg-rose-900/10'}`}>
+                                                <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono block mb-1">COMMAND_REVIEW:</span>
+                                                <p className="text-sm text-slate-300 font-mono">{checkpoint.review_notes}</p>
                                                 {checkpoint.reviewed_at && (
-                                                    <p className="text-xs text-gray-500 mt-1">
-                                                        Reviewed on {new Date(checkpoint.reviewed_at).toLocaleString()}
+                                                    <p className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">
+                                                        VERIFIED: {new Date(checkpoint.reviewed_at).toLocaleString()}
                                                     </p>
                                                 )}
                                             </div>
@@ -576,39 +587,32 @@ const ActiveJob = () => {
                                         {canSubmit && !isFinished && (
                                             <button
                                                 onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)}
-                                                className="mt-6 w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 transform active:scale-[0.98]"
+                                                className="mt-6 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black rounded-xl hover:from-cyan-500 hover:to-blue-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transform active:scale-[0.98] text-[11px] font-mono tracking-widest uppercase border border-cyan-400/50"
                                             >
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                                🎬 Start Checkpoint
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                START CHECKPOINT
                                             </button>
                                         )}
 
                                         {!canSubmit && checkpoint.status === 'PENDING' && index > 0 && (
-                                            <p className="mt-4 text-sm text-gray-500 italic text-center">
-                                                Complete previous checkpoint first
+                                            <p className="mt-4 text-[10px] text-slate-500 font-mono tracking-widest uppercase text-center w-full block">
+                                                Complete previous node first
                                             </p>
                                         )}
 
                                         {checkpoint.status === 'SUBMITTED' && (
-                                            <div className="mt-4 flex flex-col items-center gap-3">
-                                                <p className="text-sm text-yellow-700 font-medium flex items-center justify-center gap-2">
-                                                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                    </svg>
-                                                    Waiting for client review...
+                                            <div className="mt-4 pt-4 border-t border-slate-700/50 flex flex-col items-center gap-3">
+                                                <p className="text-[10px] text-amber-500 font-mono tracking-widest uppercase flex items-center justify-center gap-2">
+                                                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                                    WAITING FOR CLIENT REVIEW...
                                                 </p>
                                                 {!isFinished && (
                                                     <button
                                                         onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)}
-                                                        className="px-4 py-2 bg-white border border-yellow-300 text-yellow-700 font-bold rounded-xl hover:bg-yellow-50 transition-all text-sm flex items-center gap-2 shadow-sm"
+                                                        className="w-full py-3 border border-amber-500/50 text-amber-400 bg-amber-900/20 hover:bg-amber-900/40 hover:text-amber-300 font-black rounded-xl flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(245,158,11,0.2)] text-[11px] font-mono uppercase tracking-widest transition-all"
                                                     >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                        </svg>
-                                                        Chỉnh sửa / Nộp lại
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                        CHỈNH SỬA LẠI (EDIT)
                                                     </button>
                                                 )}
                                             </div>
