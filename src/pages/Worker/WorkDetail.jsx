@@ -219,31 +219,6 @@ const WorkDetail = () => {
                                                     )}
                                                 </div>
                                             )}
-
-                                            {/* Submit Button */}
-                                            {cp.status === 'PENDING' && !job.finished_at && (
-                                                <button
-                                                    onClick={() => navigate(`/workspace/checkpoint/${cp.id}`)}
-                                                    className="mt-6 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black rounded-xl hover:from-cyan-500 hover:to-blue-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transform active:scale-[0.98] text-[11px] font-mono tracking-widest uppercase border border-cyan-400/50"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                    START CHECKPOINT
-                                                </button>
-                                            )}
-
-                                            {cp.status === 'SUBMITTED' && (
-                                                <div className="mt-4 pt-4 border-t border-slate-700/50 flex flex-col items-center gap-3">
-                                                    {!job.finished_at && (
-                                                        <button
-                                                            onClick={() => navigate(`/workspace/checkpoint/${cp.id}`)}
-                                                            className="w-full py-3 border border-amber-500/50 text-amber-400 bg-amber-900/20 hover:bg-amber-900/40 hover:text-amber-300 font-black rounded-xl flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(245,158,11,0.2)] text-[11px] font-mono uppercase tracking-widest transition-all"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                                            CHỈNH SỬA LẠI (EDIT)
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            )}
                                         </div>
                                     ))}
                                 </div>

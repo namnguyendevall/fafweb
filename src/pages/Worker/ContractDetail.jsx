@@ -262,14 +262,16 @@ const ContractDetail = () => {
                 <div className="bg-[#090e17]/60 rounded-xl border border-slate-800 p-6 shadow-xl">
                     <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
                         <h2 className="text-sm font-black text-white font-mono uppercase tracking-widest">DELIVERY_NODES</h2>
-                        <span className="px-3 py-1 bg-slate-800 border-l-2 border-slate-500 text-slate-400 font-black text-[9px] uppercase tracking-widest font-mono">
-                            VIEW_ONLY
+                        <span className={`px-3 py-1 bg-slate-800 border-l-2 ${contract.status === 'ACTIVE' ? 'border-cyan-500 text-cyan-400' : 'border-slate-500 text-slate-400'} font-black text-[9px] uppercase tracking-widest font-mono`}>
+                            {contract.status === 'ACTIVE' ? 'ACTION_REQUIRED' : 'VIEW_ONLY'}
                         </span>
                     </div>
                     
                     <div className="space-y-4">
                         {contract.checkpoints && contract.checkpoints.length > 0 ? (
-                            contract.checkpoints.map((checkpoint) => (
+                            contract.checkpoints.map((checkpoint, index) => {
+                                const canSubmit = contract.status === 'ACTIVE' && checkpoint.status === 'PENDING' && (index === 0 || contract.checkpoints[index - 1].status === 'APPROVED');
+                                return (
                                 <div 
                                     key={checkpoint.id}
                                     className={`relative border rounded-xl overflow-hidden transition-all duration-300 ${
@@ -370,9 +372,45 @@ const ContractDetail = () => {
                                                 )}
                                             </div>
                                         )}
+
+                                        {/* Submit Button */}
+                                        {canSubmit && (
+                                            <button
+                                                onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)}
+                                                className="mt-6 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black rounded-xl hover:from-cyan-500 hover:to-blue-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transform active:scale-[0.98] text-[11px] font-mono tracking-widest uppercase border border-cyan-400/50"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                START CHECKPOINT
+                                            </button>
+                                        )}
+
+                                        {!canSubmit && contract.status === 'ACTIVE' && checkpoint.status === 'PENDING' && index > 0 && (
+                                            <p className="mt-4 text-[10px] text-slate-500 font-mono tracking-widest uppercase text-center w-full block">
+                                                Complete previous node first
+                                            </p>
+                                        )}
+
+                                        {checkpoint.status === 'SUBMITTED' && (
+                                            <div className="mt-4 pt-4 border-t border-slate-700/50 flex flex-col items-center gap-3">
+                                                <p className="text-[10px] text-amber-500 font-mono tracking-widest uppercase flex items-center justify-center gap-2">
+                                                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                                    WAITING FOR CLIENT REVIEW...
+                                                </p>
+                                                {contract.status === 'ACTIVE' && (
+                                                    <button
+                                                        onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)}
+                                                        className="w-full py-3 border border-amber-500/50 text-amber-400 bg-amber-900/20 hover:bg-amber-900/40 hover:text-amber-300 font-black rounded-xl flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(245,158,11,0.2)] text-[11px] font-mono uppercase tracking-widest transition-all"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                        CHỈNH SỬA LẠI (EDIT)
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            ))
+                                );
+                            })
                         ) : (
                             <div className="text-center py-12 bg-[#02040a] border border-slate-800 rounded-xl border-dashed">
                                 <svg className="w-8 h-8 mx-auto text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
