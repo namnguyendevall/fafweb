@@ -524,13 +524,13 @@ const ActiveJob = () => {
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-3 mb-2">
-                                                        <span className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-widest">NODE 0{index + 1}</span>
+                                                        <span className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-widest">CHECKPOINT 0{index + 1}</span>
                                                         <span className={`px-2 py-0.5 rounded border text-[9px] font-black font-mono tracking-widest uppercase ${
                                                             checkpoint.status === 'COMPLETED' || checkpoint.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' :
                                                             checkpoint.status === 'SUBMITTED' ? 'bg-amber-900/30 text-amber-400 border-amber-500/30' :
                                                             checkpoint.status === 'IN_PROGRESS' || canSubmit ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/30' :
                                                             'bg-slate-800 text-slate-400 border-slate-600'
-                                                        }`}>{checkpoint.status === 'SUBMITTED' ? 'WAITING REVIEW' : (checkpoint.status || 'PENDING')}</span>
+                                                        }`}>{checkpoint.status === 'SUBMITTED' ? 'ĐANG CHỜ DUYỆT' : (checkpoint.status || 'PENDING')}</span>
                                                     </div>
                                                     <h3 className="text-sm font-black text-white tracking-wide uppercase">{checkpoint.title || `Phase ${index+1}`}</h3>
                                                     {checkpoint.description && <p className="text-[12px] text-slate-400 font-mono mt-2">{checkpoint.description}</p>}
@@ -548,7 +548,7 @@ const ActiveJob = () => {
                                             <div className="mt-4 pt-4 border-t border-slate-700/50 bg-slate-900/30 rounded-lg p-3">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                                                    <span className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono">OPERATOR_PAYLOAD</span>
+                                                    <span className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono">BÀI NỘP CỦA BẠN</span>
                                                 </div>
                                                 <div className="bg-[#02040a] border border-cyan-500/20 p-2.5 rounded text-[11px] font-mono mb-3 break-all">
                                                     <a href={checkpoint.submission_url} target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors">
@@ -557,14 +557,14 @@ const ActiveJob = () => {
                                                 </div>
                                                 {checkpoint.submission_notes && (
                                                     <div className="mb-3 border-l-2 border-slate-600 pl-3">
-                                                        <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase block mb-1">LOGS:</span>
+                                                        <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase block mb-1">GHI CHÚ TỪ BẠN:</span>
                                                         <p className="text-sm text-slate-300 font-mono whitespace-pre-wrap">{checkpoint.submission_notes}</p>
                                                     </div>
                                                 )}
                                                 {checkpoint.submitted_at && (
                                                     <div className="text-[9px] font-mono text-slate-500 tracking-widest uppercase mt-2 border-t border-slate-700/50 pt-2 flex items-center gap-1.5">
                                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                        TX_TIME: {new Date(checkpoint.submitted_at).toLocaleString()}
+                                                        THỜI GIAN NỘP: {new Date(checkpoint.submitted_at).toLocaleString()}
                                                     </div>
                                                 )}
                                             </div>
@@ -573,11 +573,11 @@ const ActiveJob = () => {
                                         {/* Review details */}
                                         {checkpoint.review_notes && (
                                             <div className={`mt-3 border-l-[3px] p-3 rounded-r-lg ${checkpoint.status === 'APPROVED' ? 'border-emerald-500 bg-emerald-900/10' : 'border-rose-500 bg-rose-900/10'}`}>
-                                                <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono block mb-1">COMMAND_REVIEW:</span>
+                                                <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono block mb-1">NHẬN XÉT TỪ KHÁCH HÀNG:</span>
                                                 <p className="text-sm text-slate-300 font-mono">{checkpoint.review_notes}</p>
                                                 {checkpoint.reviewed_at && (
                                                     <p className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">
-                                                        VERIFIED: {new Date(checkpoint.reviewed_at).toLocaleString()}
+                                                        THỜI GIAN DUYỆT: {new Date(checkpoint.reviewed_at).toLocaleString()}
                                                     </p>
                                                 )}
                                             </div>
@@ -590,13 +590,24 @@ const ActiveJob = () => {
                                                 className="mt-6 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black rounded-xl hover:from-cyan-500 hover:to-blue-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transform active:scale-[0.98] text-[11px] font-mono tracking-widest uppercase border border-cyan-400/50"
                                             >
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                START CHECKPOINT
+                                                BẮT ĐẦU LÀM
                                             </button>
                                         )}
 
-                                        {!canSubmit && checkpoint.status === 'PENDING' && index > 0 && (
+                                        {!bothSigned && checkpoint.status === 'PENDING' && (
+                                            <div className="mt-6 p-4 bg-amber-900/10 border border-amber-500/20 rounded-xl flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                                                    <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                                </div>
+                                                <p className="text-[10px] text-amber-500 font-mono tracking-widest uppercase block">
+                                                    Vui lòng hoàn thành ký hợp đồng (Dashboard) để có thể bắt đầu làm việc.
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {!canSubmit && bothSigned && checkpoint.status === 'PENDING' && index > 0 && (
                                             <p className="mt-4 text-[10px] text-slate-500 font-mono tracking-widest uppercase text-center w-full block">
-                                                Complete previous node first
+                                                Vui lòng hoàn thành checkpoint trước đó
                                             </p>
                                         )}
 
@@ -604,7 +615,7 @@ const ActiveJob = () => {
                                             <div className="mt-4 pt-4 border-t border-slate-700/50 flex flex-col items-center gap-3">
                                                 <p className="text-[10px] text-amber-500 font-mono tracking-widest uppercase flex items-center justify-center gap-2">
                                                     <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                                    WAITING FOR CLIENT REVIEW...
+                                                    ĐANG CHỜ KHÁCH HÀNG KIỂM DUYỆT...
                                                 </p>
                                                 {!isFinished && (
                                                     <button

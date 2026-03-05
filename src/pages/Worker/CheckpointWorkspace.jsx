@@ -329,7 +329,7 @@ const CheckpointWorkspace = () => {
     };
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center bg-[#020617]">
+        <div className="min-h-screen flex items-center justify-center bg-transparent">
             <div className="flex flex-col items-center gap-4">
                 <div className="w-10 h-10 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
                 <span className="text-cyan-400 font-mono text-[10px] tracking-widest uppercase animate-pulse">Initializing Cyber-deck...</span>
@@ -340,16 +340,31 @@ const CheckpointWorkspace = () => {
     const isTracking = !!currentSessionId;
     const isSubmitted = checkpoint?.status === 'SUBMITTED';
     const isApproved = checkpoint?.status === 'APPROVED';
-    const canWork = !isApproved;
+    const bothSigned = checkpoint?.contract?.signature_worker && checkpoint?.contract?.signature_client;
+    const canWork = !isApproved && bothSigned;
+
+    if (checkpoint && !bothSigned) {
+        return (
+            <div className="min-h-screen bg-[#02040a] flex items-center justify-center p-4 relative overflow-hidden">
+                <div className="absolute inset-0 bg-rose-900/10" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(225,29,72,0.05) 10px, rgba(225,29,72,0.05) 20px)' }} />
+                <div className="bg-[#090e17]/80 backdrop-blur-md border border-rose-500/50 rounded-2xl max-w-lg w-full p-8 text-center shadow-[0_0_50px_rgba(225,29,72,0.15)] relative z-10">
+                    <div className="w-16 h-16 bg-rose-900/40 border border-rose-500/50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_20px_rgba(225,29,72,0.3)]">
+                        <svg className="w-8 h-8 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    </div>
+                    <h2 className="text-xl font-black text-rose-400 font-mono tracking-widest uppercase mb-4">KHÓA TRUY CẬP (ACCESS DENIED)</h2>
+                    <p className="text-slate-400 font-mono text-sm leading-relaxed mb-8">
+                        Hợp đồng này chưa được ký kết đầy đủ bởi cả hai bên. Vui lòng quay lại Dashboard để ký hợp đồng hoặc chờ khách hàng ký trước khi bắt đầu làm việc.
+                    </p>
+                    <button onClick={() => navigate(-1)} className="px-8 py-3 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/50 text-rose-300 font-black font-mono text-[11px] uppercase tracking-widest rounded transition-all shadow-[0_0_15px_rgba(225,29,72,0.2)]">
+                        TRỞ VỀ (RETURN)
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-[#020617] text-slate-300 font-sans relative flex flex-col">
-            {/* Ambient Background */}
-            <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(0,255,255,0.008) 0px,rgba(0,255,255,0.008) 1px,transparent 1px,transparent 3px)' }} />
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 right-1/4 w-[500px] h-[400px] bg-cyan-500/5 rounded-full blur-[100px]" />
-                <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[300px] bg-indigo-500/5 rounded-full blur-[100px]" />
-            </div>
+        <div className="min-h-screen bg-transparent text-slate-300 font-sans relative flex flex-col">
 
             {/* ── TOP BAR ── */}
             <header className="relative z-30 bg-[#090e17]/80 backdrop-blur-xl border-b border-cyan-500/30 px-4 py-3 sticky top-0 shadow-[0_4px_30px_rgba(6,182,212,0.1)]">
@@ -386,12 +401,12 @@ const CheckpointWorkspace = () => {
 
                         {canWork && (
                             isTracking
-                                ? <button onClick={handlePause} className="text-[10px] uppercase tracking-widest font-black font-mono text-rose-400 hover:text-white bg-rose-900/20 hover:bg-rose-900/40 border border-rose-500/30 rounded px-3 py-1.5 transition-all">⏸ SUSPEND</button>
-                                : <button onClick={handleResume} className="text-[10px] uppercase tracking-widest font-black font-mono text-emerald-400 hover:text-white bg-emerald-900/20 hover:bg-emerald-900/40 border border-emerald-500/30 rounded px-3 py-1.5 transition-all">▶️ RESUME</button>
+                                ? <button onClick={handlePause} className="text-[10px] uppercase tracking-widest font-black font-mono text-rose-400 hover:text-white bg-rose-900/20 hover:bg-rose-900/40 border border-rose-500/30 rounded px-3 py-1.5 transition-all">⏸ TẠM DỪNG</button>
+                                : <button onClick={handleResume} className="text-[10px] uppercase tracking-widest font-black font-mono text-emerald-400 hover:text-white bg-emerald-900/20 hover:bg-emerald-900/40 border border-emerald-500/30 rounded px-3 py-1.5 transition-all">▶️ TIẾP TỤC</button>
                         )}
 
                         <span className={`px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest font-mono border ${isApproved ? 'bg-emerald-900/30 border-emerald-500/30 text-emerald-400' : isSubmitted ? 'bg-amber-900/30 border-amber-500/30 text-amber-400' : isTracking ? 'bg-cyan-900/30 border-cyan-500/30 text-cyan-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>
-                            {isApproved ? 'VERIFIED' : isSubmitted ? 'PENDING_REVIEW' : isTracking ? 'ACTIVE_LINK' : 'IDLE'}
+                            {isApproved ? 'ĐÃ XÁC NHẬN' : isSubmitted ? 'CHỜ DUYỆT' : isTracking ? 'ĐANG LÀM' : 'TRỐNG'}
                         </span>
                     </div>
                 </div>
@@ -426,13 +441,13 @@ const CheckpointWorkspace = () => {
                                 <p className="text-[13px] font-mono text-slate-400 leading-relaxed mb-3">{checkpoint.description}</p>
                                 {checkpoint.due_date && (
                                     <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-slate-800/80 border border-slate-700 text-[10px] font-mono tracking-widest uppercase">
-                                        <span className="text-rose-400">DEADLINE:</span>
+                                        <span className="text-rose-400">HẠN CHÓT:</span>
                                         <span className="text-slate-300">{new Date(checkpoint.due_date).toLocaleDateString()}</span>
                                     </div>
                                 )}
                             </div>
                             <div className="shrink-0 text-right md:border-l border-slate-700/50 md:pl-6">
-                                <p className="text-[10px] font-mono font-black text-emerald-500 uppercase tracking-widest mb-1">BOUNTY_REWARD</p>
+                                <p className="text-[10px] font-mono font-black text-emerald-500 uppercase tracking-widest mb-1">TIỀN THƯỞNG</p>
                                 <p className="text-3xl font-black text-white font-mono tracking-tighter">${Number(checkpoint.amount || 0).toLocaleString()}</p>
                             </div>
                         </div>
@@ -448,18 +463,18 @@ const CheckpointWorkspace = () => {
                             {activeTab === 0 && (
                                 <div className="flex flex-col flex-1 gap-6">
                                     <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                                        <h3 className="text-sm font-black text-cyan-500 uppercase tracking-widest font-mono">TEXT_LOG_EDITOR</h3>
-                                        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">• AUTO-SYNC ENABLED</span>
+                                        <h3 className="text-sm font-black text-cyan-500 uppercase tracking-widest font-mono">SOẠN THẢO GHI CHÚ</h3>
+                                        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">• TỰ ĐỘNG LƯU NHÁP</span>
                                     </div>
                                     <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                                        placeholder={`// Enter mission logs...\n\n> Objectives met:\n> Pending issues:\n> Comm links:`}
+                                        placeholder={`// Nhập ghi chú công việc...\n\n> Đã làm được:\n> Vấn đề đang gặp:\n> Link liên quan:`}
                                         className="w-full flex-1 min-h-[300px] bg-[#02040a] border border-slate-700/50 rounded-xl px-4 py-3 text-cyan-100 placeholder-slate-700 text-sm leading-relaxed focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 resize-none font-mono tracking-wide selection:bg-cyan-500/30" />
                                     <div>
-                                        <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest font-mono block mb-2">EXTERNAL_PAYLOAD_URL</label>
+                                        <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest font-mono block mb-2">LINK BÀI LÀM GẮN NGOÀI (NẾU CÓ)</label>
                                         <input type="url" value={submissionUrl} onChange={e => setSubmissionUrl(e.target.value)}
-                                            placeholder="https://cloud.node/..."
+                                            placeholder="https://..."
                                             className="w-full bg-[#02040a] border border-slate-700/50 rounded-xl px-4 py-3 text-indigo-200 placeholder-slate-700 text-sm focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 font-mono tracking-wide" />
-                                        <p className="text-[9px] text-slate-600 font-mono mt-2 uppercase tracking-widest">Supports secure drives, unlisted video streams, binary dumps.</p>
+                                        <p className="text-[9px] text-slate-600 font-mono mt-2 uppercase tracking-widest">Nhập link chứa file hoặc thư mục bài làm của bạn.</p>
                                     </div>
                                 </div>
                             )}
@@ -468,11 +483,11 @@ const CheckpointWorkspace = () => {
                             {activeTab === 1 && (
                                 <div className="flex flex-col gap-6">
                                     <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                                        <h3 className="text-sm font-black text-cyan-500 uppercase tracking-widest font-mono">AV_RECORDER_MODULE</h3>
+                                        <h3 className="text-sm font-black text-cyan-500 uppercase tracking-widest font-mono">CHỨC NĂNG QUAY VIDEO</h3>
                                     </div>
                                     
                                     <div className="flex gap-2 p-1 bg-[#02040a] rounded-lg border border-slate-800">
-                                        {[['screen','SCREEN_CAPTURE'],['camera','OPTICAL_LENS'],['both','DUAL_STREAM']].map(([m, label]) => (
+                                        {[['screen','QUAY MÀN HÌNH'],['camera','QUAY CAMERA'],['both','QUAY CẢ HAI']].map(([m, label]) => (
                                             <button key={m} onClick={() => setRecordMode(m)} disabled={isRecording}
                                                 className={`flex-1 py-2 text-[10px] font-black uppercase font-mono tracking-widest rounded transition-all ${recordMode === m ? 'bg-slate-800 text-cyan-400 shadow' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'}`}>
                                                 {label}
@@ -502,28 +517,28 @@ const CheckpointWorkspace = () => {
                                         {!isRecording ? (
                                             <button onClick={startRecording}
                                                 className="flex-1 py-4 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/50 text-rose-400 font-black font-mono text-[11px] uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(225,29,72,0.2)] hover:shadow-[0_0_20px_rgba(225,29,72,0.4)]">
-                                                [ INIT_RECORDING ]
+                                                [ BẮT ĐẦU QUAY ]
                                             </button>
                                         ) : (
                                             <button onClick={stopRecording}
                                                 className="flex-1 py-4 bg-slate-800 border border-slate-600 text-white font-black font-mono text-[11px] uppercase tracking-widest rounded-xl transition-all hover:bg-slate-700">
-                                                [ TERMINATE_RECORDING ]
+                                                [ KẾT THÚC QUAY ]
                                             </button>
                                         )}
                                     </div>
 
                                     {recordedUrl && (
                                         <div className="border border-emerald-500/30 bg-emerald-900/10 rounded-xl p-5 space-y-4">
-                                            <p className="text-[10px] font-black font-mono text-emerald-400 tracking-widest uppercase">SYS: Media captured successfully</p>
+                                            <p className="text-[10px] font-black font-mono text-emerald-400 tracking-widest uppercase">Video đã lưu thành công</p>
                                             <video src={recordedUrl} controls className="w-full rounded bg-[#02040a] max-h-60 border border-slate-700" />
                                             <div className="flex gap-3">
                                                 <button onClick={downloadRecording}
                                                     className="flex-1 py-3 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-black font-mono text-[10px] uppercase tracking-widest rounded-lg">
-                                                    DOWNLOAD_DUMP (.webm)
+                                                    TẢI XUỐNG (.webm)
                                                 </button>
                                                 <button onClick={() => { setRecordedUrl(null); setRecordedChunks([]); }}
                                                     className="px-6 py-3 border border-rose-500/30 text-rose-400 hover:bg-rose-900/30 font-black font-mono text-[10px] uppercase tracking-widest rounded-lg">
-                                                    PURGE
+                                                    XÓA BỎ
                                                 </button>
                                             </div>
                                         </div>
@@ -535,14 +550,14 @@ const CheckpointWorkspace = () => {
                             {activeTab === 2 && (
                                 <div className="flex flex-col gap-6">
                                     <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                                        <h3 className="text-sm font-black text-cyan-500 uppercase tracking-widest font-mono">FILE_UPLOAD_MATRIX</h3>
+                                        <h3 className="text-sm font-black text-cyan-500 uppercase tracking-widest font-mono">TẢI VIDEO LÊN</h3>
                                     </div>
                                     
                                     <label className="block cursor-pointer group">
                                         <div className="border border-dashed border-cyan-500/30 group-hover:border-cyan-400 bg-cyan-900/5 group-hover:bg-cyan-900/10 rounded-2xl p-10 text-center transition-all">
                                             <div className="text-4xl mb-4 font-mono text-cyan-500/50 group-hover:text-cyan-400 transition-colors">[+]</div>
-                                            <p className="text-cyan-100 font-black font-mono text-sm tracking-widest uppercase mb-2">Drop payload here</p>
-                                            <p className="text-slate-500 text-[10px] font-mono tracking-widest uppercase">Format: MP4, MOV, AVI, WEBM</p>
+                                            <p className="text-cyan-100 font-black font-mono text-sm tracking-widest uppercase mb-2">Kéo thả video vào đây</p>
+                                            <p className="text-slate-500 text-[10px] font-mono tracking-widest uppercase">Định dạng: MP4, MOV, AVI, WEBM</p>
                                         </div>
                                         <input type="file" accept="video/*" multiple onChange={handleVideoUpload} className="hidden" />
                                     </label>
@@ -565,7 +580,7 @@ const CheckpointWorkspace = () => {
                                                     <div className="flex items-center justify-between">
                                                         <span className="text-[10px] font-mono text-slate-500 tracking-widest uppercase">T_{formatTime(Math.floor(currentVideoTime))}</span>
                                                         <button onClick={stampTime} className="text-[10px] font-black font-mono text-cyan-400 hover:text-cyan-300 uppercase tracking-widest bg-cyan-900/20 px-3 py-1.5 rounded border border-cyan-500/30">
-                                                            PIN_TIMESTAMP
+                                                            GẮN THỜI GIAN
                                                         </button>
                                                     </div>
                                                 </div>
@@ -579,10 +594,10 @@ const CheckpointWorkspace = () => {
                             {activeTab === 3 && (
                                 <div className="flex flex-col flex-1 gap-4">
                                     <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                                        <h3 className="text-sm font-black text-cyan-500 uppercase tracking-widest font-mono">SUBTITLE_COMPOSER</h3>
+                                        <h3 className="text-sm font-black text-cyan-500 uppercase tracking-widest font-mono">TẠO PHỤ ĐỀ</h3>
                                         <div className="flex gap-2">
-                                            <button onClick={addSubtitle} className="text-[9px] font-black px-3 py-1.5 bg-slate-800 border border-slate-600 text-slate-300 hover:text-white rounded font-mono uppercase tracking-widest transition-all hover:bg-slate-700">+ NEW_NODE</button>
-                                            <button onClick={exportSrt} className="text-[9px] font-black px-3 py-1.5 bg-indigo-600/30 border border-indigo-500/50 hover:bg-indigo-600/50 text-indigo-300 rounded font-mono uppercase tracking-widest transition-all">EXTRACT .SRT</button>
+                                            <button onClick={addSubtitle} className="text-[9px] font-black px-3 py-1.5 bg-slate-800 border border-slate-600 text-slate-300 hover:text-white rounded font-mono uppercase tracking-widest transition-all hover:bg-slate-700">+ THÊM PHỤ ĐỀ</button>
+                                            <button onClick={exportSrt} className="text-[9px] font-black px-3 py-1.5 bg-indigo-600/30 border border-indigo-500/50 hover:bg-indigo-600/50 text-indigo-300 rounded font-mono uppercase tracking-widest transition-all">XUẤT FILE .SRT</button>
                                         </div>
                                     </div>
 
@@ -610,7 +625,7 @@ const CheckpointWorkspace = () => {
                                                     </div>
                                                 </div>
                                                 <div className="flex-1">
-                                                    <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block mb-1">PAYLOAD</span>
+                                                    <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest block mb-1">VĂN BẢN</span>
                                                     <textarea value={s.text} rows={2} onChange={e => updateSub(s.id, 'text', e.target.value)}
                                                         className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white placeholder-slate-600 font-mono resize-none focus:outline-none focus:border-cyan-500/50" />
                                                 </div>
@@ -625,7 +640,7 @@ const CheckpointWorkspace = () => {
                             {activeTab === 4 && (
                                 <div className="flex flex-col flex-1 h-full min-h-[400px]">
                                     <div className="flex items-center gap-3 mb-4 border-b border-slate-800 pb-3">
-                                        <h3 className="text-sm font-black text-cyan-500 uppercase tracking-widest font-mono">FFMPEG_ENGINE</h3>
+                                        <h3 className="text-sm font-black text-cyan-500 uppercase tracking-widest font-mono">CÔNG CỤ CHỈNH SỬA VIDEO</h3>
                                         <span className="text-[9px] px-2 py-0.5 bg-blue-900/30 border border-blue-500/30 text-blue-400 rounded font-mono uppercase tracking-widest">WASM INSTANCE</span>
                                     </div>
                                     {/* the VideoEditor internally handles its UI, hopefully it blends ok. */}
@@ -638,9 +653,21 @@ const CheckpointWorkspace = () => {
                         {canWork && (
                             <div className="p-4 bg-[#090e17] border-t border-slate-800">
                                 {isSubmitted && (
-                                    <div className="mb-4 p-3 bg-amber-900/20 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 text-amber-400 font-mono text-[11px] uppercase tracking-widest">
-                                        <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                        STATUS: ĐANG CHỜ XÁC NHẬN (WAITING FOR CONFIRMATION)
+                                    <div className="mb-4 space-y-2">
+                                        <div className="p-3 bg-amber-900/20 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 text-amber-400 font-mono text-[11px] uppercase tracking-widest">
+                                            <svg className="w-4 h-4 animate-spin shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                            STATUS: ĐANG CHỜ XÁC NHẬN (WAITING FOR CONFIRMATION)
+                                        </div>
+                                        {checkpoint?.updated_at && (
+                                            <div className="p-2 border border-rose-500/30 bg-rose-900/10 rounded-xl text-center">
+                                                <p className="text-[10px] text-rose-400 uppercase tracking-widest font-mono font-black">
+                                                    ⚠️ AUTO-APPROVE DEADLINE: {new Date(new Date(checkpoint.updated_at).getTime() + 3*24*60*60*1000).toLocaleString()}
+                                                </p>
+                                                <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono italic">
+                                                    (Hệ thống sẽ tự động thanh toán nếu Client không phản hồi sau 3 ngày)
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                                 <button onClick={() => setShowSubmitModal(true)}
@@ -657,13 +684,13 @@ const CheckpointWorkspace = () => {
                                     ) : (
                                         <>
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            TRANSMIT_PAYLOAD
+                                            NỘP BÀI CỦA BẠN
                                         </>
                                     )}
                                 </button>
                             </div>
                         )}
-                        {isApproved && <div className="px-4 p-4 text-center bg-emerald-900/10"><span className="inline-block px-3 py-1 bg-emerald-900/20 border border-emerald-500/30 rounded text-[10px] text-emerald-400 font-mono uppercase tracking-widest">STATUS: VALIDATED AND SEALED.</span></div>}
+                        {isApproved && <div className="px-4 p-4 text-center bg-emerald-900/10"><span className="inline-block px-3 py-1 bg-emerald-900/20 border border-emerald-500/30 rounded text-[10px] text-emerald-400 font-mono uppercase tracking-widest">TRẠNG THÁI: ĐÃ ĐƯỢC PHÊ DUYỆT.</span></div>}
                     </div>
                 </div>
 
@@ -671,19 +698,19 @@ const CheckpointWorkspace = () => {
                 <div className="space-y-6">
                     {/* Time Stats */}
                     <div className="rounded-2xl border p-6 bg-[#090e17]/80 backdrop-blur-md" style={{ borderColor: 'rgba(51,65,85,0.7)' }}>
-                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono mb-4 border-b border-slate-800 pb-2">TELEMETRY_DATA</h3>
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono mb-4 border-b border-slate-800 pb-2">THỐNG KÊ</h3>
                         <div className="space-y-4">
                             <div>
-                                <div className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1">TOTAL LOGGED</div>
+                                <div className="text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-1">TỔNG THỜI GIAN</div>
                                 <div className="text-2xl font-black text-white font-mono tracking-tighter">{formatMinutes(totalMinutes + (isTracking ? Math.floor(elapsed / 60) : 0))}</div>
                             </div>
                             <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-800/50">
                                 <div>
-                                    <div className="text-[9px] text-slate-500 font-mono uppercase tracking-widest mb-1">CURRENT</div>
-                                    <div className="text-sm font-black text-emerald-400 font-mono">{isTracking ? formatTime(elapsed) : 'IDLE'}</div>
+                                    <div className="text-[9px] text-slate-500 font-mono uppercase tracking-widest mb-1">PHIÊN HIỆN TẠI</div>
+                                    <div className="text-sm font-black text-emerald-400 font-mono">{isTracking ? formatTime(elapsed) : 'TRỐNG'}</div>
                                 </div>
                                 <div>
-                                    <div className="text-[9px] text-slate-500 font-mono uppercase tracking-widest mb-1">CYCLES</div>
+                                    <div className="text-[9px] text-slate-500 font-mono uppercase tracking-widest mb-1">SỐ PHIÊN</div>
                                     <div className="text-sm font-black text-white font-mono">{sessions.filter(s => s.check_out).length}</div>
                                 </div>
                             </div>
@@ -692,7 +719,7 @@ const CheckpointWorkspace = () => {
 
                     {/* Session History */}
                     <div className="rounded-2xl border p-6 bg-[#090e17]/80 backdrop-blur-md flex flex-col max-h-[400px]" style={{ borderColor: 'rgba(51,65,85,0.7)' }}>
-                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono mb-4 border-b border-slate-800 pb-2 shrink-0">CONNECTION_LOGS</h3>
+                        <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono mb-4 border-b border-slate-800 pb-2 shrink-0">LỊCH SỬ LÀM VIỆC</h3>
                         {sessions.length === 0 ? (
                             <p className="text-slate-600 text-[10px] text-center py-6 font-mono uppercase tracking-widest">NO_DATA_FOUND</p>
                         ) : (
@@ -719,19 +746,19 @@ const CheckpointWorkspace = () => {
 
             {/* ── SUBMIT MODAL ── */}
             {showSubmitModal && (
-                <div className="fixed inset-0 bg-[#020617]/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-transparent/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-[#090e17] border border-cyan-500/40 rounded-2xl max-w-lg w-full p-8 shadow-[0_0_50px_rgba(6,182,212,0.15)] relative overflow-hidden">
                         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
                         
-                        <h3 className="text-xl font-black text-white uppercase tracking-wider mb-2">INITIATE_TRANSMISSION</h3>
+                        <h3 className="text-xl font-black text-white uppercase tracking-wider mb-2">GỬI BÀI LÀM</h3>
                         <p className="text-[11px] font-mono text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-800 pb-4">
-                            TOTAL_LOG_TIME: <span className="text-cyan-400 font-black tracking-normal ml-1 bg-cyan-900/30 px-2 py-0.5 rounded border border-cyan-500/20">{formatMinutes(totalMinutes + (isTracking ? Math.floor(elapsed / 60) : 0))}</span>
+                            TỔNG THỜI GIAN LÀM: <span className="text-cyan-400 font-black tracking-normal ml-1 bg-cyan-900/30 px-2 py-0.5 rounded border border-cyan-500/20">{formatMinutes(totalMinutes + (isTracking ? Math.floor(elapsed / 60) : 0))}</span>
                         </p>
 
                         <div className="space-y-6">
                             {/* File Upload */}
                             <div>
-                                <label className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-widest block mb-2">FILE_PAYLOAD_DROP</label>
+                                <label className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-widest block mb-2">TẢI FILE LÊN</label>
                                 <label className="block cursor-pointer">
                                     <div className={`border border-dashed rounded-xl p-6 text-center transition-all ${
                                         submitFile
@@ -747,8 +774,8 @@ const CheckpointWorkspace = () => {
                                         ) : (
                                             <div className="space-y-2">
                                                 <p className="text-2xl opacity-50 text-cyan-500">[+]</p>
-                                                <p className="text-cyan-400 text-xs font-black uppercase font-mono tracking-widest">SELECT_LOCAL_FILE</p>
-                                                <p className="text-slate-600 text-[9px] font-mono uppercase tracking-widest">MAX 500MB BUFFER</p>
+                                                <p className="text-cyan-400 text-xs font-black uppercase font-mono tracking-widest">CHỌN FILE TỪ MÁY</p>
+                                                <p className="text-slate-600 text-[9px] font-mono uppercase tracking-widest">TỐI ĐA 500MB</p>
                                             </div>
                                         )}
                                     </div>
@@ -758,7 +785,7 @@ const CheckpointWorkspace = () => {
 
                             {/* Link Input */}
                             <div>
-                                <label className="text-[10px] font-black font-mono text-indigo-400 uppercase tracking-widest block mb-2">OR_EXTERNAL_URI</label>
+                                <label className="text-[10px] font-black font-mono text-indigo-400 uppercase tracking-widest block mb-2">HOẶC ĐƯỜNG DẪN NGOÀI</label>
                                 <input type="url" value={submissionUrl} onChange={e => setSubmissionUrl(e.target.value)}
                                     placeholder="https://..."
                                     className="w-full bg-[#02040a] border border-slate-700 rounded-lg px-4 py-3 text-indigo-200 placeholder-slate-700 text-sm focus:outline-none focus:border-indigo-500/50 font-mono" />
@@ -766,9 +793,9 @@ const CheckpointWorkspace = () => {
 
                             {/* Transmission Notes */}
                             <div>
-                                <label className="text-[10px] font-black font-mono text-slate-400 uppercase tracking-widest block mb-2">ENCRYPTED_MESSAGE_TO_CLIENT</label>
+                                <label className="text-[10px] font-black font-mono text-slate-400 uppercase tracking-widest block mb-2">GHI CHÚ CHO KHÁCH HÀNG</label>
                                 <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
-                                    placeholder="> Insert operational details..."
+                                    placeholder="> Nhập ghi chú thêm..."
                                     className="w-full bg-[#02040a] border border-slate-700 rounded-lg px-4 py-3 text-slate-300 placeholder-slate-700 text-sm resize-none focus:outline-none focus:border-cyan-500/50 font-mono" />
                             </div>
 
@@ -790,11 +817,11 @@ const CheckpointWorkspace = () => {
                         <div className="flex gap-4 mt-8">
                             <button onClick={() => setShowSubmitModal(false)} disabled={submitting} 
                                 className="flex-1 py-3 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 font-black rounded-xl text-[11px] font-mono tracking-widest uppercase transition-all">
-                                CANCEL
+                                HỦY BỎ
                             </button>
                             <button onClick={handleSubmit} disabled={submitting || (!submitFile && !submissionUrl.trim())}
                                 className="flex-[2] py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black rounded-xl border border-cyan-400/50 shadow-[0_0_15px_rgba(6,182,212,0.3)] disabled:opacity-40 disabled:grayscale transition-all flex items-center justify-center gap-2 text-[11px] font-mono tracking-widest uppercase">
-                                {submitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'EXECUTE_TRANSMISSION'}
+                                {submitting ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'XÁC NHẬN NỘP BÀI'}
                             </button>
                         </div>
                     </div>

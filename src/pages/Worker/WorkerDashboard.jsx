@@ -5,10 +5,12 @@ import { matchingApi } from '../../api/matching.api';
 import { proposalsApi } from '../../api/proposals.api';
 import { contractsApi } from '../../api/contracts.api';
 import { reviewsApi } from '../../api/reviews.api';
+import { useAuth } from '../../auth/AuthContext';
 import warehouseImg from '../../assets/istockphoto-1947499362-612x612.jpg';
 import StatCard from './components/StatCard';
 import JobTable from './components/JobTable';
 import ReviewsList from './components/ReviewsList';
+import { useTranslation } from 'react-i18next';
 
 const SectionLabel = ({ children }) => (
     <p className="text-[9px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-3 flex items-center gap-1.5 border-b border-cyan-500/20 pb-2">
@@ -16,9 +18,81 @@ const SectionLabel = ({ children }) => (
     </p>
 );
 
+const AILaserRecommendJob = ({ job, navigate }) => {
+    const [aiData, setAiData] = useState(null);
+    const [scanning, setScanning] = useState(false);
+    const [scanned, setScanned] = useState(false);
+
+    const handleScan = async (e) => {
+        e.stopPropagation();
+        if (scanned || scanning) return;
+        setScanning(true);
+        try {
+            const res = await matchingApi.getAIRecommendations(job.id);
+            if (res.data) setAiData(res.data);
+        } catch (err) {
+            console.error("AI Scan failed", err);
+        } finally {
+            setScanning(false);
+            setScanned(true);
+        }
+    };
+
+    return (
+        <div 
+            className="p-3 rounded-xl border border-slate-700/50 hover:border-cyan-500/30 bg-slate-800/30 transition-all cursor-pointer relative overflow-hidden group/ai"
+            onClick={() => navigate(`/work/${job.id}`)}
+        >
+            {/* Laser scanning animation */}
+            {scanning && (
+                <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden rounded-xl">
+                    <div className="w-full h-full bg-cyan-500/10 animate-pulse"></div>
+                    <div className="absolute top-0 left-0 w-full h-[2px] bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,1)] animate-[scan_1.5s_ease-in-out_infinite]" />
+                </div>
+            )}
+
+            <div className="flex justify-between items-start mb-1 relative z-20">
+                <h4 className="text-[12px] font-bold text-white uppercase tracking-wider truncate pr-2">{job.title}</h4>
+                <span className="text-[10px] font-black tracking-widest text-slate-500 font-mono shrink-0">{job.badge}</span>
+            </div>
+            <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mb-2 relative z-20">{job.company} · {job.price}</div>
+            
+            <div className="relative z-20 mt-2 border-t border-slate-700/50 pt-2">
+                {!scanned && !scanning ? (
+                    <button 
+                        onClick={handleScan}
+                        className="w-full flex items-center justify-center gap-2 py-1.5 text-[9px] font-black font-mono tracking-widest uppercase text-purple-400 bg-purple-900/20 hover:bg-purple-900/40 border border-purple-500/30 hover:border-purple-400 rounded transition-all shadow-[0_0_10px_rgba(168,85,247,0.1)] group-hover/ai:shadow-[0_0_15px_rgba(168,85,247,0.3)]"
+                    >
+                        <svg className="w-3 h-3 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                        SYS.AI_SCAN_MATCH
+                    </button>
+                ) : scanning ? (
+                    <div className="w-full text-center py-1.5 text-[9px] font-black font-mono tracking-widest uppercase text-cyan-400 animate-pulse">
+                        <span className="inline-block animate-[bounce_1s_infinite]">.</span>
+                        <span className="inline-block animate-[bounce_1s_infinite_100ms]">.</span>
+                        <span className="inline-block animate-[bounce_1s_infinite_200ms]">.</span> PROCESSING_NEURAL_NET ...
+                    </div>
+                ) : (
+                    <div className="w-full bg-[#02040a]/50 border border-emerald-500/30 rounded p-2 shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-[9px] font-black font-mono tracking-widest text-emerald-500 uppercase flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
+                                AI_TARGET_LOCK
+                            </span>
+                            <span className="text-[12px] font-black font-mono text-emerald-400 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)]">{aiData?.match_score}%</span>
+                        </div>
+                        <p className="text-[10px] text-emerald-100/70 font-mono leading-tight border-l-2 border-emerald-500/50 pl-2">{aiData?.reason}</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const WorkerDashboard = () => {
     const navigate = useNavigate();
     const toast = useToast();
+    const { user: authUser } = useAuth();
     const [recommendedJobs, setRecommendedJobs] = useState([]);
     const [myProposals, setMyProposals] = useState([]);
     const [allContracts, setAllContracts] = useState([]);
@@ -29,19 +103,18 @@ const WorkerDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
     const [reviewsLoading, setReviewsLoading] = useState(true);
+    const { t } = useTranslation();
 
     const todayGreeting = useMemo(() => {
         const hour = new Date().getHours();
-        if (hour < 12) return 'GOOD MORNING';
-        if (hour < 18) return 'GOOD AFTERNOON';
-        return 'GOOD EVENING';
+        if (hour < 12) return 'CHÀO BUỔI SÁNG';
+        if (hour < 18) return 'CHÀO BUỔI CHIỀU';
+        return 'CHÀO BUỔI TỐI';
     }, []);
 
-    const userObj = useMemo(() => {
-        try { return JSON.parse(localStorage.getItem('user') || '{}'); } 
-        catch { return {}; }
-    }, []);
-    const userName = userObj.fullName || userObj.email || 'OPERATIVE';
+    // Get user name from AuthContext (full_name is the field from backend)
+    const userName = authUser?.full_name || authUser?.email || t('dashboard.you');
+    const userObj = authUser || {};
 
     useEffect(() => {
         const fetchRecommendations = async () => {
@@ -51,14 +124,14 @@ const WorkerDashboard = () => {
                 const mappedJobs = (res?.data ?? []).map(job => ({
                     id: job.id,
                     title: job.title,
-                    company: job.category_name || 'General',
+                    company: job.category_name || t('dashboard.other'),
                     price: `$${Number(job.budget).toLocaleString()}`,
                     meta: [
                         { icon: 'calendar', text: new Date(job.created_at).toLocaleDateString() },
-                        { icon: 'spark', text: `${job.job_type === 'SHORT_TERM' ? 'SHORT TERM' : 'LONG TERM'}` }
+                        { icon: 'spark', text: `${job.job_type === 'SHORT_TERM' ? t('dashboard.short_term') : t('dashboard.long_term')}` }
                     ],
-                    badge: `${job.match_score}% MATCH`,
-                    extra: `${job.matching_skills_count} matching skills`,
+                    badge: `${job.match_score}${t('dashboard.match_percent')}`,
+                    extra: `${job.matching_skills_count} ${t('dashboard.matching_skills')}`,
                     img: warehouseImg
                 }));
                 setRecommendedJobs(mappedJobs);
@@ -107,13 +180,7 @@ const WorkerDashboard = () => {
     }, [userObj.id]);
 
     return (
-        <div className="w-full min-h-screen bg-[#020617] text-slate-300 relative">
-            {/* Ambient Background */}
-            <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(0,255,255,0.008) 0px,rgba(0,255,255,0.008) 1px,transparent 1px,transparent 3px)' }} />
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 right-1/4 w-[500px] h-[400px] bg-cyan-500/5 rounded-full blur-[100px]" />
-                <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[300px] bg-indigo-500/5 rounded-full blur-[100px]" />
-            </div>
+        <div className="w-full min-h-screen bg-transparent text-slate-300 relative">
 
             <div className="mx-auto max-w-7xl px-4 py-8 relative z-10">
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -123,7 +190,7 @@ const WorkerDashboard = () => {
                             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
                             <div className="mb-6 min-w-0">
                                 <div className="flex flex-col gap-1 mb-2">
-                                    <p className="truncate text-[10px] font-mono tracking-widest text-cyan-500 uppercase">IDENTIFICATION RECORD</p>
+                                    <p className="truncate text-[10px] font-mono tracking-widest text-cyan-500 uppercase">{t('dashboard.your_profile')}</p>
                                     <h2 className="truncate text-lg font-black text-white uppercase tracking-wider">{userName}</h2>
                                 </div>
                                 {userObj.tier && (
@@ -132,7 +199,7 @@ const WorkerDashboard = () => {
                                         userObj.tier === 'PRO' ? 'bg-cyan-900/30 text-cyan-400 border border-cyan-500/30' : 
                                         'bg-slate-800 text-slate-400 border border-slate-700'
                                     }`}>
-                                        {userObj.tier} RANK
+                                        {t('dashboard.tier')} {userObj.tier}
                                     </span>
                                 )}
                             </div>
@@ -140,13 +207,13 @@ const WorkerDashboard = () => {
                             <div className="space-y-4">
                                 <div className="rounded-xl border p-4" style={{ background: 'rgba(15,23,42,0.6)', borderColor: 'rgba(6,182,212,0.15)' }}>
                                     <div className="mb-3 flex items-center justify-between">
-                                        <p className="text-[10px] font-black text-slate-300 font-mono tracking-widest uppercase">ACTIVE CONTRACTS</p>
+                                        <p className="text-[10px] font-black text-slate-300 font-mono tracking-widest uppercase">{t('dashboard.active_contracts')}</p>
                                         <span className="rounded bg-cyan-900/30 border border-cyan-500/30 px-1.5 py-0.5 text-[9px] font-black text-cyan-400 font-mono">
-                                            {activeContract ? '1 ACTIVE' : '0 ACTIVE'}
+                                            {activeContract ? t('dashboard.one_active') : t('dashboard.zero_active')}
                                         </span>
                                     </div>
                                     <p className="text-[10px] text-slate-500 italic font-mono uppercase tracking-widest">
-                                        {activeContract ? 'Monitoring active engagement...' : 'No current engagements'}
+                                        {activeContract ? t('dashboard.tracking_contract') : t('dashboard.no_active_contract')}
                                     </p>
                                 </div>
                             </div>
@@ -159,11 +226,11 @@ const WorkerDashboard = () => {
                         <div className="rounded-2xl border p-6 lg:p-8 relative overflow-hidden" style={{ background: 'radial-gradient(ellipse at bottom right, rgba(6,182,212,0.1) 0%, transparent 60%), linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
                             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-cyan-400/40 to-transparent" />
                             <div className="flex flex-col gap-2">
-                                <p className="text-cyan-500 font-mono text-[10px] tracking-widest uppercase">SYSTEM STATUS: ONLINE</p>
+                                <p className="text-cyan-500 font-mono text-[10px] tracking-widest uppercase">{t('dashboard.status_online')}</p>
                                 <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wide">
                                     {todayGreeting}, <span className="text-cyan-400">{userName}</span>
                                 </h1>
-                                <p className="text-xs text-slate-400 font-mono">Ready to initiate new work cycles?</p>
+                                <p className="text-xs text-slate-400 font-mono">{t('dashboard.ready_to_work')}</p>
                             </div>
                         </div>
 
@@ -171,17 +238,17 @@ const WorkerDashboard = () => {
                         <div className="border-b border-slate-700/50">
                             <nav className="-mb-px flex space-x-1 overflow-x-auto no-scrollbar scroll-smooth">
                                 {[
-                                    { id: 'overview', label: 'OVERVIEW HUD' },
-                                    { id: 'jobs', label: 'MISSIONS & LOGS' },
-                                    { id: 'reviews', label: 'REPUTATION DATA' }
-                                ].map((t) => (
-                                    <button key={t.id} onClick={() => setActiveTab(t.id)}
+                                    { id: 'overview', label: t('dashboard.overview') },
+                                    { id: 'jobs', label: t('dashboard.active_jobs') },
+                                    { id: 'reviews', label: t('dashboard.performance_reviews') }
+                                ].map((tabDef) => (
+                                    <button key={tabDef.id} onClick={() => setActiveTab(tabDef.id)}
                                         className={`whitespace-nowrap px-6 py-3 border-b-2 font-black text-[11px] tracking-widest uppercase font-mono transition-all ${
-                                            activeTab === t.id
+                                            activeTab === tabDef.id
                                             ? 'border-cyan-400 text-cyan-400 bg-cyan-500/5'
                                             : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
                                         }`}>
-                                        {t.label}
+                                        {tabDef.label}
                                     </button>
                                 ))}
                             </nav>
@@ -198,21 +265,33 @@ const WorkerDashboard = () => {
                                                 <svg className="w-32 h-32 text-cyan-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 3.8l7.2 14.2H4.8L12 5.8z"/></svg>
                                             </div>
                                             <div className="relative z-10">
-                                                <SectionLabel>CURRENT ENGAGEMENT</SectionLabel>
+                                                <SectionLabel>{t('dashboard.current_job')}</SectionLabel>
                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-4">
                                                     <div>
                                                         <h3 className="text-xl font-black text-white uppercase tracking-wider">{activeContract.job_title}</h3>
-                                                        <p className="text-[12px] font-mono text-cyan-400 mt-1 uppercase tracking-widest">{activeContract.client_name || 'UNKNOWN CLIENT'}</p>
+                                                        <p className="text-[12px] font-mono text-cyan-400 mt-1 uppercase tracking-widest">{activeContract.client_name || t('dashboard.anonymous_client')}</p>
                                                     </div>
                                                     <div className="flex flex-col md:items-end gap-2">
-                                                        <span className="inline-block px-3 py-1 rounded text-[10px] font-black font-mono tracking-widest uppercase bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 ring-1 ring-cyan-400/20 blur-[0.3px]">ACTIVE STATUS</span>
+                                                        <span className={`inline-block px-3 py-1 rounded text-[10px] font-black font-mono tracking-widest uppercase border ring-1 blur-[0.3px] ${
+                                                            (activeContract.status === 'PENDING' || !activeContract.signature_worker)
+                                                                ? 'bg-amber-900/40 text-amber-400 border-amber-500/50 ring-amber-400/20' 
+                                                                : 'bg-cyan-900/40 text-cyan-400 border-cyan-500/50 ring-cyan-400/20'
+                                                        }`}>
+                                                            {(activeContract.status === 'PENDING' || !activeContract.signature_worker) ? 'CHỜ KÝ HỢP ĐỒNG (OTP)' : t('dashboard.in_progress')}
+                                                        </span>
                                                         <p className="text-lg font-black text-emerald-400 font-mono">${Number(activeContract.total_amount || 0).toLocaleString()}</p>
                                                     </div>
                                                 </div>
-                                                <div className="mt-6">
-                                                    <button onClick={() => navigate(`/contract/${activeContract.id}/view`)} className="w-full sm:w-auto px-6 py-2.5 text-[10px] font-black font-mono tracking-widest uppercase bg-cyan-500 hover:bg-cyan-400 text-[#020617] transition-colors rounded shadow-[0_0_15px_rgba(6,182,212,0.4)]">
-                                                        ACCESS WORKSPACE
-                                                    </button>
+                                                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                                                    {!activeContract.signature_worker ? (
+                                                        <button onClick={() => navigate(`/contract/${activeContract.id}/sign`)} className="w-full sm:w-auto px-6 py-2.5 text-[10px] font-black font-mono tracking-widest uppercase bg-amber-500 hover:bg-amber-400 text-slate-900 transition-colors rounded shadow-[0_0_15px_rgba(245,158,11,0.4)]">
+                                                            KÝ HỢP ĐỒNG
+                                                        </button>
+                                                    ) : (
+                                                        <button onClick={() => navigate(`/contract/${activeContract.id}/view`)} className="w-full sm:w-auto px-6 py-2.5 text-[10px] font-black font-mono tracking-widest uppercase bg-cyan-500 hover:bg-cyan-400 text-[#020617] transition-colors rounded shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+                                                            {t('dashboard.view_details')}
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -222,23 +301,23 @@ const WorkerDashboard = () => {
                                     {!contractLoading && (
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="rounded-xl border p-5" style={{ background: 'linear-gradient(145deg,#082f49,#0f172a)', borderColor: 'rgba(56,189,248,0.2)' }}>
-                                                <div className="text-[10px] font-mono tracking-widest text-sky-400 uppercase mb-2">Total Earned</div>
+                                                <div className="text-[10px] font-mono tracking-widest text-sky-400 uppercase mb-2">{t('dashboard.total_earnings')}</div>
                                                 <div className="text-3xl font-black text-white mb-1 font-mono">${allContracts.filter(c => c.status === 'COMPLETED').reduce((s, c) => s + Number(c.total_amount || 0), 0).toLocaleString()}</div>
-                                                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Lifetime Yield</div>
+                                                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">{t('dashboard.accumulated_earnings')}</div>
                                             </div>
                                             <div className="rounded-xl border p-5" style={{ background: 'linear-gradient(145deg,#4c1d95,#0f172a)', borderColor: 'rgba(167,139,250,0.2)' }}>
-                                                <div className="text-[10px] font-mono tracking-widest text-purple-400 uppercase mb-2">Completed Missions</div>
+                                                <div className="text-[10px] font-mono tracking-widest text-purple-400 uppercase mb-2">{t('dashboard.completed_jobs')}</div>
                                                 <div className="text-3xl font-black text-white mb-1 font-mono">{allContracts.filter(c => c.status === 'COMPLETED').length}</div>
-                                                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Successful Logs</div>
+                                                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">{t('dashboard.approved_jobs')}</div>
                                             </div>
                                             <div className="rounded-xl border p-5" style={{ background: 'linear-gradient(145deg,#047857,#0f172a)', borderColor: 'rgba(52,211,153,0.2)' }}>
-                                                <div className="text-[10px] font-mono tracking-widest text-emerald-400 uppercase mb-2">Success Rate</div>
+                                                <div className="text-[10px] font-mono tracking-widest text-emerald-400 uppercase mb-2">{t('dashboard.success_rate')}</div>
                                                 <div className="text-3xl font-black text-white mb-1 font-mono">
                                                     {(allContracts.length > 0 
                                                         ? ((allContracts.filter(c => c.status === 'COMPLETED').length / allContracts.length) * 100).toFixed(0) 
                                                         : 100)}%
                                                 </div>
-                                                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Operational Efficiency</div>
+                                                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">{t('dashboard.work_efficiency')}</div>
                                             </div>
                                         </div>
                                     )}
@@ -247,18 +326,18 @@ const WorkerDashboard = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="rounded-2xl border p-6" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
                                             <div className="flex items-center justify-between mb-4">
-                                                <SectionLabel>ACTIVE PROPOSALS</SectionLabel>
-                                                <button onClick={() => setActiveTab('jobs')} className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest font-mono hover:text-cyan-300">View Logs ›</button>
+                                                <SectionLabel>{t('dashboard.pending_applications')}</SectionLabel>
+                                                <button onClick={() => setActiveTab('jobs')} className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest font-mono hover:text-cyan-300">{t('dashboard.view_all')}</button>
                                             </div>
                                             {proposalsLoading ? (
-                                                <div className="text-center py-6 text-[10px] font-mono tracking-widest text-cyan-500 uppercase animate-pulse">Scanning proposals...</div>
+                                                <div className="text-center py-6 text-[10px] font-mono tracking-widest text-cyan-500 uppercase animate-pulse">{t('dashboard.fetching_data')}</div>
                                             ) : myProposals.length > 0 ? (
                                                 <div className="space-y-3">
                                                     {myProposals.slice(0,3).map(p => (
                                                         <div key={p.id} className="flex justify-between items-center p-3 rounded-xl border border-slate-700/50 hover:border-cyan-500/30 bg-slate-800/30 transition-all cursor-pointer" onClick={() => navigate(`/work/${p.job_id}`)}>
                                                             <div className="min-w-0 flex-1 pr-4">
                                                                 <h4 className="text-[12px] font-bold text-white uppercase tracking-wider truncate mb-1">{p.job_title}</h4>
-                                                                <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">Req: ${p.proposed_price?.toLocaleString()}</div>
+                                                                <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">{t('dashboard.proposed_price')}{p.proposed_price?.toLocaleString()}</div>
                                                             </div>
                                                             <div className="shrink-0 text-right">
                                                                 <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase ${
@@ -271,31 +350,25 @@ const WorkerDashboard = () => {
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-[11px] text-slate-500 italic font-mono uppercase tracking-widest">No active proposals in queue.</p>
+                                                <p className="text-[11px] text-slate-500 italic font-mono uppercase tracking-widest">{t('dashboard.no_pending_applications')}</p>
                                             )}
                                         </div>
 
                                         <div className="rounded-2xl border p-6" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
                                             <div className="flex items-center justify-between mb-4">
-                                                <SectionLabel>SUGGESTED TARGETS</SectionLabel>
-                                                <button onClick={() => navigate('/find-work')} className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest font-mono hover:text-cyan-300">Browse Matrix ›</button>
+                                                <SectionLabel>{t('dashboard.recommended_jobs')}</SectionLabel>
+                                                <button onClick={() => navigate('/find-work')} className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest font-mono hover:text-cyan-300">{t('dashboard.view_all')}</button>
                                             </div>
                                             {loading ? (
-                                                <div className="text-center py-6 text-[10px] font-mono tracking-widest text-cyan-500 uppercase animate-pulse">Syncing nodes...</div>
+                                                <div className="text-center py-6 text-[10px] font-mono tracking-widest text-cyan-500 uppercase animate-pulse">{t('dashboard.loading_recommendations')}</div>
                                             ) : recommendedJobs.length > 0 ? (
                                                 <div className="space-y-3">
                                                     {recommendedJobs.slice(0,3).map(j => (
-                                                        <div key={j.id} className="p-3 rounded-xl border border-slate-700/50 hover:border-cyan-500/30 bg-slate-800/30 transition-all cursor-pointer" onClick={() => navigate(`/work/${j.id}`)}>
-                                                            <div className="flex justify-between items-start mb-1">
-                                                                <h4 className="text-[12px] font-bold text-white uppercase tracking-wider truncate pr-2">{j.title}</h4>
-                                                                <span className="text-[10px] font-black tracking-widest text-cyan-400 font-mono shrink-0">{j.badge}</span>
-                                                            </div>
-                                                            <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">{j.company} · {j.price}</div>
-                                                        </div>
+                                                        <AILaserRecommendJob key={j.id} job={j} navigate={navigate} />
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-[11px] text-slate-500 italic font-mono uppercase tracking-widest">Awaiting algorithm optimization...</p>
+                                                <p className="text-[11px] text-slate-500 italic font-mono uppercase tracking-widest">{t('dashboard.no_recommendations')}</p>
                                             )}
                                         </div>
                                     </div>
@@ -305,12 +378,12 @@ const WorkerDashboard = () => {
                             {activeTab === 'jobs' && (
                                 <div className="space-y-6 animate-[fadeIn_.3s_ease-out]">
                                     <div className="rounded-2xl border p-6" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
-                                        <SectionLabel>TRANSACTION LOGS & CONTRACTS</SectionLabel>
+                                        <SectionLabel>LỊCH SỬ {'&'} HỢP ĐỒNG</SectionLabel>
                                         
                                         {/* Pass them to JobTable component */}
                                         <div className="mt-4 cyberpunk-datatable-wrapper">
                                             {contractLoading ? (
-                                                <div className="py-10 text-center text-cyan-500 font-mono text-[10px] tracking-widest uppercase animate-pulse">Decrypting Contracts...</div>
+                                                <div className="py-10 text-center text-cyan-500 font-mono text-[10px] tracking-widest uppercase animate-pulse">Đang tải hợp đồng...</div>
                                             ) : (
                                                 <JobTable contracts={allContracts} />
                                             )}
@@ -322,9 +395,9 @@ const WorkerDashboard = () => {
                             {activeTab === 'reviews' && (
                                 <div className="space-y-6 animate-[fadeIn_.3s_ease-out]">
                                     <div className="rounded-2xl border p-6" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
-                                        <SectionLabel>REPUTATION MATRIX</SectionLabel>
+                                        <SectionLabel>{t('dashboard.your_reviews')}</SectionLabel>
                                         {reviewsLoading ? (
-                                            <div className="py-10 text-center text-cyan-500 font-mono text-[10px] tracking-widest uppercase animate-pulse">Loading Reputation...</div>
+                                            <div className="py-10 text-center text-cyan-500 font-mono text-[10px] tracking-widest uppercase animate-pulse">{t('dashboard.loading_reviews')}</div>
                                         ) : (
                                             <ReviewsList data={reviewsData} type="worker" />
                                         )}

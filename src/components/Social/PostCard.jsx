@@ -164,6 +164,12 @@ const PostCard = ({ post: initialPost, onLikeToggle, onDeleted }) => {
         return `${backendRoot}${url}`;
     };
 
+    const isVideoUrl = (url) => {
+        if (!url) return false;
+        const lowerUrl = url.toLowerCase();
+        return lowerUrl.endsWith('.mp4') || lowerUrl.endsWith('.webm') || lowerUrl.endsWith('.mov') || lowerUrl.endsWith('.mkv');
+    };
+
     // close menu on outside click
     useEffect(() => {
         const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false); };
@@ -282,8 +288,21 @@ const PostCard = ({ post: initialPost, onLikeToggle, onDeleted }) => {
                 </div>
 
                 {post.image_url && (
-                    <div className="mt-2 w-full bg-gray-50 flex items-center justify-center overflow-hidden border-y border-gray-100 max-h-[512px]">
-                        <img src={getImageUrl(post.image_url)} alt="Post attachment" className="w-full h-full object-contain" loading="lazy" />
+                    <div className="mt-2 w-full bg-gray-50 flex items-center justify-center overflow-hidden border-y border-gray-100 aspect-video">
+                        {isVideoUrl(post.image_url) ? (
+                            <video 
+                                src={getImageUrl(post.image_url)} 
+                                controls 
+                                className="w-full h-full object-cover" 
+                            />
+                        ) : (
+                            <img 
+                                src={getImageUrl(post.image_url)} 
+                                alt="Post attachment" 
+                                className="w-full h-full object-cover" 
+                                loading="lazy" 
+                            />
+                        )}
                     </div>
                 )}
 

@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { matchingApi } from '../../api/matching.api';
 import { jobsApi } from '../../api/jobs.api';
+import { useTranslation } from 'react-i18next';
 
 function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
 /* ── Score ring ── */
 function MatchRing({ score }) {
+    const { t } = useTranslation();
     const color = score >= 80 ? '#22d3ee' : score >= 50 ? '#f59e0b' : '#64748b';
     const label = score >= 80 ? 'text-cyan-300' : score >= 50 ? 'text-amber-300' : 'text-slate-400';
     return (
@@ -16,7 +18,7 @@ function MatchRing({ score }) {
             'bg-slate-700/50 border-slate-600/40 text-slate-400'
         }`}>
             <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: color }} />
-            {score}% MATCH
+            {score}{t('find_work.match_percent')}
         </div>
     );
 }
@@ -57,6 +59,7 @@ const FindWork = () => {
     const [jobs, setJobs] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { t } = useTranslation();
 
     useEffect(() => {
         jobsApi.getCate().then(res => setCategories(res.data || [])).catch(() => {});
@@ -98,23 +101,15 @@ const FindWork = () => {
     useEffect(() => { if (safePage !== page) setPage(safePage); }, [page, safePage]);
 
     return (
-        <div className="w-full min-h-screen" style={{ background: '#020617' }}>
-            {/* Scanlines */}
-            <div className="fixed inset-0 pointer-events-none z-0"
-                style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(0,255,255,0.008) 0px,rgba(0,255,255,0.008) 1px,transparent 1px,transparent 3px)' }} />
-            {/* Glow orbs */}
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 left-1/3 w-[500px] h-[300px] bg-cyan-500/4 rounded-full blur-[120px]" />
-                <div className="absolute bottom-0 right-1/4 w-[400px] h-[300px] bg-purple-600/4 rounded-full blur-[100px]" />
-            </div>
+        <div className="w-full min-h-screen" >
 
             <div className="relative z-10 w-full max-w-screen-xl mx-auto px-4 sm:px-6 py-8">
                 {/* Page header */}
                 <div className="mb-6">
-                    <p className="text-[9px] font-black tracking-widest text-cyan-500 font-mono uppercase mb-1">// FAF NETWORK</p>
-                    <h1 className="text-2xl font-black text-white uppercase tracking-wide">Find Work</h1>
+                    <p className="text-[9px] font-black tracking-widest text-cyan-500 font-mono uppercase mb-1">{t('find_work.find_freelance_work')}</p>
+                    <h1 className="text-2xl font-black text-white uppercase tracking-wide">{t('find_work.find_new_work')}</h1>
                     <p className="text-slate-500 text-sm font-mono mt-1">
-                        {loading ? 'Scanning opportunities...' : `${filtered.length} jobs available`}
+                        {loading ? t('find_work.scanning_jobs') : `${filtered.length} ${t('find_work.jobs_available')}`}
                     </p>
                 </div>
 
@@ -125,9 +120,9 @@ const FindWork = () => {
                         {/* Category */}
                         <div className="rounded-xl border p-4" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.18)' }}>
                             <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent pointer-events-none" />
-                            <SectionLabel>CATEGORY</SectionLabel>
+                            <SectionLabel>{t('find_work.category_label')}</SectionLabel>
                             <div className="space-y-0.5">
-                                {[{ id: '', name: 'All Categories' }, ...categories].map(cat => (
+                                {[{ id: '', name: t('find_work.all_categories') }, ...categories].map(cat => (
                                     <button key={cat.id} onClick={() => { setCategoryId(cat.id); setPage(1); }}
                                         className={`w-full text-left px-3 py-1.5 rounded-lg text-[12px] font-mono font-bold transition-all ${
                                             categoryId === cat.id
@@ -142,15 +137,15 @@ const FindWork = () => {
 
                         {/* Budget */}
                         <div className="rounded-xl border p-4" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.18)' }}>
-                            <SectionLabel>BUDGET RANGE ($)</SectionLabel>
+                            <SectionLabel>{t('find_work.budget_label')}</SectionLabel>
                             <div className="space-y-3">
                                 <div>
-                                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block mb-1">MIN</label>
+                                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block mb-1">{t('find_work.from_label')}</label>
                                     <FilterInput type="number" min={0} step={100} value={budgetRange[0]}
                                         onChange={e => { setBudgetRange([Number(e.target.value), budgetRange[1]]); setPage(1); }} />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block mb-1">MAX</label>
+                                    <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block mb-1">{t('find_work.to_label')}</label>
                                     <FilterInput type="number" min={0} step={100} value={budgetRange[1]}
                                         onChange={e => { setBudgetRange([budgetRange[0], Number(e.target.value)]); setPage(1); }} />
                                 </div>
@@ -159,7 +154,7 @@ const FindWork = () => {
 
                         {/* Match Score */}
                         <div className="rounded-xl border p-4" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.18)' }}>
-                            <SectionLabel>MIN MATCH SCORE</SectionLabel>
+                            <SectionLabel>{t('find_work.min_match_score')}</SectionLabel>
                             <input type="range" min={0} max={100} step={10} value={minMatchScore}
                                 onChange={e => { setMinMatchScore(Number(e.target.value)); setPage(1); }}
                                 className="w-full accent-cyan-500" />
@@ -181,25 +176,25 @@ const FindWork = () => {
                                     </svg>
                                 </div>
                                 <input value={query} onChange={e => { setQuery(e.target.value); setPage(1); }}
-                                    placeholder="Search jobs, skills, keywords..."
+                                    placeholder={t('find_work.search_placeholder_jobs')}
                                     className="w-full pl-11 pr-4 py-3 rounded-xl font-mono text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500/50 transition-all"
                                     style={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(6,182,212,0.2)', color: '#e2e8f0' }} />
                             </div>
                             <select value={sort} onChange={e => setSort(e.target.value)}
                                 className="px-4 py-3 rounded-xl font-mono font-black text-[11px] tracking-widest uppercase focus:outline-none focus:ring-1 focus:ring-cyan-500/50 transition-all shrink-0"
                                 style={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(6,182,212,0.2)', color: '#94a3b8' }}>
-                                <option value="match">BEST MATCH</option>
-                                <option value="newest">NEWEST</option>
-                                <option value="payHigh">$ HIGH → LOW</option>
-                                <option value="payLow">$ LOW → HIGH</option>
+                                <option value="match">{t('find_work.best_match')}</option>
+                                <option value="newest">{t('find_work.newest')}</option>
+                                <option value="payHigh">{t('find_work.price_high_low')}</option>
+                                <option value="payLow">{t('find_work.price_low_high')}</option>
                             </select>
                         </div>
 
                         {/* Tabs */}
                         <div className="flex gap-1 p-1 rounded-xl border" style={{ background: 'rgba(15,23,42,0.8)', borderColor: 'rgba(51,65,85,0.5)' }}>
                             {[
-                                { key: 'SHORT_TERM', label: '⚡ SHORT-TERM' },
-                                { key: 'LONG_TERM',  label: '◈ LONG-TERM'  },
+                                { key: 'SHORT_TERM', label: t('find_work.short_term') },
+                                { key: 'LONG_TERM',  label: t('find_work.long_term')  },
                             ].map(t => (
                                 <button key={t.key} onClick={() => { setTab(t.key); setPage(1); }}
                                     className={`flex-1 py-2 px-4 rounded-lg font-mono font-black text-[10px] tracking-widest uppercase transition-all ${
@@ -217,13 +212,13 @@ const FindWork = () => {
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                                     <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                                    <span className="text-slate-500 font-mono text-sm tracking-widest">SCANNING JOBS...</span>
+                                    <span className="text-slate-500 font-mono text-sm tracking-widest">{t('find_work.searching_jobs')}</span>
                                 </div>
                             ) : pageItems.length === 0 ? (
                                 <div className="rounded-xl border p-14 text-center" style={{ background: 'rgba(13,18,36,0.8)', borderColor: 'rgba(6,182,212,0.15)' }}>
                                     <div className="text-4xl mb-4">📡</div>
-                                    <p className="text-[14px] font-black text-white uppercase tracking-widest font-mono mb-2">NO SIGNALS FOUND</p>
-                                    <p className="text-slate-500 text-[12px] font-mono">Try adjusting filters or search query.</p>
+                                    <p className="text-[14px] font-black text-white uppercase tracking-widest font-mono mb-2">{t('find_work.no_results_found')}</p>
+                                    <p className="text-slate-500 text-[12px] font-mono">{t('find_work.try_different_filter')}</p>
                                 </div>
                             ) : pageItems.map(job => (
                                 <Link key={job.id} to={`/work/${job.id}`}
@@ -256,25 +251,24 @@ const FindWork = () => {
                                                         {job.match_score > 0 && <MatchRing score={job.match_score} />}
                                                     </div>
                                                     <div className="flex items-center gap-2 text-[11px] font-mono text-slate-500">
-                                                        <span className="text-cyan-500/70">{job.category_name || 'Uncategorized'}</span>
+                                                        <span className="text-cyan-500/70">{job.category_name || t('find_work.uncategorized')}</span>
                                                         <span>·</span>
                                                         <span>{new Date(job.created_at).toLocaleDateString()}</span>
                                                         {job.matching_skills_count > 0 && (
                                                             <>
                                                                 <span>·</span>
-                                                                <span className="text-cyan-400">{job.matching_skills_count}/{job.total_required_skills} skills matched</span>
+                                                                <span className="text-cyan-400">{job.matching_skills_count}/{job.total_required_skills} {t('find_work.matching_skills')}</span>
                                                             </>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                {/* Budget */}
                                                 <div className="text-right flex-shrink-0">
                                                     <div className="text-[16px] font-black text-white font-mono">
                                                         ${Number(job.budget || 0).toLocaleString()}
                                                     </div>
                                                     <div className="text-[9px] font-black tracking-widest text-slate-500 uppercase font-mono">
-                                                        {job.job_type === 'SHORT_TERM' ? 'FIXED' : 'PROJECT'}
+                                                        {job.job_type === 'SHORT_TERM' ? t('find_work.fixed_price') : t('find_work.project_type')}
                                                     </div>
                                                 </div>
                                             </div>
@@ -288,7 +282,7 @@ const FindWork = () => {
 
                                             {/* Description */}
                                             <p className="text-[12px] text-slate-500 leading-relaxed line-clamp-2 font-mono">
-                                                {job.description || 'No description provided.'}
+                                                {job.description || t('find_work.no_description')}
                                             </p>
                                         </div>
                                     </div>

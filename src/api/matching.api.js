@@ -4,7 +4,10 @@ export const matchingApi = {
   getRecommendedJobs: (filters = {}) => {
     return axiosClient.get("/matching/jobs/recommended", { params: filters });
   },
-  getRecommendedWorkers: (jobId, limit = 10) => {
-    return axiosClient.get(`/matching/workers/${jobId}`, { params: { limit } });
+  getRecommendedWorkers: (jobId, params) => {
+    return axiosClient.get(`/matching/workers/${jobId}`, { params });
+  },
+  getAIRecommendations: (jobId) => {
+    return axiosClient.get(`/matching/ai-recommendations/${jobId}`);
   }
 };

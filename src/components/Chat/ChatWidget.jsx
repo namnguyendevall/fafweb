@@ -46,13 +46,16 @@ const ChatWidget = () => {
     const otherParticipant = selectedConv?.participants?.find(p => String(p.id) !== String(user.id));
     const otherUserName = otherParticipant?.full_name || otherParticipant?.email?.split('@')[0] || 'Chat';
 
+    const isManager = user?.role === 'manager';
+    const accentColor = isManager ? 'emerald' : 'blue';
+
     return (
         <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end pointer-events-none">
             {/* Chat Window */}
             {isOpen && activeConvId && (
                 <div className="w-80 h-[450px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden mb-4 pointer-events-auto transition-all transform origin-bottom-right">
                     {/* Header */}
-                    <div className="p-3 bg-blue-600 text-white flex items-center justify-between shadow-sm">
+                    <div className={`p-3 bg-${accentColor}-600 text-white flex items-center justify-between shadow-sm`}>
                         <div className="flex items-center gap-2 overflow-hidden">
                             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold shrink-0">
                                 {otherUserName.charAt(0)}
@@ -84,7 +87,7 @@ const ChatWidget = () => {
                             return (
                                 <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[85%] px-3 py-1.5 rounded-xl text-xs shadow-sm ${
-                                        isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
+                                        isMe ? `bg-${accentColor}-600 text-white rounded-tr-none` : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
                                     }`}>
                                         <p>{msg.content}</p>
                                     </div>
@@ -101,9 +104,9 @@ const ChatWidget = () => {
                             value={messageInput}
                             onChange={(e) => setMessageInput(e.target.value)}
                             placeholder="Aa"
-                            className="flex-1 px-3 py-1.5 bg-gray-100 border-none rounded-full focus:ring-1 focus:ring-blue-500 text-sm"
+                            className={`flex-1 px-3 py-1.5 bg-gray-100 border-none rounded-full focus:ring-1 focus:ring-${accentColor}-500 text-sm`}
                         />
-                        <button type="submit" disabled={!messageInput.trim()} className="text-blue-600 font-bold disabled:opacity-30">
+                        <button type="submit" disabled={!messageInput.trim()} className={`text-${accentColor}-600 font-bold disabled:opacity-30`}>
                             <svg className="w-5 h-5 rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
                         </button>
                     </form>
@@ -113,7 +116,7 @@ const ChatWidget = () => {
             {/* Conversation List Window */}
             {isOpen && !activeConvId && (
                 <div className="w-80 h-[450px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden mb-4 pointer-events-auto transition-all transform origin-bottom-right">
-                    <div className="p-3 bg-blue-600 text-white flex items-center justify-between">
+                    <div className={`p-3 bg-${accentColor}-600 text-white flex items-center justify-between`}>
                         <span className="font-bold text-sm">Chats</span>
                         <button onClick={() => setIsOpen(false)} className="p-1 hover:bg-white/20 rounded">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -132,7 +135,7 @@ const ChatWidget = () => {
                                         onClick={() => setActiveConvId(conv.id)}
                                         className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-50 transition-colors"
                                     >
-                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold shrink-0">
+                                        <div className={`w-10 h-10 rounded-full bg-${accentColor}-100 flex items-center justify-center text-${accentColor}-600 font-bold shrink-0`}>
                                             {name.charAt(0)}
                                         </div>
                                         <div className="text-left overflow-hidden">
@@ -150,7 +153,7 @@ const ChatWidget = () => {
             {/* Floating Bubble Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 hover:scale-110 active:scale-95 transition-all pointer-events-auto relative"
+                className={`w-14 h-14 bg-${accentColor}-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-${accentColor}-700 hover:scale-110 active:scale-95 transition-all pointer-events-auto relative`}
             >
                 {isOpen ? (
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>

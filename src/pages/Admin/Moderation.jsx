@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
+import { useToast } from '../../contexts/ToastContext';
 
 const Moderation = () => {
+    const toast = useToast();
     const [tasks, setTasks] = useState([]);
     const [filteredTasks, setFilteredTasks] = useState([]);
     const [activeTab, setActiveTab] = useState('All');
@@ -127,12 +129,12 @@ const Moderation = () => {
 
     const handleApprove = (taskId) => {
         setTasks(tasks.filter(task => task.id !== taskId));
-        alert('Task approved successfully');
+        toast.success('Task approved successfully');
     };
 
     const handleHide = (taskId) => {
         setTasks(tasks.filter(task => task.id !== taskId));
-        alert('Task hidden successfully');
+        toast.success('Task hidden successfully');
     };
 
     const pendingCount = tasks.filter(t => t.status === 'PENDING').length;

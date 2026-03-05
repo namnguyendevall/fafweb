@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { userApi } from "../../../api/user.api";
+import { useTranslation } from "react-i18next";
 
 const Step3BudgetMilestones = ({
   totalBudget,
@@ -16,7 +17,8 @@ const Step3BudgetMilestones = ({
   onContinue,
   onBack,
 }) => {
-  const [wallet, setWallet] = useState();
+  const { t } = useTranslation();
+  const [wallet, setWallet] = useState(0);
   const [validationErrors, setValidationErrors] = useState([]);
 
   useEffect(() => {
@@ -28,135 +30,108 @@ const Step3BudgetMilestones = ({
       .catch((err) => {
         console.error('Failed to fetch wallet balance:', err);
       });
-  });
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Set Budget & Checkpoints
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        
+        {/* Main Content Area */}
+        <div className="lg:col-span-2 space-y-10">
+          <div className="border-b border-white/5 pb-6">
+            <p className="text-[10px] font-mono font-black text-fuchsia-500 uppercase tracking-[0.3em] mb-2">{t('postjob.step3_subtitle', 'ESCROW_ALLOCATION')}</p>
+            <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider font-mono">
+              {t('postjob.step3_title', 'BUDGET_&_MILESTONES')}
             </h1>
-            <p className="text-sm text-gray-600">
-              Define the total value of this job and break it down into
-              verifiable milestones for the escrow.
-            </p>
           </div>
 
-          {/* Total Job Budget */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Total Job Budget
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
-                $
-              </span>
-              <input
-                type="number"
-                value={totalBudget}
-                onChange={(e) => {
-                  const value = Number(e.target.value);
-
-                  if (!isNaN(value) && value >= 0 && value <= wallet) {
-                    setTotalBudget(value);
-                  } else {
-                    return
-                  }
-                }}
-                className="w-full pl-8 pr-20 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                PTS
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-gray-500">
-              Total points allocated for the completion of all milestones.
-            </p>
+          {/* Total Job Budget Input */}
+          <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl border border-white/5 p-8 shadow-2xl relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-fuchsia-500/5 blur-3xl rounded-full -mr-16 -mt-16" />
+             
+             <div className="relative z-10">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono mb-3">
+                  {t('postjob.total_budget', 'TOTAL_MISSION_FUNDING')}
+                </label>
+                <div className="relative group">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-fuchsia-500 font-mono font-black text-lg group-focus-within:animate-pulse">
+                    $
+                  </span>
+                  <input
+                    type="number"
+                    value={totalBudget}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      if (!isNaN(value) && value >= 0 && value <= wallet) {
+                        setTotalBudget(value);
+                      }
+                    }}
+                    className="w-full pl-10 pr-20 py-4 bg-black/40 border border-white/10 rounded-xl text-white font-mono text-xl outline-none focus:border-fuchsia-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black font-mono text-slate-600 uppercase tracking-widest">
+                    PTS_CREDITS
+                  </span>
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+                    <p className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.2em] italic">
+                        {t('postjob.total_budget_desc', 'FUNDS_WILL_BE_LOCKED_IN_ESCROW_UPON_PUBLICATION')}
+                    </p>
+                </div>
+             </div>
           </div>
 
-          {/* Project Checkpoints */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Project Checkpoints
-              </h2>
-              <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-full">
-                {checkpoints.length} Checkpoint
-                {checkpoints.length !== 1 ? "s" : ""}
-              </span>
+          {/* Project Checkpoints / Milestones */}
+          <div className="space-y-6">
+            <div className="flex items-end justify-between px-2">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-[12px] font-black text-white uppercase tracking-[0.2em] font-mono">
+                    {t('postjob.project_checkpoints', 'MILESTONE_SYNCHRONIZATION')}
+                </h2>
+                <span className="text-[9px] font-mono text-fuchsia-500/50 uppercase tracking-widest">
+                    {checkpoints.length} {t('postjob.checkpoint_count', 'PROTOCOLS_DEFINED')}
+                </span>
+              </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               {checkpoints.map((checkpoint, index) => (
                 <div
                   key={checkpoint.id}
-                  className="relative bg-white border border-gray-200 rounded-lg p-6"
+                  className="group relative bg-white/[0.02] border border-white/5 rounded-2xl p-8 hover:border-fuchsia-500/30 transition-all hover:bg-white/[0.03] shadow-lg"
                 >
+                  {/* Step Number Tag */}
+                  <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-[#090e17] border border-white/10 flex items-center justify-center font-black font-mono text-fuchsia-500 shadow-xl group-hover:border-fuchsia-500/50 transition-colors">
+                      {String(index + 1).padStart(2, '0')}
+                  </div>
+
+                  {/* Remove Button */}
                   <button
                     type="button"
                     onClick={() => onRemoveCheckpoint(checkpoint.id)}
-                    className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 rounded text-gray-400 hover:text-red-600 transition-colors"
+                    className="absolute top-4 right-4 p-2 text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                   >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
 
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
-                      <span className="text-blue-600 font-semibold text-sm">
-                        {index + 1}
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      value={checkpoint.name}
-                      onChange={(e) =>
-                        onUpdateCheckpoint(
-                          checkpoint.id,
-                          "name",
-                          e.target.value,
-                        )
-                      }
-                      className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                        Title
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+                    {/* Milestone Name */}
+                    <div className="space-y-2">
+                      <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest font-mono">
+                        {t('postjob.checkpoint_name', 'MILESTONE_ID')}
                       </label>
                       <input
                         type="text"
-                        value={checkpoint.title}
-                        onChange={(e) =>
-                          onUpdateCheckpoint(
-                            checkpoint.id,
-                            "title",
-                            e.target.value,
-                          )
-                        }
-                        placeholder="e.g. Initial Concept & Wireframes"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        value={checkpoint.name}
+                        onChange={(e) => onUpdateCheckpoint(checkpoint.id, "name", e.target.value)}
+                        className="w-full px-4 py-2.5 bg-black/40 border border-white/5 rounded-lg text-white font-mono text-sm outline-none focus:border-fuchsia-500/40 transition-all uppercase"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                        Points
+
+                    {/* Milestone Allocation */}
+                    <div className="space-y-2">
+                      <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest font-mono">
+                        {t('postjob.checkpoint_points', 'ALLOCATION_PTS')}
                       </label>
                       <div className="relative">
                         <input
@@ -164,71 +139,59 @@ const Step3BudgetMilestones = ({
                           value={checkpoint.points}
                           onChange={(e) => {
                             const value = Number(e.target.value) || 0;
-
-                            const otherPoints = checkpoints.reduce(
-                              (sum, cp) =>
-                                cp.id === checkpoint.id
-                                  ? sum
-                                  : sum + (Number(cp.points) || 0),
-                              0,
-                            );
-
+                            const otherPoints = checkpoints.reduce((sum, cp) => cp.id === checkpoint.id ? sum : sum + (Number(cp.points) || 0), 0);
                             if (otherPoints + value > totalBudgetNum) return;
-
                             onUpdateCheckpoint(checkpoint.id, "points", value);
                           }}
-                          className="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg text-sm"
+                          className="w-full px-4 py-2.5 pr-12 bg-black/40 border border-white/5 rounded-lg text-fuchsia-400 font-mono text-sm outline-none focus:border-fuchsia-500/40 transition-all"
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                          PTS
-                        </span>
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black font-mono text-slate-600">PTS</span>
                       </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="block text-xs font-medium mb-1">
-                      Due Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={checkpoint.due_date || ""}
-                      min={index > 0 && checkpoints[index - 1].due_date ? checkpoints[index - 1].due_date : new Date().toISOString().split('T')[0]}
-                      onChange={(e) =>
-                        onUpdateCheckpoint(
-                          checkpoint.id,
-                          "due_date",
-                          e.target.value,
-                        )
-                      }
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    />
-                    {index > 0 && checkpoint.due_date && checkpoints[index - 1].due_date && 
-                     new Date(checkpoint.due_date) <= new Date(checkpoints[index - 1].due_date) && (
-                      <p className="text-xs text-red-600 mt-1">
-                        Must be after checkpoint {index} date
-                      </p>
-                    )}
-                  </div>
+                    {/* Milestone Title (Detailed) */}
+                    <div className="space-y-2">
+                      <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest font-mono">
+                        {t('postjob.checkpoint_title', 'PROTOCOL_LABEL')}
+                      </label>
+                      <input
+                        type="text"
+                        value={checkpoint.title}
+                        onChange={(e) => onUpdateCheckpoint(checkpoint.id, "title", e.target.value)}
+                        placeholder="e.g. ALPHA_V01_DELIVERY"
+                        className="w-full px-4 py-2.5 bg-black/40 border border-white/5 rounded-lg text-white font-mono text-sm outline-none focus:border-fuchsia-500/40 transition-all"
+                      />
+                    </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                      Description
-                    </label>
-                    <textarea
-                      value={checkpoint.description}
-                      onChange={(e) =>
-                        onUpdateCheckpoint(
-                          checkpoint.id,
-                          "description",
-                          e.target.value,
-                        )
-                      }
-                      placeholder="Describe what needs to be delivered for this checkpoint..."
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm resize-y"
-                    />
+                    {/* Duration in Days */}
+                    <div className="space-y-2">
+                      <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest font-mono">
+                        {t('postjob.checkpoint_duration', 'DAYS TO COMPLETE')}
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={checkpoint.duration_days || ""}
+                        onChange={(e) => onUpdateCheckpoint(checkpoint.id, "duration_days", e.target.value)}
+                        className="w-full px-4 py-2.5 bg-black/40 border border-white/5 rounded-lg text-white font-mono text-xs outline-none focus:border-fuchsia-500/40 transition-all [color-scheme:dark]"
+                        placeholder="e.g. 7"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div className="md:col-span-2 space-y-2">
+                        <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest font-mono">
+                          {t('postjob.checkpoint_desc', 'EXECUTION_CONSTRIANTS')}
+                        </label>
+                        <textarea
+                          value={checkpoint.description}
+                          onChange={(e) => onUpdateCheckpoint(checkpoint.id, "description", e.target.value)}
+                          placeholder={t('postjob.checkpoint_desc_pl', 'DEFINE_MILESTONE_SUCCESS_CRITERIA...')}
+                          rows={3}
+                          className="w-full px-4 py-3 bg-black/40 border border-white/5 rounded-lg text-slate-400 font-mono text-xs outline-none focus:border-fuchsia-500/40 transition-all resize-none italic"
+                        />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -237,24 +200,14 @@ const Step3BudgetMilestones = ({
               <button
                 type="button"
                 onClick={onAddCheckpoint}
-                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 hover:bg-blue-50 transition-colors text-center"
+                className="w-full border-2 border-dashed border-white/5 rounded-2xl p-8 hover:border-fuchsia-500/30 hover:bg-white/[0.01] transition-all group"
               >
-                <div className="flex flex-col items-center gap-2">
-                  <svg
-                    className="w-6 h-6 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-600">
-                    Add Checkpoint
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-500 group-hover:text-fuchsia-500 group-hover:scale-110 transition-all border border-white/10 group-hover:border-fuchsia-500/30">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                  </div>
+                  <span className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-[0.3em] group-hover:text-slate-300">
+                    {t('postjob.add_checkpoint', 'INITIALIZE_NEW_PROTOCOL')}
                   </span>
                 </div>
               </button>
@@ -262,164 +215,127 @@ const Step3BudgetMilestones = ({
           </div>
         </div>
 
-        {/* Sidebar - Escrow Summary */}
+        {/* RIGHT SIDEBAR: Escrow Monitor */}
         <div className="lg:col-span-1">
-          <div className="sticky top-8 bg-white border-l-4 border-blue-500 rounded-lg p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <svg
-                className="w-5 h-5 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Escrow Summary
-              </h3>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Allocated</span>
-                <span
-                  className={`font-medium ${
-                    isOverBudget ? "text-red-600" : "text-gray-900"
-                  }`}
-                >
-                  {usedPoints.toLocaleString()} /{" "}
-                  {totalBudgetNum.toLocaleString()} PTS
-                </span>
-              </div>
-
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all ${
-                    isOverBudget ? "bg-red-500" : "bg-blue-600"
-                  }`}
-                  style={{ width: `${Math.min(usedPercent, 100)}%` }}
-                />
-              </div>
-
-              <div className="text-xs text-gray-500 text-right">
-                Your Point : {wallet} PTS
-              </div>    
-              <div className="text-xs text-gray-500 text-right">
-                {usedPercent}% allocated
-              </div>
-            </div>
-
-            <div className="bg-blue-50 rounded-lg p-4 mb-4">
-              <div className="flex items-start gap-3">
-                <svg
-                  className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <p className="text-xs text-blue-800">
-                  Funds will be held securely in FAF Escrow and only released
-                  when you verify each milestone completion.
-                </p>
-              </div>
-            </div>
-
-            {isBudgetAllocated && (
-              <div className="bg-green-50 rounded-lg p-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <svg
-                    className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <p className="text-xs text-green-800 font-medium">
-                    100% of budget allocated to milestones
-                  </p>
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              {validationErrors.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-start gap-2">
-                    <svg className="w-5 h-5 text-red-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-red-900 mb-1">Please fix the following:</p>
-                      <ul className="text-xs text-red-800 space-y-1">
-                        {validationErrors.map((error, idx) => (
-                          <li key={idx}>• {error}</li>
-                        ))}
-                      </ul>
+          <div className="sticky top-10 space-y-6">
+            <div className="bg-[#090e17] rounded-3xl border-l-4 border-fuchsia-500 p-8 shadow-2xl relative overflow-hidden">
+                {/* Grid Overlay */}
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCI+CjxwYXRoIGQ9Ik0gMzAgMCBMIDAgMCBMIDAgMzAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyMTcsNzAsMjM5LDAuMDIpIiBzdHJva2Utd2lkdGg9IjEiLz4KPC9zdmc+')] pointer-events-none" />
+                
+                <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="w-10 h-10 rounded-xl bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-500 border border-fuchsia-500/20 shadow-[0_0_15px_rgba(217,70,239,0.2)]">
+                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04" /></svg>
+                      </div>
+                      <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] font-mono">
+                        {t('postjob.escrow_summary', 'ESCROW_MONITOR')}
+                      </h3>
                     </div>
-                  </div>
+
+                    <div className="space-y-6 mb-8">
+                      <div className="flex justify-between items-end">
+                        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">{t('postjob.allocated', 'ALLOCATED')}</span>
+                        <div className="text-right">
+                            <span className={`text-xl font-black font-mono transition-colors ${isOverBudget ? "text-rose-500" : "text-white"}`}>
+                              {usedPoints.toLocaleString()}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-600 ml-2">/ {totalBudgetNum.toLocaleString()} PTS</span>
+                        </div>
+                      </div>
+
+                      {/* Power Bar */}
+                      <div className="relative h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 p-[2px]">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(217,70,239,0.4)] ${
+                            isOverBudget ? "bg-rose-600" : "bg-gradient-to-r from-fuchsia-600 to-violet-500"
+                          }`}
+                          style={{ width: `${Math.min(usedPercent, 100)}%` }}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className="p-3 bg-black/40 rounded-xl border border-white/5">
+                              <p className="text-[8px] font-mono text-slate-600 uppercase tracking-widest mb-1">{t('postjob.efficiency', 'EFFICIENCY')}</p>
+                              <p className="text-xs font-black font-mono text-fuchsia-500">{usedPercent}%</p>
+                          </div>
+                          <div className="p-3 bg-black/40 rounded-xl border border-white/5">
+                              <p className="text-[8px] font-mono text-slate-600 uppercase tracking-widest mb-1">{t('postjob.available', 'RESERVE')}</p>
+                              <p className="text-xs font-black font-mono text-emerald-400 italic">{(wallet || 0).toLocaleString()}</p>
+                          </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl border border-fuchsia-500/10 bg-fuchsia-500/5 mb-8">
+                        <p className="text-[9px] font-mono text-fuchsia-400/70 leading-relaxed uppercase italic">
+                          {t('postjob.escrow_notice', 'LOCKED_FUNDS_CANNOT_BE_WITHDRAWN_UNTIL_MISSION_RESOLUTION_OR_AUTHORIZED_TERMINATION.')}
+                        </p>
+                    </div>
+
+                    {isBudgetAllocated && (
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-8 animate-pulse">
+                        <div className="flex items-center gap-3">
+                          <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                          <p className="text-[10px] font-black font-mono text-emerald-400 uppercase tracking-widest">
+                            {t('postjob.budget_allocated_notice', 'ALLOCATION_NOMINAL')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Navigation Actions */}
+                    <div className="space-y-4 pt-6 border-t border-white/5">
+                      {validationErrors.length > 0 && (
+                        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 mb-4">
+                          <div className="flex items-start gap-2">
+                            <svg className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">{t('postjob.fix_errors', 'SYNC_ERRORS')}</p>
+                              <ul className="text-[8px] text-rose-300 space-y-1 font-mono uppercase italic">
+                                {validationErrors.map((error, idx) => (
+                                  <li key={idx}>• {error}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          const errors = [];
+                          checkpoints.forEach((cp, idx) => { if (!cp.duration_days || cp.duration_days < 1) errors.push(`Milestone ${idx+1} requires valid duration mapping in days`); });
+                          if (!isBudgetAllocated) errors.push(t('postjob.err_budget_mismatch', { used: usedPoints, total: totalBudgetNum }));
+                          if (errors.length > 0) { setValidationErrors(errors); return; }
+                          setValidationErrors([]);
+                          onContinue();
+                        }}
+                        className="group relative w-full py-4 bg-fuchsia-600 hover:bg-fuchsia-500 text-[#020617] font-black font-mono text-[11px] tracking-[0.2em] uppercase rounded-xl shadow-[0_0_25px_rgba(217,70,239,0.3)] transition-all active:scale-[0.98] overflow-hidden"
+                      >
+                        <span className="relative z-10">{t('postjob.btn_continue', 'VERIFY_ESCROW')}</span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                      </button>
+
+                      <button
+                        onClick={onBack}
+                        className="w-full py-2 text-[10px] font-black font-mono tracking-[0.2em] uppercase text-slate-600 hover:text-white transition-colors"
+                      >
+                        {t('postjob.btn_back_details', '<< STAGE_02')}
+                      </button>
+                    </div>
                 </div>
-              )}
-              <button
-                onClick={() => {
-                  const errors = [];
-                  
-                  // Check if all checkpoints have due dates
-                  checkpoints.forEach((cp, idx) => {
-                    if (!cp.due_date) {
-                      errors.push(`Checkpoint ${idx + 1} is missing a due date`);
-                    }
-                  });
-                  
-                  // Check if dates are in chronological order
-                  for (let i = 1; i < checkpoints.length; i++) {
-                    if (checkpoints[i].due_date && checkpoints[i-1].due_date) {
-                      if (new Date(checkpoints[i].due_date) <= new Date(checkpoints[i-1].due_date)) {
-                        errors.push(`Checkpoint ${i + 1} due date must be after Checkpoint ${i}`);
-                      }
-                    }
-                  }
-                  
-                  // Check if budget is fully allocated
-                  if (!isBudgetAllocated) {
-                    errors.push(`Total checkpoint points (${usedPoints}) must equal budget (${totalBudgetNum})`);
-                  }
-                  
-                  if (errors.length > 0) {
-                    setValidationErrors(errors);
-                    return;
-                  }
-                  
-                  setValidationErrors([]);
-                  onContinue();
-                }}
-                className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                Continue
-              </button>
-              <button
-                onClick={onBack}
-                className="w-full text-sm text-gray-600 hover:text-gray-900 font-medium text-center"
-              >
-                ← Back to details
-              </button>
+            </div>
+
+            {/* Hardware Status Decoder */}
+            <div className="px-6 py-4 rounded-2xl border border-white/5 bg-white/[0.01] flex items-center justify-between opacity-50">
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-mono text-slate-600 uppercase tracking-widest leading-none mb-1">AUTH_SIG</span>
+                  <span className="text-[10px] font-mono text-fuchsia-500 font-bold uppercase tracking-tighter">0xFAF_X82..A1</span>
+                </div>
+                <div className="w-10 h-0.5 bg-fuchsia-500/20 rounded-full" />
+                <div className="flex flex-col text-right">
+                  <span className="text-[8px] font-mono text-slate-600 uppercase tracking-widest leading-none mb-1">LATENCY</span>
+                  <span className="text-[10px] font-mono text-emerald-500 font-bold uppercase tracking-tighter">14.0 MS</span>
+                </div>
             </div>
           </div>
         </div>

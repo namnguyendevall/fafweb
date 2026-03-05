@@ -106,7 +106,7 @@ const Finance = () => {
                             </div>
 
                             {/* Line chart giống hình minh họa */}
-                            <div className="mt-4 rounded-xl bg-[#020617] px-4 pt-4 pb-3 border border-slate-800">
+                            <div className="mt-4 rounded-xl bg-transparent px-4 pt-4 pb-3 border border-slate-800">
                                 <div className="mb-3 flex items-center justify-between text-[11px] text-slate-400">
                                     <span>Points movement</span>
                                     <div className="flex items-center gap-3">

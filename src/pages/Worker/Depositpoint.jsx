@@ -40,13 +40,7 @@ const Depositpoint = () => {
     }
 
     return (
-        <div className="w-full min-h-screen bg-[#020617] text-slate-300 relative flex flex-col font-sans">
-            {/* Ambient Background */}
-            <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(0,255,255,0.008) 0px,rgba(0,255,255,0.008) 1px,transparent 1px,transparent 3px)' }} />
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 right-1/4 w-[500px] h-[400px] bg-cyan-500/5 rounded-full blur-[100px]" />
-                <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[300px] bg-indigo-500/5 rounded-full blur-[100px]" />
-            </div>
+        <div className="w-full min-h-screen bg-transparent text-slate-300 relative flex flex-col font-sans">
 
             {/* Toast Notification */}
             {showToast && (
@@ -59,9 +53,9 @@ const Depositpoint = () => {
                             </svg>
                         </div>
                         <div className="flex-1">
-                            <div className="text-[11px] font-black text-emerald-400 uppercase tracking-widest font-mono">TRANSACTION_SUCCESS</div>
+                            <div className="text-[11px] font-black text-emerald-400 uppercase tracking-widest font-mono">GIAO DỊCH THÀNH CÔNG</div>
                             <div className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-widest">
-                                +{points} CREDITS ADDED TO WALLET
+                                Đã cộng {points} CRED vào ví
                             </div>
                         </div>
                     </div>
@@ -78,7 +72,7 @@ const Depositpoint = () => {
                         <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
-                        ABORT_AND_RETURN_TO_WALLET
+                        HỦY BỎ VÀ QUAY LẠI VÍ
                     </button>
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-900/50 to-blue-900/50 border border-cyan-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.2)]">
@@ -87,8 +81,8 @@ const Depositpoint = () => {
                             </svg>
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black text-white uppercase tracking-wider">ACQUIRE_FUNDS</h1>
-                            <p className="text-[11px] font-mono text-cyan-500/70 uppercase tracking-widest mt-1">Initiate secure currency exchange to FAF_CREDITS</p>
+                            <h1 className="text-2xl font-black text-white uppercase tracking-wider">NẠP TIỀN VÀO TÀI KHOẢN</h1>
+                            <p className="text-[11px] font-mono text-cyan-500/70 uppercase tracking-widest mt-1">Quy đổi tiền tệ an toàn sang FAF_CREDITS</p>
                         </div>
                     </div>
                 </div>
@@ -105,7 +99,7 @@ const Depositpoint = () => {
                         {/* Amount Section */}
                         <div className="bg-[#02040a] rounded-xl border border-slate-800 p-6 relative">
                             <div className="absolute -left-px top-6 bottom-6 w-0.5 bg-cyan-500" />
-                            <label className="block text-[10px] font-black text-cyan-500 uppercase tracking-widest font-mono mb-4">EXCHANGE_VOLUME</label>
+                            <label className="block text-[10px] font-black text-cyan-500 uppercase tracking-widest font-mono mb-4">SỐ LƯỢNG QUY ĐỔI</label>
                             <div className="flex flex-col md:flex-row items-center gap-4">
                                 <div className="flex-1 w-full relative group">
                                     <input
@@ -114,7 +108,7 @@ const Depositpoint = () => {
                                         onChange={handlePointsChange}
                                         className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 pl-16 text-lg font-black font-mono text-cyan-300 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 transition-all text-right"
                                     />
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-cyan-500 font-mono tracking-widest bg-cyan-900/30 px-2 py-1 rounded">CREDITS</span>
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-cyan-500 font-mono tracking-widest bg-cyan-900/30 px-2 py-1 rounded">CRED</span>
                                 </div>
                                 
                                 <div className="text-cyan-500/50 shrink-0 rotate-90 md:rotate-0">
@@ -134,13 +128,13 @@ const Depositpoint = () => {
                                 </div>
                             </div>
                             <p className="mt-3 text-[10px] font-mono font-black text-slate-500 tracking-widest uppercase">
-                                RATE: 1_CREDIT = ${exchangeRate.toFixed(2)}_USD
+                                TỈ LỆ: 1 CRED = ${exchangeRate.toFixed(2)} USD
                             </p>
                         </div>
 
                         {/* Payment Method Section */}
                         <div>
-                            <label className="block text-[10px] font-black text-cyan-500 uppercase tracking-widest font-mono mb-4">PAYMENT_GATEWAY</label>
+                            <label className="block text-[10px] font-black text-cyan-500 uppercase tracking-widest font-mono mb-4">PHƯƠNG THỨC THANH TOÁN</label>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {/* Credit Card Option */}
                                 <button
@@ -167,9 +161,9 @@ const Depositpoint = () => {
                                         </div>
                                         <div>
                                             <div className="text-[11px] font-black tracking-widest uppercase font-mono text-slate-200">
-                                                CREDIT_CARD
+                                                THẺ TÍN DỤNG
                                             </div>
-                                            <div className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">INSTANT_PROCESS</div>
+                                            <div className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">XỬ LÝ TỨC THÌ</div>
                                         </div>
                                     </div>
                                 </button>
@@ -199,9 +193,9 @@ const Depositpoint = () => {
                                         </div>
                                         <div>
                                             <div className="text-[11px] font-black tracking-widest uppercase font-mono text-slate-200">
-                                                PAYPAL_NET
+                                                CHUYỂN KHOẢN PAYPAL
                                             </div>
-                                            <div className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">OAUTH_CONNECT</div>
+                                            <div className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">KẾT NỐI PAYPAL</div>
                                         </div>
                                     </div>
                                 </button>
@@ -211,16 +205,16 @@ const Depositpoint = () => {
                         {/* Order Summary Section */}
                         <div className="bg-[#02040a] rounded-xl border border-slate-800 p-6 space-y-4 font-mono">
                             <div className="flex items-center justify-between text-slate-400 text-[11px] uppercase tracking-widest">
-                                <span>SUBTOTAL ({points}_CRED)</span>
+                                <span>TẠM TÍNH ({points} CRED)</span>
                                 <span className="text-white">${subtotal.toFixed(2)}</span>
                             </div>
                             <div className="flex items-center justify-between text-slate-400 text-[11px] uppercase tracking-widest">
-                                <span>NETWORK_FEE</span>
+                                <span>PHÍ GIAO DỊCH</span>
                                 <span className="text-white">${processingFee.toFixed(2)}</span>
                             </div>
                             <div className="flex items-center justify-between pt-4 border-t border-slate-800">
                                 <div>
-                                    <div className="text-[12px] font-black text-cyan-400 tracking-widest uppercase">TRANSACTION_TOTAL</div>
+                                    <div className="text-[12px] font-black text-cyan-400 tracking-widest uppercase">TỔNG CỘNG</div>
                                 </div>
                                 <span className="text-2xl font-black text-white">${totalDue.toFixed(2)}</span>
                             </div>
@@ -234,7 +228,7 @@ const Depositpoint = () => {
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                             </svg>
-                            AUTHORIZE_PAYMENT [ ${totalDue.toFixed(2)} ]
+                            XÁC NHẬN THANH TOÁN [ ${totalDue.toFixed(2)} ]
                         </button>
 
                         {/* Security Message */}
@@ -242,7 +236,7 @@ const Depositpoint = () => {
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
-                            <span>SECURE_ENCRYPTED_GATEWAY_STRIPE</span>
+                            <span>CỔNG THANH TOÁN BẢO MẬT STRIPE</span>
                         </div>
                     </div>
                 </div>

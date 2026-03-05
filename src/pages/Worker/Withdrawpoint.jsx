@@ -31,13 +31,7 @@ const Withdrawpoint = () => {
     }
 
     return (
-        <div className="w-full min-h-screen bg-[#020617] text-slate-300 relative flex flex-col font-sans">
-            {/* Ambient Background */}
-            <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(0,255,255,0.008) 0px,rgba(0,255,255,0.008) 1px,transparent 1px,transparent 3px)' }} />
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 right-1/4 w-[500px] h-[400px] bg-cyan-500/5 rounded-full blur-[100px]" />
-                <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[300px] bg-indigo-500/5 rounded-full blur-[100px]" />
-            </div>
+        <div className="w-full min-h-screen bg-transparent text-slate-300 relative flex flex-col font-sans">
 
             {/* Toast Notification */}
             {showToast && (
@@ -50,9 +44,9 @@ const Withdrawpoint = () => {
                             </svg>
                         </div>
                         <div className="flex-1">
-                            <div className="text-[11px] font-black text-emerald-400 uppercase tracking-widest font-mono">EXTRACTION_INITIATED</div>
+                            <div className="text-[11px] font-black text-emerald-400 uppercase tracking-widest font-mono">ĐANG XỬ LÝ RÚT TIỀN</div>
                             <div className="text-[9px] font-mono text-slate-400 mt-1 uppercase tracking-widest leading-relaxed">
-                                SIGNAL TRANSMITTED. EST PROCESSING: 1-3 CYCLES.
+                                Đã gửi yêu cầu. Xử lý dự kiến từ 1-3 ngày làm việc.
                             </div>
                         </div>
                     </div>
@@ -69,7 +63,7 @@ const Withdrawpoint = () => {
                         <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
-                        ABORT_AND_RETURN_TO_WALLET
+                        HỦY BỎ VÀ QUAY LẠI VÍ
                     </button>
                     <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-rose-900/50 to-indigo-900/50 border border-rose-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(225,29,72,0.2)]">
@@ -78,8 +72,8 @@ const Withdrawpoint = () => {
                             </svg>
                         </div>
                         <div>
-                            <h1 className="text-2xl font-black text-white uppercase tracking-wider">WITHDRAW_FUNDS</h1>
-                            <p className="text-[11px] font-mono text-rose-400/70 uppercase tracking-widest mt-1">Extract liquid assets to external gateway</p>
+                            <h1 className="text-2xl font-black text-white uppercase tracking-wider">RÚT TIỀN TỪ TÀI KHOẢN</h1>
+                            <p className="text-[11px] font-mono text-rose-400/70 uppercase tracking-widest mt-1">Chuyển số dư khả dụng ra ngân hàng ngoài</p>
                         </div>
                     </div>
                 </div>
@@ -97,7 +91,7 @@ const Withdrawpoint = () => {
                         <div className="bg-[#02040a] rounded-xl border border-slate-800 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
                                 <div className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-2">
-                                    AVAILABLE_LIQUIDITY
+                                    SỐ DƯ KHẢ DỤNG
                                 </div>
                                 <div className="text-3xl font-black text-white font-mono tracking-tighter">
                                     ${availableBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -113,7 +107,7 @@ const Withdrawpoint = () => {
                         {/* Withdrawal Amount Section */}
                         <div>
                             <label className="block text-[10px] font-black text-rose-400 uppercase tracking-widest font-mono mb-4">
-                                EXTRACTION_VOLUME
+                                SỐ TIỀN RÚT
                             </label>
                             <div className="relative group">
                                 <span className="absolute left-5 top-1/2 -translate-y-1/2 text-lg font-black text-slate-500 font-mono">$</span>
@@ -130,7 +124,7 @@ const Withdrawpoint = () => {
                                     onClick={handleMaxClick}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 rounded bg-rose-900/30 border border-rose-500/50 px-3 py-1.5 text-[10px] font-black text-rose-400 hover:bg-rose-900/50 hover:text-rose-300 font-mono tracking-widest uppercase transition-colors"
                                 >
-                                    MAX_FILL
+                                    RÚT TOÀN BỘ
                                 </button>
                             </div>
                         </div>
@@ -138,7 +132,7 @@ const Withdrawpoint = () => {
                         {/* Select Destination Section */}
                         <div>
                             <label className="block text-[10px] font-black text-cyan-500 uppercase tracking-widest font-mono mb-4">
-                                DESTINATION_NODE
+                                NGÂN HÀNG HƯỞNG THỤ
                             </label>
                             <div className="space-y-4">
                                 {/* Visa Card Option */}
@@ -163,8 +157,8 @@ const Withdrawpoint = () => {
                                                 <span className="text-[11px] font-black italic text-white tracking-wider">VISA</span>
                                             </div>
                                             <div>
-                                                <div className="text-[12px] font-bold text-slate-200 uppercase tracking-wider font-mono">VISA_LINK_4242</div>
-                                                <div className="text-[10px] font-mono text-slate-500 mt-1 tracking-widest uppercase">TTL: 12/25</div>
+                                                <div className="text-[12px] font-bold text-slate-200 uppercase tracking-wider font-mono">THẺ VISA [4242]</div>
+                                                <div className="text-[10px] font-mono text-slate-500 mt-1 tracking-widest uppercase">HẠN SD: 12/25</div>
                                             </div>
                                         </div>
                                     </div>
@@ -194,8 +188,8 @@ const Withdrawpoint = () => {
                                                 </svg>
                                             </div>
                                             <div>
-                                                <div className="text-[12px] font-bold text-slate-300 uppercase tracking-wider font-mono">NEW_ROUTING_TARGET</div>
-                                                <div className="text-[10px] font-mono text-slate-500 mt-1 tracking-widest uppercase">ESTABLISH CONNECTION</div>
+                                                <div className="text-[12px] font-bold text-slate-300 uppercase tracking-wider font-mono">THÊM NGÂN HÀNG MỚI</div>
+                                                <div className="text-[10px] font-mono text-slate-500 mt-1 tracking-widest uppercase">Kết nối tài khoản ngân hàng</div>
                                             </div>
                                         </div>
                                     </div>
@@ -206,15 +200,15 @@ const Withdrawpoint = () => {
                         {/* Withdrawal Summary Section */}
                         <div className="bg-[#02040a] rounded-xl border border-slate-800 p-6 space-y-4 font-mono">
                             <div className="flex items-center justify-between text-slate-400 text-[11px] uppercase tracking-widest">
-                                <span>GROSS_EXTRACTION</span>
+                                <span>SỐ TIỀN YÊU CẦU</span>
                                 <span className="text-white">${withdrawalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                             <div className="flex items-center justify-between text-rose-500/70 text-[11px] uppercase tracking-widest">
-                                <span>NETWORK_TAX ({systemFeePercent}%)</span>
+                                <span>PHÍ GIAO DỊCH ({systemFeePercent}%)</span>
                                 <span className="text-rose-400">-${systemFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                             <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-                                <span className="text-[12px] font-black text-cyan-400 tracking-widest uppercase">NET_YIELD</span>
+                                <span className="text-[12px] font-black text-cyan-400 tracking-widest uppercase">SỐ TIỀN NHẬN THỰC TẾ</span>
                                 <span className="text-2xl font-black text-white">${netReceive.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                         </div>
@@ -226,7 +220,7 @@ const Withdrawpoint = () => {
                             disabled={withdrawalAmount <= 0 || withdrawalAmount > availableBalance}
                             className="w-full rounded-xl bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-600 hover:to-indigo-600 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 disabled:border-slate-700 disabled:shadow-none py-4 text-[12px] font-black tracking-widest font-mono text-white shadow-[0_0_20px_rgba(225,29,72,0.3)] border border-rose-400/50 transition-all hover:scale-[1.02] flex items-center justify-center gap-3 uppercase"
                         >
-                            EXECUTE_TRANSFER
+                            XÁC NHẬN RÚT TIỀN
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                             </svg>
@@ -238,7 +232,7 @@ const Withdrawpoint = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <span className="text-[10px] font-mono text-indigo-300 uppercase tracking-widest leading-relaxed">
-                                TRANSMISSION DELAY: 1-3 CYCLES. LARGE ASSET TRANSFERS SUBJECT TO MANUAL VERIFICATION ALGORITHMS.
+                                THỜI GIAN XỬ LÝ TỪ 1-3 NGÀY LÀM VIỆC. CÁC KHOẢN RÚT LỚN CÓ THỂ CẦN XÁC MINH BỔ SUNG.
                             </span>
                         </div>
                     </div>

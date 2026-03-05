@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { useToast } from '../../contexts/ToastContext';
 
 /* ─── Helpers ─── */
 const fmt = (s) => {
@@ -25,6 +26,7 @@ const FONTS = ['Arial', 'Georgia', 'Courier New', 'Impact', 'Comic Sans MS', 'Ve
 
 /* ─── Main Component ─── */
 const VideoEditor = ({ onSubmissionReady }) => {
+    const toast = useToast();
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const timelineRef = useRef(null);
@@ -196,7 +198,7 @@ const VideoEditor = ({ onSubmissionReady }) => {
                 pipStreamRef.current = stream;
                 if (pipVideoRef.current) { pipVideoRef.current.srcObject = stream; pipVideoRef.current.play(); }
                 setPipActive(true);
-            } catch (e) { alert('Không thể mở camera: ' + e.message); }
+            } catch (e) { toast.error('Không thể mở camera: ' + e.message); }
         }
     };
 
@@ -413,7 +415,7 @@ const VideoEditor = ({ onSubmissionReady }) => {
             setUploadedUrl(url);
             if (onSubmissionReady) onSubmissionReady(url);
         } catch (err) {
-            alert('Lỗi upload: ' + err.message);
+            toast.error('Lỗi upload: ' + err.message);
         } finally {
             setUploading(false);
         }

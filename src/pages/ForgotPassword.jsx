@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import FAFLogo from '../assets/FAF-Logo.png';
 import { authApi } from '../api/auth.api';
+import { useTranslation } from 'react-i18next';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,12 +17,12 @@ const ForgotPassword = () => {
 
     // Validation
     if (!email) {
-      setError('Vui lòng nhập email');
+      setError(t('auth.email_required'));
       return;
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Email không hợp lệ');
+      setError(t('auth.email_invalid'));
       return;
     }
 
@@ -35,7 +37,7 @@ const ForgotPassword = () => {
       });
     } catch (err) {
       console.error('Forgot password failed:', err);
-      setError(err.response?.data?.error || 'Không tìm thấy email này trong hệ thống');
+      setError(err.response?.data?.error || t('auth.email_not_found'));
     } finally {
       setLoading(false);
     }
@@ -70,24 +72,24 @@ const ForgotPassword = () => {
       <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20 pointer-events-auto transition-opacity duration-300">
           <Link to="/" className="flex items-center gap-2 group cursor-crosshair">
               <svg className="w-5 h-5 text-purple-500 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-              <span className="font-mono text-xs uppercase tracking-widest text-slate-400 group-hover:text-purple-400 transition-colors">Abort Recovery</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-slate-400 group-hover:text-purple-400 transition-colors">{t('auth.cancel_reset')}</span>
           </Link>
           <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
               </span>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Recovery Module Online</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-slate-500">{t('auth.recovery_system_active')}</span>
           </div>
       </div>
 
       <main className={`w-full max-w-md px-6 relative z-20 ${loading ? "pointer-events-none opacity-60" : ""}`}>
         <div className="text-center mb-8">
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight text-glitch-effect cursor-crosshair inline-block mb-2">
-              KEY RECOVERY
+              {t('auth.reset_password_title')}
             </h1>
             <p className="text-sm font-mono text-slate-400">
-              Provide your comms vector to receive a reset token.
+              {t('auth.forgot_password_subtitle')}
             </p>
         </div>
 
@@ -98,7 +100,7 @@ const ForgotPassword = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label htmlFor="email" className="text-xs font-mono text-slate-400 uppercase tracking-widest flex justify-between">
-                Comms Vector (Email)
+                {t('auth.email_label')}
               </label>
               <div className="relative group/input">
                 <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-md opacity-0 group-focus-within/input:opacity-100 transition-opacity"></div>
@@ -146,11 +148,11 @@ const ForgotPassword = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  TRANSMITTING...
+                  {t('auth.sending_code')}
                 </span>
               ) : (
                 <>
-                  <span>DISPATCH_TOKEN()</span>
+                  <span>{t('auth.request_reset')}</span>
                   <svg className="w-5 h-5 text-blue-400 group-hover/btn:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
@@ -175,7 +177,7 @@ const ForgotPassword = () => {
               <svg className="w-4 h-4 text-slate-500 group-hover/back:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              Access Terminal
+              {t('auth.back_to_login')}
             </Link>
           </div>
         </div>

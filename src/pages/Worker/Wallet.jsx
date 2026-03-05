@@ -1,25 +1,22 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../auth/AuthContext'
 
 const Wallet = () => {
     const navigate = useNavigate()
+    const { user, fetchMe } = useAuth()
     const [selectedTab, setSelectedTab] = useState('All')
     const [selectedPackage, setSelectedPackage] = useState('Pro')
     const [customAmount, setCustomAmount] = useState('')
     const [withdrawAmount, setWithdrawAmount] = useState('')
     const [copied, setCopied] = useState(false)
 
-    const user = useMemo(() => {
-        try {
-            const raw = localStorage.getItem('user')
-            return raw ? JSON.parse(raw) : null
-        } catch {
-            return null
-        }
-    }, [])
+    useEffect(() => {
+        fetchMe();
+    }, []);
 
-    const walletId = user?.walletId || 'faf_8823_xk92_mn44'
-    const totalBalance = user?.walletBalance || 4500
+    const walletId = user?.id ? `faf_${user.id}_wallet` : 'faf_wallet'
+    const totalBalance = user?.balance_points ?? 0
     const usdBalance = (totalBalance * 0.01).toFixed(2)
 
     const transactions = [
@@ -129,13 +126,7 @@ const Wallet = () => {
     }
 
     return (
-        <div className="w-full min-h-screen bg-[#020617] text-slate-300 relative font-sans">
-            {/* Ambient Background */}
-            <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(0,255,255,0.008) 0px,rgba(0,255,255,0.008) 1px,transparent 1px,transparent 3px)' }} />
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 right-1/4 w-[500px] h-[400px] bg-cyan-500/5 rounded-full blur-[100px]" />
-                <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[300px] bg-indigo-500/5 rounded-full blur-[100px]" />
-            </div>
+        <div className="w-full min-h-screen bg-transparent text-slate-300 relative font-sans">
 
             <div className="mx-auto max-w-7xl px-4 py-8 relative z-10 w-full">
                 {/* Header */}
@@ -146,8 +137,8 @@ const Wallet = () => {
                         </svg>
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black text-white uppercase tracking-widest font-mono text-shadow-glow-cyan">WALLET_OVERVIEW</h1>
-                        <p className="mt-1 text-[10px] text-cyan-500/70 font-mono tracking-widest uppercase">Manage network earnings, deposits, and routing targets</p>
+                        <h1 className="text-2xl font-black text-white uppercase tracking-widest font-mono text-shadow-glow-cyan">QUẢN LÝ VÍ NGÂN LƯỢNG</h1>
+                        <p className="mt-1 text-[10px] text-cyan-500/70 font-mono tracking-widest uppercase">Quản lý thu nhập, nạp tiền và rút tiền</p>
                     </div>
                 </div>
 
@@ -161,7 +152,7 @@ const Wallet = () => {
 
                             <div className="flex flex-col md:flex-row md:items-start justify-between relative z-10 gap-6">
                                 <div>
-                                    <div className="text-[10px] font-black text-cyan-500 font-mono uppercase tracking-widest mb-3">TOTAL_ASSET_VALUE</div>
+                                    <div className="text-[10px] font-black text-cyan-500 font-mono uppercase tracking-widest mb-3">TỔNG TÀI SẢN</div>
                                     <div className="text-4xl md:text-5xl font-black text-white mb-2 font-mono tracking-tighter">
                                         {totalBalance.toLocaleString()} <span className="text-xl text-cyan-500 tracking-widest">CRED</span>
                                     </div>
@@ -170,7 +161,7 @@ const Wallet = () => {
                                     <div className="mt-8 flex flex-wrap items-center gap-4">
                                         <div className="bg-[#02040a] border border-slate-800 rounded px-4 py-2 flex items-center gap-3 w-max">
                                             <div>
-                                                <div className="text-[9px] font-black text-slate-500 mb-1 font-mono uppercase tracking-widest">WALLET_ID</div>
+                                                <div className="text-[9px] font-black text-slate-500 mb-1 font-mono uppercase tracking-widest">SỐ VÍ</div>
                                                 <div className="text-[12px] font-mono font-bold text-slate-300">{walletId}</div>
                                             </div>
                                             <button
@@ -191,7 +182,7 @@ const Wallet = () => {
                                             </button>
                                         </div>
                                         <span className="inline-flex items-center rounded bg-emerald-900/30 border border-emerald-500/30 px-3 py-1.5 text-[9px] font-black text-emerald-400 font-mono tracking-widest uppercase shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-                                            [OK] NETWORK_ACTIVE
+                                            [OK] ĐANG HOẠT ĐỘNG
                                         </span>
                                     </div>
                                 </div>
@@ -201,13 +192,13 @@ const Wallet = () => {
                                       onClick={() => document.getElementById('buy-points-section').scrollIntoView({ behavior: 'smooth' })}
                                       className="px-6 py-3 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 text-cyan-400 text-[10px] font-black font-mono tracking-widest uppercase rounded flex items-center gap-2 transition-colors">
                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-                                       ACQUIRE_FUNDS
+                                       NẠP TIỀN
                                    </button>
                                    <button 
                                     onClick={() => document.getElementById('withdraw-section').scrollIntoView({ behavior: 'smooth' })}
                                     className="px-6 py-3 bg-[#02040a] hover:bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-black font-mono tracking-widest uppercase rounded flex items-center gap-2 transition-colors">
                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                                       ROUTE_FUNDS
+                                       RÚT TIỀN
                                    </button>
                                 </div>
                             </div>
@@ -218,7 +209,7 @@ const Wallet = () => {
                             <div className="px-6 py-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest flex items-center gap-2">
                                     <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                    TRANSACTION_LOGS
+                                    LỊCH SỬ GIAO DỊCH
                                 </h2>
                                 
                                 {/* Tabs */}
@@ -232,7 +223,7 @@ const Wallet = () => {
                                                 : 'text-slate-500 border border-transparent hover:text-slate-300'
                                                 }`}
                                         >
-                                            {tab}
+                                            {tab === 'All' ? 'Tất cả' : tab === 'Incoming' ? 'Cộng tiền' : tab === 'Outgoing' ? 'Trừ tiền' : tab}
                                         </button>
                                     ))}
                                 </div>
@@ -273,7 +264,7 @@ const Wallet = () => {
                                                         {transaction.amount}
                                                     </div>
                                                     <div className={`mt-0.5 text-[9px] font-black font-mono uppercase tracking-widest ${transaction.statusColor}`}>
-                                                        [{transaction.status}]
+                                                        [{transaction.status === 'COMPLETED' ? 'THÀNH CÔNG' : transaction.status === 'PENDING' ? 'ĐANG XỬ LÝ' : transaction.status === 'PROCESSED' ? 'ĐÃ XỬ LÝ' : transaction.status}]
                                                     </div>
                                                 </div>
                                             </div>
@@ -283,7 +274,7 @@ const Wallet = () => {
 
                                 <div className="mt-6 text-center">
                                     <button className="text-[10px] font-black font-mono text-cyan-500 hover:text-cyan-400 uppercase tracking-widest items-center inline-flex gap-2 group">
-                                        EXPAND_FULL_LEDGER
+                                        XEM TẤT CẢ GIAO DỊCH
                                         <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                                     </button>
                                 </div>
@@ -304,9 +295,9 @@ const Wallet = () => {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                         </svg>
                                     </div>
-                                    <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest">ACQUIRE_CREDITS</h2>
+                                    <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest">NẠP THÊM TIỀN</h2>
                                 </div>
-                                <p className="mt-2 text-[10px] text-slate-500 font-mono tracking-widest uppercase">Select volume tier to establish link</p>
+                                <p className="mt-2 text-[10px] text-slate-500 font-mono tracking-widest uppercase">Chọn gói nạp hoặc nhập số lượng</p>
                             </div>
                             
                             <div className="px-6 py-5 space-y-5">
@@ -320,7 +311,7 @@ const Wallet = () => {
                                             {pkg.id === 'Pro' && (
                                                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 w-full text-center">
                                                     <span className="inline-flex rounded bg-cyan-500 px-1.5 py-0.5 text-[8px] font-black text-black font-mono tracking-widest">
-                                                        REC
+                                                        GỢI Ý
                                                     </span>
                                                 </div>
                                             )}
@@ -340,7 +331,7 @@ const Wallet = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-black text-cyan-500 mb-2 font-mono uppercase tracking-widest">CUSTOM_VOLUME</label>
+                                    <label className="block text-[10px] font-black text-cyan-500 mb-2 font-mono uppercase tracking-widest">NHẬP SỐ LƯỢNG RIÊNG</label>
                                     <div className="relative">
                                         <input
                                             type="number"
@@ -365,7 +356,7 @@ const Wallet = () => {
                                     }}
                                     className="w-full rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(6,182,212,0.3)] border border-cyan-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2"
                                 >
-                                    AUTHORIZE_PURCHASE
+                                    XÁC NHẬN NẠP MUA
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                                 </button>
                             </div>
@@ -382,14 +373,14 @@ const Wallet = () => {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                                         </svg>
                                     </div>
-                                    <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest">ROUTE_FUNDS_OUT</h2>
+                                    <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest">YÊU CẦU RÚT TIỀN</h2>
                                 </div>
-                                <p className="mt-2 text-[10px] text-slate-500 font-mono tracking-widest uppercase">Target external fiat gateways</p>
+                                <p className="mt-2 text-[10px] text-slate-500 font-mono tracking-widest uppercase">Rút tiền ra ngân hàng ngoài</p>
                             </div>
                             
                             <div className="px-6 py-5 space-y-5">
                                 <div>
-                                    <div className="text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">LIQUIDITY_AVAILABLE</div>
+                                    <div className="text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">SỐ DƯ KHẢ DỤNG</div>
                                     <div className="rounded border border-slate-800 bg-[#02040a] px-4 py-3 flex items-center justify-between">
                                         <div className="text-xl font-black text-rose-400 font-mono">{totalBalance.toLocaleString()}</div>
                                         <div className="text-[10px] text-slate-500 font-mono">CRED</div>
@@ -397,25 +388,25 @@ const Wallet = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">EXTRACTION_AMOUNT</label>
+                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">SỐ TIỀN RÚT</label>
                                     <input
                                         type="number"
                                         value={withdrawAmount}
                                         onChange={(e) => setWithdrawAmount(e.target.value)}
-                                        placeholder="MIN LIMIT: 100 CRED"
+                                        placeholder="TỐI THIỂU: 100 CRED"
                                         className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-black font-mono text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase placeholder-slate-700"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">TARGET_NODE</label>
+                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">CHỌN NGÂN HÀNG</label>
                                     <select className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-[11px] font-black font-mono text-slate-300 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase appearance-none">
-                                        <option>BANK_LINK [ **** 8821 ]</option>
+                                        <option>NGÂN HÀNG [ **** 8821 ]</option>
                                     </select>
                                 </div>
 
                                 <div className="flex items-center justify-between rounded bg-[#02040a] border border-slate-800 px-4 py-3 font-mono">
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">NETWORK_TAX</span>
+                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">PHÍ GIAO DỊCH</span>
                                     <span className="text-[11px] font-black text-white">$2.50 USD</span>
                                 </div>
 
@@ -423,7 +414,7 @@ const Wallet = () => {
                                     onClick={() => navigate('/withdraw-points')}
                                     className="w-full rounded-lg bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-600 hover:to-indigo-600 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(225,29,72,0.3)] border border-rose-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2"
                                 >
-                                    EXECUTE_TRANSFER
+                                    XÁC NHẬN RÚT TIỀN
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
                                 </button>
                             </div>
@@ -435,13 +426,13 @@ const Wallet = () => {
                             <div className="flex flex-col gap-3 relative z-10 pl-2">
                                 <div className="flex items-center gap-3">
                                     <svg className="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                                    <div className="text-[11px] font-black text-white font-mono uppercase tracking-widest">SUPPORT_BEACON</div>
+                                    <div className="text-[11px] font-black text-white font-mono uppercase tracking-widest">HỖ TRỢ TRỰC TUYẾN</div>
                                 </div>
                                 <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase leading-relaxed">
-                                    ROUTING ERRORS? PING SYSTEM ADMINISTRATORS FOR MANUAL RESOLUTION LOGS.
+                                    CÓ LỖI GIAO DỊCH? HÃY LIÊN HỆ VỚI QUẢN TRỊ VIÊN ĐỂ ĐƯỢC GIẢI QUYẾT.
                                 </p>
                                 <button className="text-[10px] font-black font-mono text-cyan-500 hover:text-cyan-400 uppercase tracking-widest self-start mt-2 border-b border-cyan-500/30 hover:border-cyan-400 pb-0.5 transition-colors">
-                                    INITIATE_COMMS_LINK
+                                    GỬI YÊU CẦU HỖ TRỢ
                                 </button>
                             </div>
                         </div>

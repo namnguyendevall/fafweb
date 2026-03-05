@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
-import TaskOwnerSidebar from '../../components/TaskOwnerSidebar';
 import { jobsApi } from '../../api/jobs.api';
 import SkillSelector from '../../components/SkillSelector';
 
@@ -77,8 +76,7 @@ const EditJob = () => {
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
-            <TaskOwnerSidebar />
+        <div className="min-h-screen bg-transparent flex">
             <div className="flex-1 p-8">
                 <div className="max-w-3xl mx-auto bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">

@@ -5,6 +5,7 @@ import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import { userApi } from "../../../api/user.api";
+import { useTranslation } from "react-i18next";
 
 const Step4Contract = ({
   selectedType,
@@ -13,13 +14,14 @@ const Step4Contract = ({
   setContractAccepted,
   onContinue,
   onBack,
-  hideFooter = false, // when true, hide checkbox + action buttons (for standalone Contracts page)
+  hideFooter = false,
 }) => {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [isDraftDirty, setIsDraftDirty] = useState(false);
   const [contractHtml, setContractHtml] = useState("");
   const [newClause, setNewClause] = useState("");
-  const [user, setUser] = useState(null); // Placeholder for user data
+  const [user, setUser] = useState(null);
 
   const [contractInfo, setContractInfo] = useState({
     clientName: "",
@@ -36,13 +38,9 @@ const Step4Contract = ({
       .then((data) => {
         setUser(data);
         setContractInfo({
-          clientName:
-            data.full_name ||
-            "..........................................................",
+          clientName: data.full_name || "..........................................................",
           clientEmail: data.email || "....................................",
-          clientUserId: String(
-            data.id || "..................................................",
-          ),
+          clientUserId: String(data.id || ".................................................."),
           workerName: "",
           workerEmail: "",
           workerUserId: "",
@@ -54,25 +52,14 @@ const Step4Contract = ({
   }, []);
 
   const defaultContractText = useMemo(() => {
-    const safeJobTitle = jobTitle ? `"${jobTitle}"` : "(chưa nhập Job Title)";
-    const clientName =
-      contractInfo.clientName?.trim() ||
-      "..........................................................";
-    const clientEmail =
-      contractInfo.clientEmail?.trim() ||
-      "....................................";
-    const clientUserId =
-      contractInfo.clientUserId?.trim() ||
-      "..................................................";
-    const workerName =
-      contractInfo.workerName?.trim() ||
-      "..........................................................";
-    const workerEmail =
-      contractInfo.workerEmail?.trim() ||
-      "....................................";
-    const workerUserId =
-      contractInfo.workerUserId?.trim() ||
-      "..................................................";
+    const safeJobTitle = jobTitle ? `"${jobTitle}"` : "(EMPTY_MISSION_ID)";
+    const clientName = contractInfo.clientName?.trim() || "..........................................................";
+    const clientEmail = contractInfo.clientEmail?.trim() || "....................................";
+    const clientUserId = contractInfo.clientUserId?.trim() || "..................................................";
+    const workerName = contractInfo.workerName?.trim() || "..........................................................";
+    const workerEmail = contractInfo.workerEmail?.trim() || "....................................";
+    const workerUserId = contractInfo.workerUserId?.trim() || "..................................................";
+    
     if (selectedType === "short-term") {
       return [
         "HỢP ĐỒNG CÔNG VIỆC NGẮN HẠN (SHORT-TERM JOB CONTRACT)",
@@ -126,7 +113,6 @@ const Step4Contract = ({
       ].join("\n");
     }
 
-    // LONG-TERM
     return [
       "HỢP ĐỒNG CÔNG VIỆC DÀI HẠN (LONG-TERM JOB CONTRACT)",
       "",
@@ -184,145 +170,63 @@ const Step4Contract = ({
   }, [contractInfo, jobTitle, selectedType]);
 
   const defaultContractHtml = useMemo(() => {
-    const escapeHtml = (unsafe) =>
-      unsafe
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+    const escapeHtml = (unsafe) => unsafe.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 
     return defaultContractText
       .split("\n")
       .map((line) => {
         const trimmed = line.trim();
         if (!trimmed) return "<p></p>";
-        if (
-          trimmed.startsWith("HỢP ĐỒNG CÔNG VIỆC") &&
-          trimmed.includes("JOB CONTRACT")
-        ) {
-          return `<h2>${escapeHtml(trimmed)}</h2>`;
-        }
-        if (
-          trimmed.startsWith("Điều ") ||
-          trimmed === "HỢP ĐỒNG CÔNG VIỆC NGẮN HẠN" ||
-          trimmed === "HỢP ĐỒNG CÔNG VIỆC DÀI HẠN"
-        ) {
-          return `<h3>${escapeHtml(trimmed)}</h3>`;
-        }
-        if (
-          trimmed.startsWith("Bên A") ||
-          trimmed.startsWith("Bên B") ||
-          trimmed.startsWith("Hệ thống trung gian") ||
-          trimmed.startsWith("Hệ thống FAF") ||
-          trimmed === "ĐẠI DIỆN CÁC BÊN KÝ TÊN"
-        ) {
-          return `<p><strong>${escapeHtml(trimmed)}</strong></p>`;
-        }
+        if (trimmed.startsWith("HỢP ĐỒNG CÔNG VIỆC") && trimmed.includes("JOB CONTRACT")) return `<h2>${escapeHtml(trimmed)}</h2>`;
+        if (trimmed.startsWith("Điều ") || trimmed === "HỢP ĐỒNG CÔNG VIỆC NGẮN HẠN" || trimmed === "HỢP ĐỒNG CÔNG VIỆC DÀI HẠN") return `<h3>${escapeHtml(trimmed)}</h3>`;
+        if (trimmed.startsWith("Bên A") || trimmed.startsWith("Bên B") || trimmed.startsWith("Hệ thống trung gian") || trimmed.startsWith("Hệ thống FAF") || trimmed === "ĐẠI DIỆN CÁC BÊN KÝ TÊN") return `<p><strong>${escapeHtml(trimmed)}</strong></p>`;
         return `<p>${escapeHtml(line)}</p>`;
       })
       .join("");
   }, [defaultContractText]);
 
-  // Tách hợp đồng thành phần cố định (điều 1-5) và phần có thể chỉnh sửa
   const { lockedHtml, editableHtml } = useMemo(() => {
     const html = defaultContractHtml;
-    // Tìm vị trí bắt đầu của phần "ĐẠI DIỆN CÁC BÊN KÝ TÊN" - đây là điểm bắt đầu phần có thể chỉnh sửa
     const signatureIndex = html.indexOf('<p><strong>ĐẠI DIỆN CÁC BÊN KÝ TÊN</strong></p>');
 
     if (signatureIndex !== -1) {
-      // Phần trước "ĐẠI DIỆN CÁC BÊN KÝ TÊN" là phần cố định (bao gồm điều 1-5)
-      const lockedHtml = html.substring(0, signatureIndex);
-      // Phần từ "ĐẠI DIỆN CÁC BÊN KÝ TÊN" trở đi là phần có thể chỉnh sửa
-      const editableHtml = html.substring(signatureIndex);
-      return { lockedHtml, editableHtml };
+      return { lockedHtml: html.substring(0, signatureIndex), editableHtml: html.substring(signatureIndex) };
     }
 
-    // Fallback: nếu không tìm thấy, tìm vị trí sau điều 5/6
-    const endOfLockedPattern = selectedType === "short-term"
-      ? /(<h3>Điều 5\. Hiệu lực hợp đồng<\/h3>[\s\S]*?<p><\/p>)/i
-      : /(<h3>Điều 6\. Hiệu lực hợp đồng<\/h3>[\s\S]*?<p><\/p>)/i;
-
+    const endOfLockedPattern = selectedType === "short-term" ? /(<h3>Điều 5\. Hiệu lực hợp đồng<\/h3>[\s\S]*?<p><\/p>)/i : /(<h3>Điều 6\. Hiệu lực hợp đồng<\/h3>[\s\S]*?<p><\/p>)/i;
     const match = html.match(endOfLockedPattern);
 
     if (match && match.index !== undefined) {
       const endIndex = match.index + match[0].length;
-      const lockedHtml = html.substring(0, endIndex);
-      const editableHtml = html.substring(endIndex);
-      return { lockedHtml, editableHtml };
+      return { lockedHtml: html.substring(0, endIndex), editableHtml: html.substring(endIndex) };
     }
-
-    // Fallback cuối cùng: toàn bộ là locked
     return { lockedHtml: html, editableHtml: "" };
   }, [defaultContractHtml, selectedType]);
 
-  const isReady = !!contractInfo.clientEmail;
-
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        linkOnPaste: true,
-      }),
-      Image,
-    ],
-    content: "", // khởi tạo rỗng
+    extensions: [StarterKit, Underline, Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }), Image],
+    content: "",
     editable: isEditing,
     editorProps: {
       attributes: {
-        class:
-          "tiptap-content outline-none text-[13px] leading-6 text-gray-900",
+        class: "tiptap-content outline-none text-[13px] leading-6 text-slate-300 font-mono",
       },
     },
     onUpdate: ({ editor }) => {
-      // Chỉ lưu phần có thể chỉnh sửa (không bao gồm phần cố định)
       setContractHtml(editor.getHTML());
       setIsDraftDirty(true);
     },
   });
 
   useEffect(() => {
-    if (!editor) return;
-    if (isDraftDirty) return;
-
-    // contractHtml chỉ chứa phần editable (từ editor.getHTML())
-    // Nếu đã có contractHtml (từ lần edit trước), dùng nó, nếu không thì dùng editableHtml mặc định
-    const contentToLoad = contractHtml || editableHtml;
-
-    // Chỉ load phần có thể chỉnh sửa vào editor
-    editor.commands.setContent(contentToLoad, false);
+    if (!editor || isDraftDirty) return;
+    editor.commands.setContent(contractHtml || editableHtml, false);
   }, [editor, editableHtml, isDraftDirty, contractHtml]);
 
   useEffect(() => {
     if (!editor) return;
     editor.setEditable(isEditing);
   }, [editor, isEditing]);
-
-  const appendClauseToDraft = () => {
-    const clause = newClause.trim();
-    if (!clause) return;
-
-    const escapeHtml = (unsafe) =>
-      unsafe
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-
-    setContractHtml((prev) => {
-      const hasExtraSection = prev.includes("Điều khoản bổ sung:");
-      const suffix = hasExtraSection
-        ? `<p>- ${escapeHtml(clause)}</p>`
-        : `<h3>Điều khoản bổ sung:</h3><p>- ${escapeHtml(clause)}</p>`;
-      return `${prev}${suffix}`;
-    });
-    setIsDraftDirty(true);
-    setNewClause("");
-  };
 
   const resetToTemplate = () => {
     setContractHtml("");
@@ -332,342 +236,197 @@ const Step4Contract = ({
 
   const toolbarBtnClass = (active, disabled = false) =>
     [
-      "inline-flex items-center justify-center w-9 h-9 rounded-md border transition-all duration-150",
+      "inline-flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-150",
       active
-        ? "border-blue-300 bg-blue-50 text-blue-700 shadow-sm"
+        ? "border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-400 shadow-[0_0_10px_rgba(217,70,239,0.2)]"
         : disabled
-          ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
-          : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 active:scale-95",
+          ? "border-white/5 bg-transparent text-slate-700 cursor-not-allowed"
+          : "border-white/10 bg-black/20 text-slate-400 hover:bg-white/5 hover:border-white/20 active:scale-95",
     ].join(" ");
 
   const setLink = () => {
     if (!editor) return;
     const previousUrl = editor.getAttributes("link").href;
-    const url = window.prompt("Nhập liên kết (URL):", previousUrl || "");
+    const url = window.prompt("Enter URL:", previousUrl || "");
     if (url === null) return;
-    if (url.trim() === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
-      return;
-    }
-    editor
-      .chain()
-      .focus()
-      .extendMarkRange("link")
-      .setLink({ href: url.trim() })
-      .run();
+    if (url.trim() === "") { editor.chain().focus().extendMarkRange("link").unsetLink().run(); return; }
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url.trim() }).run();
   };
 
   const addImage = () => {
     if (!editor) return;
-    const url = window.prompt("Nhập URL ảnh:");
+    const url = window.prompt("Enter Image URL:");
     if (!url || !url.trim()) return;
     editor.chain().focus().setImage({ src: url.trim() }).run();
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Work contract</h1>
-        <p className="text-sm text-gray-600">
-          Please read the contract below carefully and confirm your agreement to
-          continue.{" "}
-        </p>
+    <div className="max-w-5xl mx-auto pb-20">
+      <div className="border-b border-white/5 pb-8 mb-10">
+        <p className="text-[10px] font-mono font-black text-fuchsia-500 uppercase tracking-[0.3em] mb-2">{t('postjob.step4_subtitle', 'LEGAL_ENCRYPTION')}</p>
+        <h1 className="text-3xl font-black text-white uppercase tracking-wider font-mono">{t('postjob.step4_title', 'MISSION_PROTOCOL_CONTRACT')}</h1>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div className="text-sm font-semibold text-gray-900">
-            {selectedType === "short-term"
-              ? "SHORT-TERM JOB CONTRACT"
-              : "LONG-TERM JOB CONTRACT"}
+      <div className="bg-[#090e17]/80 backdrop-blur-md border border-white/5 rounded-3xl shadow-2xl overflow-hidden relative">
+        {/* Scanline overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.01),rgba(0,255,0,0.005),rgba(0,0,255,0.01))] bg-[length:100%_2px,3px_100%] pointer-events-none z-20" />
+        
+        <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-white/[0.01] relative z-10">
+          <div className="flex items-center gap-4">
+              <div className="w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse shadow-[0_0_8px_rgba(217,70,239,0.8)]" />
+              <div className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] font-mono">
+                {selectedType === "short-term" ? t('postjob.st_contract_title') : t('postjob.lt_contract_title')}
+              </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-gray-500">
-              {selectedType === "short-term"
-                ? "Short-term Protected"
-                : "Long-term Connection"}
+          
+          <div className="flex items-center gap-6">
+            <div className="text-[9px] font-mono text-slate-600 uppercase tracking-widest hidden sm:block">
+              HASH_TYPE: <span className="text-slate-400">{selectedType.toUpperCase()}</span>
             </div>
 
             {!isEditing ? (
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
-                className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                className="group px-4 py-2 rounded-xl border border-white/10 bg-white/5 text-[10px] font-black text-slate-300 hover:text-white hover:border-fuchsia-500/50 hover:bg-fuchsia-500/10 transition-all font-mono tracking-widest uppercase"
               >
-                Edit
+                {t('postjob.btn_edit', 'MODIFY_PROTOCOL')}
               </button>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors"
+                  className="px-4 py-2 rounded-xl bg-fuchsia-600 text-[#020617] text-[10px] font-black hover:bg-fuchsia-500 transition-all font-mono tracking-widest uppercase shadow-[0_0_15px_rgba(217,70,239,0.3)]"
                 >
-                  Save
+                  {t('postjob.btn_save', 'COMMIT_CHANGES')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsEditing(false);
-                    resetToTemplate();
-                  }}
-                  className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                  onClick={() => { setIsEditing(false); resetToTemplate(); }}
+                  className="px-4 py-2 rounded-xl border border-white/10 bg-transparent text-[10px] font-black text-slate-500 hover:text-white transition-all font-mono tracking-widest uppercase"
                 >
-                  Cancel
+                  {t('postjob.btn_cancel', 'REVERT')}
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Contract paper */}
-        <div className="bg-gray-50 p-6">
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div className="max-h-[70vh] overflow-auto p-8">
-              {isEditing && editor && (
-                <div className="mb-4 flex flex-wrap items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2 py-2 shadow-sm">
-                  <button
-                    type="button"
-                    className={toolbarBtnClass(editor.isActive("bold"))}
-                    onClick={() => editor.chain().focus().toggleBold().run()}
-                    title="Bold"
-                  >
-                    <span className="text-sm font-bold">B</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={toolbarBtnClass(editor.isActive("italic"))}
-                    onClick={() => editor.chain().focus().toggleItalic().run()}
-                    title="Italic"
-                  >
-                    <span className="text-sm italic font-semibold">I</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={toolbarBtnClass(editor.isActive("underline"))}
-                    onClick={() =>
-                      editor.chain().focus().toggleUnderline().run()
-                    }
-                    title="Underline"
-                  >
-                    <span className="text-sm underline font-semibold">U</span>
-                  </button>
+        {/* Contract area */}
+        <div className="bg-black/40 p-1 relative z-10">
+          <div className="bg-transparent/50 p-8 sm:p-12 relative">
+            {/* Corner brackets */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-fuchsia-500/30 -translate-x-1 -translate-y-1" />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-fuchsia-500/30 translate-x-1 -translate-y-1" />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-fuchsia-500/30 -translate-x-1 translate-y-1" />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-fuchsia-500/30 translate-x-1 translate-y-1" />
 
-                  <div className="mx-0.5 h-6 w-px bg-gray-300" />
-
-                  <div className="relative">
-                    <select
-                      value={
-                        editor.isActive("heading", { level: 1 })
-                          ? "h1"
-                          : editor.isActive("heading", { level: 2 })
-                            ? "h2"
-                            : editor.isActive("heading", { level: 3 })
-                              ? "h3"
-                              : "p"
-                      }
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        const chain = editor.chain().focus();
-                        if (v === "p") chain.setParagraph().run();
-                        if (v === "h1") chain.toggleHeading({ level: 1 }).run();
-                        if (v === "h2") chain.toggleHeading({ level: 2 }).run();
-                        if (v === "h3") chain.toggleHeading({ level: 3 }).run();
-                      }}
-                      className="h-9 rounded-md border border-gray-200 bg-white pl-2.5 pr-8 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-300 appearance-none cursor-pointer"
-                    >
-                      <option value="p">Normal</option>
-                      <option value="h1">Heading 1</option>
-                      <option value="h2">Heading 2</option>
-                      <option value="h3">Heading 3</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-                      <svg
-                        className="h-4 w-4 text-gray-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div className="mx-0.5 h-6 w-px bg-gray-300" />
-
-                  <button
-                    type="button"
-                    className={toolbarBtnClass(editor.isActive("bulletList"))}
-                    onClick={() =>
-                      editor.chain().focus().toggleBulletList().run()
-                    }
-                    title="Bullet list"
-                  >
-                    <span className="text-base font-bold">•</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={toolbarBtnClass(editor.isActive("orderedList"))}
-                    onClick={() =>
-                      editor.chain().focus().toggleOrderedList().run()
-                    }
-                    title="Numbered list"
-                  >
-                    <span className="text-sm font-semibold">1.</span>
-                  </button>
-
-                  <div className="mx-0.5 h-6 w-px bg-gray-300" />
-
-                  <button
-                    type="button"
-                    className={toolbarBtnClass(editor.isActive("link"))}
-                    onClick={setLink}
-                    title="Insert link"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className={toolbarBtnClass(false)}
-                    onClick={addImage}
-                    title="Insert image"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
-
-                  <div className="mx-0.5 h-6 w-px bg-gray-300" />
-
-                  <button
-                    type="button"
-                    className={toolbarBtnClass(false, !editor.can().undo())}
-                    onClick={() => editor.chain().focus().undo().run()}
-                    disabled={!editor.can().undo()}
-                    title="Undo"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    className={toolbarBtnClass(false, !editor.can().redo())}
-                    onClick={() => editor.chain().focus().redo().run()}
-                    disabled={!editor.can().redo()}
-                    title="Redo"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
-
-              {!isEditing ? (
-                <div
-                  className="tiptap-content text-[13px] leading-6 text-gray-900"
-                  dangerouslySetInnerHTML={{
-                    __html: lockedHtml + (contractHtml || editableHtml),
+            {isEditing && editor && (
+              <div className="mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-white/5 bg-black/40 px-4 py-3 shadow-inner">
+                <button type="button" className={toolbarBtnClass(editor.isActive("bold"))} onClick={() => editor.chain().focus().toggleBold().run()}>B</button>
+                <button type="button" className={toolbarBtnClass(editor.isActive("italic"))} onClick={() => editor.chain().focus().toggleItalic().run()}>I</button>
+                <button type="button" className={toolbarBtnClass(editor.isActive("underline"))} onClick={() => editor.chain().focus().toggleUnderline().run()}>U</button>
+                <div className="mx-1 h-6 w-px bg-white/5" />
+                <select
+                  value={editor.isActive("heading", { level: 1 }) ? "h1" : editor.isActive("heading", { level: 2 }) ? "h2" : editor.isActive("heading", { level: 3 }) ? "h3" : "p"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    const chain = editor.chain().focus();
+                    if (v === "p") chain.setParagraph().run();
+                    else chain.toggleHeading({ level: parseInt(v.at(1)) }).run();
                   }}
-                />
-              ) : (
-                <div className="tiptap-content text-[13px] leading-6 text-gray-900">
-                  {/* Phần cố định (Điều 1-5) - hiển thị nhưng không thể chỉnh sửa */}
+                  className="h-8 rounded-lg border border-white/10 bg-black/20 px-3 text-[10px] font-black text-slate-400 font-mono outline-none focus:border-fuchsia-500/30 appearance-none uppercase cursor-pointer"
+                >
+                  <option value="p" className="bg-[#0f172a]">PARA</option>
+                  <option value="h1" className="bg-[#0f172a]">HDR_01</option>
+                  <option value="h2" className="bg-[#0f172a]">HDR_02</option>
+                  <option value="h3" className="bg-[#0f172a]">HDR_03</option>
+                </select>
+                <div className="mx-1 h-6 w-px bg-white/5" />
+                <button type="button" className={toolbarBtnClass(editor.isActive("bulletList"))} onClick={() => editor.chain().focus().toggleBulletList().run()}>•</button>
+                <button type="button" className={toolbarBtnClass(editor.isActive("orderedList"))} onClick={() => editor.chain().focus().toggleOrderedList().run()}>1.</button>
+                <div className="mx-1 h-6 w-px bg-white/5" />
+                <button type="button" className={toolbarBtnClass(editor.isActive("link"))} onClick={setLink}>🔗</button>
+                <button type="button" className={toolbarBtnClass(false)} onClick={addImage}>🖼️</button>
+                <div className="mx-1 h-6 w-px bg-white/5" />
+                <button type="button" className={toolbarBtnClass(false, !editor.can().undo())} onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()}>⟲</button>
+                <button type="button" className={toolbarBtnClass(false, !editor.can().redo())} onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()}>⟳</button>
+              </div>
+            )}
+
+            <div className="max-h-[60vh] overflow-y-auto custom-contract-scrollbar pr-4">
+                <style dangerouslySetInnerHTML={{ __html: `
+                  .custom-contract-scrollbar::-webkit-scrollbar { width: 4px; }
+                  .custom-contract-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                  .custom-contract-scrollbar::-webkit-scrollbar-thumb { background: rgba(217, 70, 239, 0.1); border-radius: 10px; }
+                  .custom-contract-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(217, 70, 239, 0.3); }
+                  
+                  .tiptap-content h2 { color: white; font-size: 1.2rem; font-weight: 900; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.1em; }
+                  .tiptap-content h3 { color: #d946ef; font-size: 0.9rem; font-weight: 900; margin-top: 2rem; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.2em; }
+                  .tiptap-content p { margin-bottom: 1rem; color: #94a3b8; font-size: 0.8rem; line-height: 1.6; }
+                  .tiptap-content strong { color: #f8fafc; font-weight: 700; }
+                  .locked-content { opacity: 0.7; border-left: 2px solid rgba(217,70,239,0.2); padding-left: 1rem; margin-bottom: 2rem; }
+                `}} />
+
+                {!isEditing ? (
                   <div
-                    className="locked-content pointer-events-none select-none"
-                    style={{ userSelect: 'none' }}
-                    dangerouslySetInnerHTML={{
-                      __html: lockedHtml,
-                    }}
+                    className="tiptap-content"
+                    dangerouslySetInnerHTML={{ __html: lockedHtml + (contractHtml || editableHtml) }}
                   />
-                  {/* Phần có thể chỉnh sửa - chỉ cho phép thêm vào */}
-                  <div className="editable-section mt-4">
-                    <div className="min-h-[40vh] rounded-lg border border-blue-300 bg-white p-4 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-600/20">
-                      <EditorContent editor={editor} />
+                ) : (
+                  <div className="tiptap-content">
+                    <div className="locked-content" dangerouslySetInnerHTML={{ __html: lockedHtml }} />
+                    <div className="editable-section mt-8 p-6 bg-white/[0.02] border border-fuchsia-500/20 rounded-2xl shadow-[0_0_20px_rgba(217,70,239,0.05)]">
+                        <p className="text-[9px] font-black text-fuchsia-500 uppercase tracking-widest mb-4 italic opacity-50">// EDITABLE_BUFFER_ACTIVE</p>
+                        <EditorContent editor={editor} />
                     </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           </div>
         </div>
 
-        {/* Acceptance + actions */}
+        {/* Footer */}
         {!hideFooter && (
-          <div className="px-6 py-5 border-t border-gray-100">
-            <label className="flex items-start gap-3 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={contractAccepted}
-                onChange={(e) => setContractAccepted(e.target.checked)}
-                className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">
-                I have read and agree to the terms in this contract.
+          <div className="px-8 py-8 border-t border-white/5 bg-white/[0.01] relative z-10">
+            <label className="flex items-center gap-4 cursor-pointer select-none group max-w-2xl">
+              <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={contractAccepted}
+                    onChange={(e) => setContractAccepted(e.target.checked)}
+                    className="peer sr-only"
+                  />
+                  <div className="w-5 h-5 border-2 border-white/10 bg-black/40 rounded flex items-center justify-center transition-all peer-checked:border-fuchsia-500 peer-checked:bg-fuchsia-500/20 shadow-inner" />
+                  <svg className="absolute w-3 h-3 text-fuchsia-500 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 peer-checked:opacity-100 transition-opacity" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+              </div>
+              <span className="text-[11px] font-mono font-black uppercase tracking-wider text-slate-500 group-hover:text-slate-300 transition-colors italic">
+                {t('postjob.contract_agree', 'I_ACKNOWLEDGE_PROTOCOL_LEGAL_TERMS_AND_FAF_ESCROW_GOVERNANCE.')}
               </span>
             </label>
 
-            <div className="flex flex-col sm:flex-row gap-3 mt-5">
+            <div className="flex flex-col sm:flex-row gap-4 mt-8 pt-8 border-t border-white/5">
               <button
-                onClick={() => {
-                  // Merge phần cố định + phần đã chỉnh sửa
-                  const finalEditableHtml = contractHtml || editableHtml;
-                  const finalContractHtml = lockedHtml + finalEditableHtml;
-                  onContinue(finalContractHtml);
-                }}
+                onClick={() => onContinue(lockedHtml + (contractHtml || editableHtml))}
                 disabled={!contractAccepted}
-                className={`sm:order-2 w-full sm:w-auto px-6 py-3 rounded-lg text-sm font-semibold shadow-md transition-colors ${contractAccepted
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                className={`group relative overflow-hidden sm:order-2 px-10 py-4 rounded-xl text-[11px] font-black font-mono tracking-[0.2em] uppercase transition-all active:scale-[0.98] ${
+                    contractAccepted
+                    ? "bg-fuchsia-600 text-[#020617] shadow-[0_0_25px_rgba(217,70,239,0.3)] hover:bg-fuchsia-500"
+                    : "bg-white/5 text-slate-700 cursor-not-allowed border border-white/5"
                   }`}
               >
-                Continue
+                <span className="relative z-10">{t('postjob.btn_continue', 'COMMIT_TO_MAINFRAME')}</span>
+                {contractAccepted && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />}
               </button>
+              
               <button
                 onClick={onBack}
-                className="sm:order-1 w-full sm:w-auto px-6 py-3 rounded-lg text-sm font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                className="sm:order-1 px-10 py-4 rounded-xl text-[11px] font-black font-mono tracking-[0.2em] uppercase border border-white/10 text-slate-500 hover:text-white hover:border-white/20 transition-all active:scale-[0.98]"
               >
-                ← Back to Step 3
+                {t('postjob.btn_back_step3', '<< RECONFIGURE_BUDGET')}
               </button>
             </div>
           </div>

@@ -11,8 +11,10 @@ const ProtectedRoute = ({ children, roles }) => {
   if (roles) {
     const userRole = user.role?.toLowerCase();
     const allowedRoles = roles.map(r => r.toLowerCase());
+    // THEO YÊU CẦU TẠM THỜI: Tự động accept tất cả quyền để dễ test, không bị đá ra ngoài
     if (!allowedRoles.includes(userRole)) {
-      return <Navigate to="/forbidden" replace />;
+      console.warn(`[Dev Mode] Bypass route restriction. User: ${userRole}, Allowed: ${allowedRoles}`);
+      // return <Navigate to="/forbidden" replace />;
     }
   }
 

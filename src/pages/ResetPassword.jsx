@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import FAFLogo from '../assets/FAF-Logo.png';
 import { authApi } from '../api/auth.api';
+import { useTranslation } from 'react-i18next';
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const ResetPassword = () => {
   const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const { t } = useTranslation();
 
   // Redirect if no email
   React.useEffect(() => {
@@ -75,22 +77,22 @@ const ResetPassword = () => {
 
     // Validation
     if (otpCode.length !== 6) {
-      setError('Vui lòng nhập đầy đủ 6 chữ số OTP');
+      setError(t('auth.otp_length_warning'));
       return;
     }
 
     if (!newPassword) {
-      setError('Vui lòng nhập mật khẩu mới');
+      setError(t('auth.new_password_required'));
       return;
     }
 
     if (newPassword.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      setError(t('auth.password_min_length'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
+      setError(t('auth.password_mismatch'));
       return;
     }
 
@@ -103,7 +105,7 @@ const ResetPassword = () => {
         newPassword
       });
 
-      setSuccess('Đặt lại mật khẩu thành công!');
+      setSuccess(t('auth.reset_success'));
       
       // Redirect to signin after 2 seconds
       setTimeout(() => {
@@ -111,7 +113,7 @@ const ResetPassword = () => {
       }, 2000);
     } catch (err) {
       console.error('Reset password failed:', err);
-      setError(err.response?.data?.error || 'Đặt lại mật khẩu thất bại. Vui lòng thử lại.');
+      setError(err.response?.data?.error || t('auth.reset_fail'));
     } finally {
       setLoading(false);
     }
@@ -124,12 +126,12 @@ const ResetPassword = () => {
 
     try {
       await authApi.reSendOtp({ email });
-      setSuccess('Mã OTP mới đã được gửi đến email của bạn!');
+      setSuccess(t('auth.new_otp_sent'));
       setOtp(['', '', '', '', '', '']);
       document.getElementById('otp-0')?.focus();
     } catch (err) {
       console.error('Resend OTP failed:', err);
-      setError('Gửi lại OTP thất bại. Vui lòng thử lại.');
+      setError(t('auth.resend_otp_fail'));
     } finally {
       setResending(false);
     }
@@ -160,25 +162,25 @@ const ResetPassword = () => {
       <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20 pointer-events-auto transition-opacity duration-300">
           <Link to="/" className="flex items-center gap-2 group cursor-crosshair">
               <svg className="w-5 h-5 text-purple-500 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-              <span className="font-mono text-xs uppercase tracking-widest text-slate-400 group-hover:text-purple-400 transition-colors">Abort Key Restructuring</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-slate-400 group-hover:text-purple-400 transition-colors">{t('auth.cancel_reset_password')}</span>
           </Link>
           <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
               </span>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Reconfiguration Module Online</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-slate-500">{t('auth.reset_system_active')}</span>
           </div>
       </div>
 
       <main className={`w-full max-w-md px-6 relative z-20 overflow-y-auto max-h-[100dvh] pt-24 pb-12 custom-scrollbar ${loading ? "pointer-events-none opacity-60" : ""}`}>
         <div className="text-center mb-8">
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight text-glitch-effect cursor-crosshair inline-block mb-2">
-              KEY OVERRIDE
+              {t('auth.reset_password_title')}
             </h1>
             <p className="text-sm font-mono text-slate-400">
-              Clearance code sent to <br/>
-              <span className="text-white font-semibold">[{email || "UNKNOWN_NODE"}]</span>
+              {t('auth.otp_sent_to')} <br/>
+              <span className="text-white font-semibold">[{email || t('auth.unknown_address')}]</span>
             </p>
         </div>
 
@@ -190,7 +192,7 @@ const ResetPassword = () => {
             {/* OTP Input */}
             <div className="space-y-2">
               <label className="text-xs font-mono text-slate-400 uppercase tracking-widest flex justify-between">
-                Protocol Override Code
+                {t('auth.otp_label')}
               </label>
               <div className="flex justify-center gap-2 sm:gap-3">
                 {otp.map((digit, index) => (
@@ -213,7 +215,7 @@ const ResetPassword = () => {
             {/* New Password */}
             <div className="space-y-2">
               <label htmlFor="newPassword" className="text-xs font-mono text-slate-400 uppercase tracking-widest flex justify-between">
-                New Encryption Key
+                {t('auth.new_password_label')}
               </label>
               <div className="relative group/input">
                 <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-md opacity-0 group-focus-within/input:opacity-100 transition-opacity"></div>
@@ -243,7 +245,7 @@ const ResetPassword = () => {
             {/* Confirm Password */}
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="text-xs font-mono text-slate-400 uppercase tracking-widest flex justify-between">
-                Verify New Key
+                {t('auth.confirm_new_password_label')}
               </label>
               <div className="relative group/input">
                 <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-md opacity-0 group-focus-within/input:opacity-100 transition-opacity"></div>
@@ -299,11 +301,11 @@ const ResetPassword = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  COMMITTING_KEY...
+                  {t('auth.saving_password')}
                 </span>
               ) : (
                 <>
-                  <span>CONFIRM_OVERRIDE()</span>
+                  <span>{t('auth.confirm_reset')}</span>
                   <svg className="w-5 h-5 text-blue-400 group-hover/btn:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -312,10 +314,9 @@ const ResetPassword = () => {
             </button>
           </form>
 
-          {/* Resend OTP */}
           <div className="mt-8 text-center flex flex-col items-center">
               <p className="text-xs font-mono text-slate-500 mb-2 uppercase tracking-widest">
-                  Signal Interrupted?
+                  {t('auth.did_not_receive_otp')}
               </p>
               <button
                   type="button"
@@ -323,7 +324,7 @@ const ResetPassword = () => {
                   disabled={resending}
                   className="text-xs font-mono font-bold text-white hover:text-blue-400 border-b border-white/20 hover:border-blue-400 pb-0.5 transition-all cursor-crosshair disabled:text-slate-600 disabled:border-slate-800"
               >
-                  {resending ? 'TRANSMITTING...' : 'RE-TRANSMIT PROTOCOL'}
+                  {resending ? t('auth.sending_resend') : t('auth.resend_otp')}
               </button>
           </div>
 
@@ -335,7 +336,7 @@ const ResetPassword = () => {
               <svg className="w-4 h-4 text-slate-500 group-hover/back:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              Access Terminal
+              {t('auth.back_to_login')}
             </Link>
           </div>
         </div>

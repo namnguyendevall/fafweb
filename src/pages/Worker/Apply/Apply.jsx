@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { jobsApi } from '../../../api/jobs.api';
+import { proposalsApi } from '../../../api/proposals.api';
 import Step1 from './Step1';
 import Step2 from './Step2';
 import Step3 from './Step3';
@@ -10,6 +11,7 @@ const Apply = () => {
     const [currentStep, setCurrentStep] = useState(1);
     const [job, setJob] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [hasApplied, setHasApplied] = useState(false);
     const [proposalData, setProposalData] = useState({
         coverLetter: '',
         proposedPrice: ''
@@ -24,12 +26,21 @@ const Apply = () => {
     const fetchJob = async () => {
         try {
             setLoading(true);
-            const res = await jobsApi.getJobDetail(id);
-            setJob(res.data);
+            const [jobRes, proposalsRes] = await Promise.all([
+                jobsApi.getJobDetail(id),
+                proposalsApi.getMyProposals()
+            ]);
+            
+            setJob(jobRes.data);
+            
+            // Check if already applied
+            const applied = proposalsRes.data.some(p => p.job_id === parseInt(id));
+            setHasApplied(applied);
+
             // Initialize proposed price with job budget
             setProposalData(prev => ({
                 ...prev,
-                proposedPrice: res.data.budget || ''
+                proposedPrice: jobRes.data.budget || ''
             }));
         } catch (err) {
             console.error('Failed to fetch job:', err);
@@ -55,6 +66,25 @@ const Apply = () => {
                 <div className="text-center">
                     <h2 className="text-2xl font-bold mb-4">Job not found</h2>
                     <button onClick={() => window.history.back()} className="text-blue-600 hover:underline">Go back</button>
+                </div>
+            </div>
+        );
+    }
+
+    if (hasApplied) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="text-center bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                    <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                    </div>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">Already Applied</h2>
+                    <p className="text-slate-600 mb-6">You have already submitted a proposal for this job.</p>
+                    <button onClick={() => window.history.back()} className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-colors">
+                        Go Back
+                    </button>
                 </div>
             </div>
         );
