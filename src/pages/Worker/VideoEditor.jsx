@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../auth/AuthContext';
+import { aiApi } from '../../api/ai.api';
+import { io } from 'socket.io-client';
 
 /* ─── Helpers ─── */
 const fmt = (s) => {
@@ -25,10 +29,16 @@ const FONTS = ['Arial', 'Georgia', 'Courier New', 'Impact', 'Comic Sans MS', 'Ve
 
 /* ─── Main Component ─── */
 const VideoEditor = ({ onSubmissionReady }) => {
+    const toast = useToast();
+    const { user } = useAuth();
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const timelineRef = useRef(null);
     const animFrameRef = useRef(null);
+    const socketRef = useRef(null);
+
+    const [roomId] = useState('demo_collab_room'); // Simulated room ID
+    const [remoteCursors, setRemoteCursors] = useState({});
 
     /* Video state */
     const [videoFile, setVideoFile] = useState(null);
@@ -49,7 +59,7 @@ const VideoEditor = ({ onSubmissionReady }) => {
     const [captionFont, setCaptionFont] = useState('Arial');
     const [captionSize, setCaptionSize] = useState(32);
     const [captionColor, setCaptionColor] = useState('#ffffff');
-    const [captionBg, setCaptionBg] = useState('rgba(0,0,0,0.5)');
+    const [captionBg, setCaptionBg] = useState('#000000');
     const [captionX, setCaptionX] = useState(50);
     const [captionY, setCaptionY] = useState(85);
 
@@ -111,6 +121,9 @@ const VideoEditor = ({ onSubmissionReady }) => {
 
     /* UI */
     const [activePanel, setActivePanel] = useState('trim');
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportRes, setExportRes] = useState('1080p');
+    const [exportFps, setExportFps] = useState('60');
 
     /* ── Load FFmpeg ── */
     const loadFFmpeg = async () => {
@@ -147,6 +160,77 @@ const VideoEditor = ({ onSubmissionReady }) => {
         setCuts([]);
     };
 
+    /* ── Live Co-Op Socket Sync ── */
+    useEffect(() => {
+        // Init socket
+        const socket = io(import.meta.env.VITE_SOCKET_URL || (import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '')) || 'http://localhost:5000', {
+            auth: { token: localStorage.getItem('accessToken') }
+        });
+        socketRef.current = socket;
+
+        socket.emit('join_video_room', roomId);
+
+        socket.on('video_sync_play', ({ time }) => {
+            if (videoRef.current && videoRef.current.paused) {
+                videoRef.current.currentTime = time;
+                videoRef.current.play().catch(e => console.error("Auto-play prevented", e));
+            }
+        });
+
+        socket.on('video_sync_pause', ({ time }) => {
+            if (videoRef.current && !videoRef.current.paused) {
+                videoRef.current.pause();
+                videoRef.current.currentTime = time;
+            }
+        });
+
+        socket.on('video_sync_seek', ({ time }) => {
+            if (videoRef.current) {
+                videoRef.current.currentTime = time;
+            }
+        });
+
+        socket.on('video_cursor_move', (data) => {
+            setRemoteCursors(prev => ({
+                ...prev,
+                [data.userId]: data
+            }));
+            
+            // Auto clean up stale cursors after 5s
+            setTimeout(() => {
+                setRemoteCursors(prev => {
+                    const next = { ...prev };
+                    if (next[data.userId]?.timestamp === data.timestamp) {
+                        delete next[data.userId];
+                    }
+                    return next;
+                });
+            }, 5000);
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [roomId]);
+
+    // Broadcast cursor movements visually over the canvas Wrapper
+    const handleCanvasMouseMove = (e) => {
+        if (!canvasRef.current || !socketRef.current) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        
+        // Throttle emission slightly in a real app, but for demo:
+        socketRef.current.emit('video_cursor_move', {
+            roomId,
+            x,
+            y,
+            userName: user?.full_name || 'Anonymous',
+            timestamp: Date.now(),
+            color: user?.role === 'employer' ? '#d946ef' : '#0ea5e9' // fuchsia vs sky
+        });
+    };
+
     /* ── Sync currentTime from video ── */
     useEffect(() => {
         const v = videoRef.current;
@@ -163,10 +247,18 @@ const VideoEditor = ({ onSubmissionReady }) => {
         };
         const onLoaded = () => {
             const d = v.duration;
-            setDuration(d);
-            setTrimStart(0);
-            setTrimEnd(d);
+            if (!isNaN(d) && d > 0) {
+                setDuration(d);
+                setTrimStart(0);
+                setTrimEnd(d);
+            }
         };
+        
+        // If metadata is already loaded before the listener attaches
+        if (v.readyState >= 1) {
+            onLoaded();
+        }
+
         v.addEventListener('timeupdate', onTime);
         v.addEventListener('loadedmetadata', onLoaded);
         v.addEventListener('play', () => setIsPlaying(true));
@@ -174,6 +266,8 @@ const VideoEditor = ({ onSubmissionReady }) => {
         return () => {
             v.removeEventListener('timeupdate', onTime);
             v.removeEventListener('loadedmetadata', onLoaded);
+            v.removeEventListener('play', () => setIsPlaying(true));
+            v.removeEventListener('pause', () => setIsPlaying(false));
         };
     }, [videoUrl, trimStart, trimEnd]);
 
@@ -196,7 +290,7 @@ const VideoEditor = ({ onSubmissionReady }) => {
                 pipStreamRef.current = stream;
                 if (pipVideoRef.current) { pipVideoRef.current.srcObject = stream; pipVideoRef.current.play(); }
                 setPipActive(true);
-            } catch (e) { alert('Không thể mở camera: ' + e.message); }
+            } catch (e) { toast.error('Không thể mở camera: ' + e.message); }
         }
     };
 
@@ -213,28 +307,45 @@ const VideoEditor = ({ onSubmissionReady }) => {
 
         const render = () => {
             const ctx = canvas.getContext('2d');
-            canvas.width = video.videoWidth || 1280;
-            canvas.height = video.videoHeight || 720;
+            // Match canvas logical size to its visual size for crisp rendering and correct overlay coords
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                animFrameRef.current = requestAnimationFrame(render);
+                return;
+            }
+            if (canvas.width !== rect.width) canvas.width = rect.width;
+            if (canvas.height !== rect.height) canvas.height = rect.height;
+            
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             // Draw visible captions
             captions.filter(c => currentTime >= c.startTime && currentTime <= c.endTime).forEach(cap => {
-                ctx.font = `bold ${cap.size}px ${cap.font}`;
+                const scaledSize = Math.max(12, (cap.size / 100) * canvas.height); // Scale size relative to screen
+                ctx.font = `bold ${scaledSize}px ${cap.font || 'Arial'}`;
                 const x = (cap.x / 100) * canvas.width;
                 const y = (cap.y / 100) * canvas.height;
                 const tw = ctx.measureText(cap.text).width;
-                const th = cap.size;
-                ctx.fillStyle = cap.bg;
-                ctx.fillRect(x - tw / 2 - 8, y - th - 4, tw + 16, th + 12);
-                ctx.fillStyle = cap.color;
+                const th = scaledSize;
+                
+                // Draw background box
+                if (cap.bg && cap.bg !== 'transparent') {
+                    ctx.fillStyle = cap.bg;
+                    ctx.fillRect(x - tw / 2 - 8, y - th + 4, tw + 16, th + 8);
+                }
+                
+                // Draw Text
+                ctx.fillStyle = cap.color || '#ffffff';
                 ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
                 ctx.fillText(cap.text, x, y);
             });
 
             // Draw stickers
             stickers.filter(s => currentTime >= s.startTime && currentTime <= s.endTime).forEach(s => {
-                ctx.font = `${s.size}px serif`;
+                const scaledSize = Math.max(16, (s.size / 100) * canvas.height);
+                ctx.font = `${scaledSize}px serif`;
                 ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
                 ctx.fillText(s.emoji, (s.x / 100) * canvas.width, (s.y / 100) * canvas.height);
             });
 
@@ -264,20 +375,25 @@ const VideoEditor = ({ onSubmissionReady }) => {
         if (v.paused) {
             if (v.currentTime >= trimEnd) v.currentTime = trimStart;
             v.play();
+            socketRef.current?.emit('video_sync_play', { roomId, time: v.currentTime });
         } else {
             v.pause();
+            socketRef.current?.emit('video_sync_pause', { roomId, time: v.currentTime });
         }
     };
 
     /* ── Seek ── */
     const seekTo = (pct) => {
         const t = pct * duration;
-        if (videoRef.current) videoRef.current.currentTime = t;
+        if (videoRef.current) {
+            videoRef.current.currentTime = t;
+            socketRef.current?.emit('video_sync_seek', { roomId, time: t });
+        }
     };
 
     /* ── Timeline drag ── */
     const handleTimelineMouse = useCallback((e) => {
-        if (!dragging || !timelineRef.current || !duration) return;
+        if (!dragging || !timelineRef.current || !duration || isNaN(duration)) return;
         const rect = timelineRef.current.getBoundingClientRect();
         const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         const t = pct * duration;
@@ -321,6 +437,38 @@ const VideoEditor = ({ onSubmissionReady }) => {
     };
 
     const removeCaption = (id) => setCaptions(prev => prev.filter(c => c.id !== id));
+
+    const [isAITranscribing, setIsAITranscribing] = useState(false);
+    const handleAutoSubtitle = async () => {
+        if (!videoFile) return;
+        setIsAITranscribing(true);
+        try {
+            toast.info('Đang phân tích âm thanh bằng AI...');
+            const res = await aiApi.transcribeVideo(videoFile);
+            if (res.data?.success && res.data?.captions) {
+                const newCaps = res.data.captions.map((c, i) => ({
+                    id: Date.now() + i,
+                    text: c.text,
+                    font: captionFont,
+                    size: captionSize,
+                    color: captionColor,
+                    bg: captionBg,
+                    x: captionX,
+                    y: captionY,
+                    startTime: c.start,
+                    endTime: c.end
+                }));
+                // Merge with existing
+                setCaptions(prev => [...prev, ...newCaps]);
+                toast.success('AI đã tạo phụ đề thành công!');
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error('Lỗi khi tạo phụ đề AI: ' + e.message);
+        } finally {
+            setIsAITranscribing(false);
+        }
+    };
 
     /* ── Add Cut Segment ── */
     const addCut = () => {
@@ -371,7 +519,8 @@ const VideoEditor = ({ onSubmissionReady }) => {
             }
             if (muted) args.push('-an');
 
-            args.push('-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-c:a', 'aac', 'output.mp4');
+            const resScale = exportRes === '1080p' ? '1920:1080' : '1280:720';
+            args.push('-c:v', 'libx264', '-preset', 'fast', '-crf', '23', '-r', exportFps, '-s', resScale, '-c:a', 'aac', 'output.mp4');
 
             setProcessLog('⚙️ Đang xử lý video...');
             await ffmpeg.exec(args);
@@ -403,7 +552,7 @@ const VideoEditor = ({ onSubmissionReady }) => {
             const blob = await res.blob();
             const formData = new FormData();
             formData.append('file', blob, videoFile?.name || 'video.mp4');
-            const uploadRes = await fetch('http://localhost:5000/api/uploads/submission', {
+            const uploadRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/uploads/submission`, {
                 method: 'POST',
                 credentials: 'include',
                 body: formData,
@@ -413,7 +562,7 @@ const VideoEditor = ({ onSubmissionReady }) => {
             setUploadedUrl(url);
             if (onSubmissionReady) onSubmissionReady(url);
         } catch (err) {
-            alert('Lỗi upload: ' + err.message);
+            toast.error('Lỗi upload: ' + err.message);
         } finally {
             setUploading(false);
         }
@@ -424,501 +573,382 @@ const VideoEditor = ({ onSubmissionReady }) => {
 
     /* ─────────────────── RENDER ─────────────────── */
     return (
-        <div className="flex flex-col gap-4 select-none">
-            {/* Upload */}
+        <div className="flex flex-col h-full bg-[#0e0e0e] text-gray-300 select-none font-sans overflow-hidden absolute inset-0 z-50">
+            {/* ── HEADER ── */}
+            <header className="h-14 bg-[#141414] border-b border-gray-800 flex items-center justify-between px-4 shrink-0">
+                <div className="flex items-center gap-4">
+                    <span className="text-gray-400 font-semibold text-sm">Untitled Project</span>
+                    {ffmpegLoading && <span className="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">Downloading Core...</span>}
+                </div>
+                <div className="flex items-center gap-3">
+                    <button onClick={loadFFmpeg} className="text-xs font-semibold px-3 py-1.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300">
+                        {ffmpegLoaded ? '✅ FFmpeg Ready' : 'Load Engine'}
+                    </button>
+                    <button 
+                        onClick={() => setShowExportModal(true)}
+                        disabled={!isLoaded || !ffmpegLoaded}
+                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:bg-gray-700 text-white font-semibold text-sm px-5 py-1.5 rounded transition-all">
+                        Xuất Bản
+                    </button>
+                </div>
+            </header>
+
             {!isLoaded ? (
-                <label className="cursor-pointer block">
-                    <div className="border-2 border-dashed border-gray-700 hover:border-blue-500 rounded-2xl p-12 text-center transition-all bg-gray-900">
-                        <div className="text-5xl mb-3">🎬</div>
-                        <p className="text-gray-300 font-semibold text-lg mb-1">Upload video để bắt đầu chỉnh sửa</p>
-                        <p className="text-gray-600 text-sm">MP4, MOV, AVI, MKV, WebM...</p>
-                    </div>
-                    <input type="file" accept="video/*" onChange={handleFileLoad} className="hidden" />
-                </label>
-            ) : (
-                <>
-                {/* ─── PREVIEW PLAYER ─── */}
-                <div className="bg-black rounded-2xl overflow-hidden relative" style={{ aspectRatio: '16/9' }}>
-                    <video
-                        ref={videoRef}
-                        src={videoUrl}
-                        className="w-full h-full object-contain"
-                        style={{ filter: computedFilter(), transform: `rotate(${rotation}deg) scaleX(${flipH ? -1 : 1}) scaleY(${flipV ? -1 : 1})` }}
-                        onClick={togglePlay}
-                    />
-                    {/* Caption + Sticker Canvas */}
-                    <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ opacity: 0.99 }} />
-                    {/* PiP Camera */}
-                    {pipActive && (
-                        <video ref={pipVideoRef} muted playsInline autoPlay
-                            className="absolute w-1/4 rounded-xl border-2 border-white shadow-lg object-cover"
-                            style={{ top: pipPos.y + '%', left: pipPos.x + '%' }} />
-                    )}
-                    {!isPlaying && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-                                <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            </div>
+                <div className="flex-1 flex items-center justify-center bg-[#111]">
+                    <label className="cursor-pointer group flex flex-col items-center">
+                        <div className="w-32 h-32 bg-gray-800 rounded-3xl flex items-center justify-center text-5xl mb-4 group-hover:scale-105 group-hover:bg-gray-700 transition-all shadow-xl">
+                            <span className="group-hover:-translate-y-2 transition-transform">🎥</span>
                         </div>
-                    )}
-                    <div className="absolute bottom-2 right-3 bg-black/60 text-white text-xs font-mono px-2 py-1 rounded">{fmt(currentTime)} / {fmt(duration)}</div>
-                    <label className="absolute top-2 right-2 cursor-pointer">
-                        <div className="bg-black/60 hover:bg-black text-white text-xs px-2 py-1 rounded-lg transition-colors">🔄 Đổi video</div>
+                        <p className="text-white font-semibold mb-1">Nhập tệp phương tiện</p>
+                        <p className="text-gray-500 text-sm">Hỗ trợ MP4, MOV, WEBM</p>
                         <input type="file" accept="video/*" onChange={handleFileLoad} className="hidden" />
                     </label>
                 </div>
-
-                {/* ─── TIMELINE ─── */}
-                <div className="bg-gray-900 rounded-xl p-4 space-y-3">
-                    {/* Controls row */}
-                    <div className="flex items-center gap-3">
-                        <button onClick={togglePlay}
-                            className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white transition-all shrink-0">
-                            {isPlaying
-                                ? <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>
-                                : <svg className="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            }
-                        </button>
-                        {/* Seek to start */}
-                        <button onClick={() => videoRef.current && (videoRef.current.currentTime = trimStart)}
-                            className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-gray-800">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-                        </button>
-                        <span className="font-mono text-sm text-gray-300">{fmt(currentTime)}</span>
-                        <div className="flex-1" />
-                        {/* Speed */}
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-gray-500">Speed</span>
-                            <select value={speed} onChange={e => setSpeed(Number(e.target.value))}
-                                className="bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-2 py-1">
-                                {SPEEDS.map(s => <option key={s} value={s}>{s}x</option>)}
-                            </select>
-                        </div>
-                        {/* Volume */}
-                        <div className="flex items-center gap-1.5">
-                            <button onClick={() => setMuted(!muted)} className="text-gray-400 hover:text-white">
-                                {muted ? '🔇' : '🔊'}
-                            </button>
-                            <input type="range" min={0} max={1} step={0.05} value={volume}
-                                onChange={e => setVolume(Number(e.target.value))}
-                                className="w-16 accent-blue-500" />
-                        </div>
-                    </div>
-
-                    {/* Timeline bar */}
-                    <div className="relative h-14 flex items-center" ref={timelineRef}
-                        onMouseDown={(e) => {
-                            const rect = timelineRef.current.getBoundingClientRect();
-                            const pct = (e.clientX - rect.left) / rect.width;
-                            const t = pct * duration;
-                            if (videoRef.current) videoRef.current.currentTime = t;
-                            setDragging('seek');
-                        }}>
-                        {/* Track BG */}
-                        <div className="absolute inset-x-0 top-4 h-6 bg-gray-700 rounded-full cursor-pointer" />
-
-                        {/* Trim region */}
-                        <div className="absolute top-4 h-6 bg-blue-500/30 border-t-2 border-b-2 border-blue-500 rounded"
-                            style={{ left: pct(trimStart), width: `calc(${pct(trimEnd)} - ${pct(trimStart)})` }} />
-
-                        {/* Cut segments */}
-                        {cuts.map(cut => (
-                            <div key={cut.id} className="absolute top-3.5 h-7 bg-green-500/30 border border-green-500 rounded pointer-events-none"
-                                style={{ left: pct(cut.start), width: `calc(${pct(cut.end)} - ${pct(cut.start)})` }}>
-                                <span className="text-green-400 text-xs px-1 truncate">{cut.label}</span>
-                            </div>
-                        ))}
-
-                        {/* Playhead */}
-                        <div className="absolute top-2 w-0.5 h-10 bg-white z-10 pointer-events-none"
-                            style={{ left: pct(currentTime) }}>
-                            <div className="w-3 h-3 bg-white rounded-full -ml-1.5 -mt-1" />
-                        </div>
-
-                        {/* Trim handle: start */}
-                        <div className="absolute top-1 h-12 w-3 bg-blue-500 rounded-l-lg cursor-ew-resize z-20 flex items-center justify-center"
-                            style={{ left: `calc(${pct(trimStart)} - 6px)` }}
-                            onMouseDown={(e) => { e.stopPropagation(); setDragging('start'); }}>
-                            <div className="w-0.5 h-6 bg-white/70 rounded" />
-                        </div>
-
-                        {/* Trim handle: end */}
-                        <div className="absolute top-1 h-12 w-3 bg-blue-500 rounded-r-lg cursor-ew-resize z-20 flex items-center justify-center"
-                            style={{ left: `calc(${pct(trimEnd)} - 6px)` }}
-                            onMouseDown={(e) => { e.stopPropagation(); setDragging('end'); }}>
-                            <div className="w-0.5 h-6 bg-white/70 rounded" />
-                        </div>
-                    </div>
-
-                    {/* Trim info */}
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>✂️ Từ <strong className="text-blue-400">{fmt(trimStart)}</strong> → <strong className="text-blue-400">{fmt(trimEnd)}</strong> ({fmt(trimEnd - trimStart)})</span>
-                        <button onClick={() => { setTrimStart(0); setTrimEnd(duration); }} className="text-gray-600 hover:text-gray-400">Reset trim</button>
-                    </div>
-                </div>
-
-                {/* ─── PANELS ─── */}
-                <div className="flex gap-2 flex-wrap">
-                    {[['trim','✂️ Cắt'], ['caption','💬 Caption'], ['filters','🎨 Filter'], ['color','🌈 Màu'], ['transform','🔄 Xoay'], ['stickers','😂 Sticker'], ['pip','📷 Camera'], ['bgaudio','🎵 Nhạc nền'], ['cuts','📌 Clips'], ['audio','🔊 Âm lượng'], ['export','🚀 Export']].map(([p, l]) => (
-                        <button key={p} onClick={() => setActivePanel(p)}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activePanel === p ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white border border-gray-700'}`}>
-                            {l}
-                        </button>
-                    ))}
-                </div>
-
-                {/* PANEL: Trim */}
-                {activePanel === 'trim' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-                        <h4 className="font-bold text-gray-200">✂️ Cắt / Trim video</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-xs text-gray-400 block mb-1">Điểm bắt đầu (giây)</label>
-                                <input type="number" min={0} max={trimEnd - 0.1} step={0.1} value={trimStart.toFixed(1)}
-                                    onChange={e => setTrimStart(Math.min(Number(e.target.value), trimEnd - 0.5))}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono" />
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-400 block mb-1">Điểm kết thúc (giây)</label>
-                                <input type="number" min={trimStart + 0.1} max={duration} step={0.1} value={trimEnd.toFixed(1)}
-                                    onChange={e => setTrimEnd(Math.max(Number(e.target.value), trimStart + 0.5))}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono" />
-                            </div>
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={() => { if (videoRef.current) setTrimStart(videoRef.current.currentTime); }}
-                                className="flex-1 py-2 bg-gray-800 border border-gray-700 text-sm text-gray-300 hover:text-white rounded-lg">
-                                📍 Đặt điểm đầu tại đây
-                            </button>
-                            <button onClick={() => { if (videoRef.current) setTrimEnd(videoRef.current.currentTime); }}
-                                className="flex-1 py-2 bg-gray-800 border border-gray-700 text-sm text-gray-300 hover:text-white rounded-lg">
-                                📍 Đặt điểm cuối tại đây
-                            </button>
-                        </div>
-                        <p className="text-xs text-gray-600">💡 Kéo thanh xanh trên timeline, hoặc bấm nút để đặt điểm cắt tại vị trí hiện tại</p>
-                    </div>
-                )}
-
-                {/* PANEL: Caption */}
-                {activePanel === 'caption' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
-                        <h4 className="font-bold text-gray-200">💬 Thêm Caption / Chữ</h4>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="col-span-2">
-                                <input value={captionText} onChange={e => setCaptionText(e.target.value)}
-                                    placeholder="Nhập nội dung caption..."
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-500 block mb-1">Font</label>
-                                <select value={captionFont} onChange={e => setCaptionFont(e.target.value)}
-                                    className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-2 py-1.5">
-                                    {FONTS.map(f => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-500 block mb-1">Cỡ chữ: {captionSize}px</label>
-                                <input type="range" min={16} max={96} value={captionSize} onChange={e => setCaptionSize(Number(e.target.value))}
-                                    className="w-full accent-blue-500" />
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-500 block mb-1">Màu chữ</label>
-                                <input type="color" value={captionColor} onChange={e => setCaptionColor(e.target.value)}
-                                    className="w-full h-10 rounded-lg cursor-pointer bg-gray-800 border border-gray-700 px-1" />
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-500 block mb-1">Vị trí ngang: {captionX}%</label>
-                                <input type="range" min={0} max={100} value={captionX} onChange={e => setCaptionX(Number(e.target.value))}
-                                    className="w-full accent-blue-500" />
-                            </div>
-                            <div>
-                                <label className="text-xs text-gray-500 block mb-1">Vị trí dọc: {captionY}%</label>
-                                <input type="range" min={0} max={100} value={captionY} onChange={e => setCaptionY(Number(e.target.value))}
-                                    className="w-full accent-blue-500" />
-                            </div>
-                        </div>
-                        <button onClick={addCaption} disabled={!captionText.trim()}
-                            className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm disabled:opacity-40">
-                            + Thêm tại {fmt(currentTime)}
-                        </button>
-
-                        {/* Caption list */}
-                        {captions.length > 0 && (
-                            <div className="space-y-2 max-h-44 overflow-y-auto">
-                                {captions.map(c => (
-                                    <div key={c.id} className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2">
-                                        <span className="text-xs font-mono text-gray-500">{fmt(c.startTime)}→{fmt(c.endTime)}</span>
-                                        <span className="flex-1 text-sm text-white truncate">{c.text}</span>
-                                        <input type="number" min={0} max={duration} step={0.5} value={c.endTime.toFixed(1)}
-                                            onChange={e => setCaptions(prev => prev.map(cap => cap.id === c.id ? { ...cap, endTime: Number(e.target.value) } : cap))}
-                                            className="w-20 bg-gray-700 border border-gray-600 rounded px-1 py-0.5 text-white text-xs font-mono" />
-                                        <button onClick={() => removeCaption(c.id)} className="text-red-400 hover:text-red-300 text-lg leading-none">×</button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* PANEL: Filters */}
-                {activePanel === 'filters' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                        <h4 className="font-bold text-gray-200 mb-3">🎨 Bộ lọc nhanh</h4>
-                        <div className="grid grid-cols-4 gap-2">
-                            {FILTERS.map((f, i) => (
-                                <button key={i} onClick={() => setFilterIdx(i)}
-                                    className={`p-2 rounded-xl border-2 text-xs font-semibold transition-all ${filterIdx === i ? 'border-blue-500 bg-blue-600/20 text-blue-400' : 'border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-500'}`}>
-                                    <div className="w-full h-8 rounded mb-1 bg-gradient-to-r from-gray-600 to-gray-400" style={{ filter: f.css }} />
-                                    {f.name}
+            ) : (
+                <div className="flex flex-1 overflow-hidden">
+                    {/* ── LEFT PANEL (ASSETS/FX) ── */}
+                    <div className="w-80 bg-[#141414] border-r border-gray-800 flex flex-col shrink-0">
+                        <div className="flex text-xs font-medium text-gray-400 border-b border-gray-800">
+                            {['media','text','filters','adjust'].map(t => (
+                                <button key={t} onClick={() => setActivePanel(t)}
+                                    className={`flex-1 py-3 capitalize ${activePanel === t ? 'text-white border-b-2 border-white' : 'hover:text-gray-200'}`}>
+                                    {t}
                                 </button>
                             ))}
                         </div>
-                    </div>
-                )}
-
-                {/* PANEL: Color Grading */}
-                {activePanel === 'color' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h4 className="font-bold text-gray-200">🌈 Chỉnh màu sắc</h4>
-                            <button onClick={() => { setBrightness(100); setContrast(100); setSaturation(100); setHue(0); setBlur(0); }} className="text-xs text-gray-500 hover:text-gray-300">Reset</button>
-                        </div>
-                        {[['Độ sáng', brightness, setBrightness, 0, 200, '%'],['Tương phản', contrast, setContrast, 0, 200, '%'],['Bão hoà', saturation, setSaturation, 0, 200, '%'],['Tông màu', hue, setHue, -180, 180, '°'],['Làm mờ', blur, setBlur, 0, 10, 'px']].map(([lbl, val, set, min, max, unit]) => (
-                            <div key={lbl}>
-                                <div className="flex justify-between text-xs text-gray-400 mb-1"><span>{lbl}</span><span className="font-mono text-white">{val}{unit}</span></div>
-                                <input type="range" min={min} max={max} value={val} onChange={e => set(Number(e.target.value))} className="w-full accent-blue-500" />
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {/* PANEL: Transform */}
-                {activePanel === 'transform' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
-                        <h4 className="font-bold text-gray-200">🔄 Xoay & Lật</h4>
-                        <div className="grid grid-cols-4 gap-2">
-                            {[0,90,180,270].map(r => (
-                                <button key={r} onClick={() => setRotation(r)}
-                                    className={`py-3 rounded-xl border-2 text-sm font-bold transition-all ${rotation === r ? 'border-blue-500 bg-blue-600/20 text-blue-400' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>
-                                    {r}°
-                                </button>
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button onClick={() => setFlipH(!flipH)} className={`py-3 rounded-xl border-2 font-semibold text-sm transition-all ${flipH ? 'border-blue-500 bg-blue-600/20 text-blue-400' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>↔️ Lật ngang</button>
-                            <button onClick={() => setFlipV(!flipV)} className={`py-3 rounded-xl border-2 font-semibold text-sm transition-all ${flipV ? 'border-blue-500 bg-blue-600/20 text-blue-400' : 'border-gray-700 bg-gray-800 text-gray-400'}`}>↕️ Lật dọc</button>
-                        </div>
-                        <button onClick={() => { setRotation(0); setFlipH(false); setFlipV(false); }} className="w-full py-2 text-xs text-gray-500 hover:text-gray-300 border border-gray-700 rounded-xl">Reset transform</button>
-                    </div>
-                )}
-
-                {/* PANEL: Stickers */}
-                {activePanel === 'stickers' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-                        <h4 className="font-bold text-gray-200">😂 Sticker / Emoji</h4>
-                        <p className="text-xs text-gray-500">Bấm vào emoji để thêm vào vị trí hiện tại ({fmt(currentTime)})</p>
-                        <div className="flex flex-wrap gap-2">
-                            {EMOJI_LIST.map(em => (
-                                <button key={em} onClick={() => setStickers(prev => [...prev, { id: Date.now(), emoji: em, x: 50, y: 50, size: 64, startTime: currentTime, endTime: Math.min(currentTime + 3, duration) }])}
-                                    className="text-3xl w-12 h-12 bg-gray-800 rounded-xl hover:bg-gray-700 border border-gray-700 hover:border-blue-500 transition-all flex items-center justify-center">{em}</button>
-                            ))}
-                        </div>
-                        {stickers.length > 0 && (
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                                {stickers.map(s => (
-                                    <div key={s.id} className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2">
-                                        <span className="text-2xl">{s.emoji}</span>
-                                        <div className="flex-1 grid grid-cols-2 gap-1 text-xs">
-                                            <div><label className="text-gray-500">X%</label><input type="number" min={0} max={100} value={s.x} onChange={e => setStickers(prev => prev.map(st => st.id===s.id?{...st,x:+e.target.value}:st))} className="w-full bg-gray-700 rounded px-1 text-white"/></div>
-                                            <div><label className="text-gray-500">Y%</label><input type="number" min={0} max={100} value={s.y} onChange={e => setStickers(prev => prev.map(st => st.id===s.id?{...st,y:+e.target.value}:st))} className="w-full bg-gray-700 rounded px-1 text-white"/></div>
-                                            <div><label className="text-gray-500">Đến (s)</label><input type="number" min={0} max={duration} step={0.5} value={s.endTime.toFixed(1)} onChange={e => setStickers(prev => prev.map(st => st.id===s.id?{...st,endTime:+e.target.value}:st))} className="w-full bg-gray-700 rounded px-1 text-white"/></div>
-                                            <div><label className="text-gray-500">Size</label><input type="number" min={20} max={200} value={s.size} onChange={e => setStickers(prev => prev.map(st => st.id===s.id?{...st,size:+e.target.value}:st))} className="w-full bg-gray-700 rounded px-1 text-white"/></div>
+                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                            {activePanel === 'media' && (
+                                <div className="space-y-4">
+                                    <h4 className="font-bold text-white text-sm">Media</h4>
+                                    <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden border border-gray-700 group">
+                                        <video src={videoUrl} className="w-full h-full object-cover opacity-50" />
+                                        <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+                                            <p className="text-xs text-white truncate max-w-[150px]">{videoFile?.name}</p>
                                         </div>
-                                        <button onClick={() => setStickers(prev => prev.filter(st => st.id !== s.id))} className="text-red-400 text-lg">×</button>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* PANEL: PiP Camera */}
-                {activePanel === 'pip' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
-                        <h4 className="font-bold text-gray-200">📷 Camera góc (Picture-in-Picture)</h4>
-                        <button onClick={togglePip} className={`w-full py-3 font-bold rounded-xl text-sm transition-all ${pipActive ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-blue-600 hover:bg-blue-500 text-white'}`}>
-                            {pipActive ? '⏹ Tắt camera' : '📷 Bật camera góc'}
-                        </button>
-                        {pipActive && (
-                            <div className="space-y-3">
-                                <p className="text-xs text-green-400">🟢 Camera đang bật — hiển thị góc trên phải video</p>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div><label className="text-xs text-gray-400 block mb-1">Vị trí ngang: {pipPos.x}%</label><input type="range" min={0} max={75} value={pipPos.x} onChange={e => setPipPos(p => ({...p, x: +e.target.value}))} className="w-full accent-blue-500" /></div>
-                                    <div><label className="text-xs text-gray-400 block mb-1">Vị trí dọc: {pipPos.y}%</label><input type="range" min={0} max={75} value={pipPos.y} onChange={e => setPipPos(p => ({...p, y: +e.target.value}))} className="w-full accent-blue-500" /></div>
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* PANEL: Background Audio */}
-                {activePanel === 'bgaudio' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
-                        <h4 className="font-bold text-gray-200">🎵 Nhạc nền</h4>
-                        <label className="block cursor-pointer">
-                            <div className="border-2 border-dashed border-gray-700 hover:border-blue-500 rounded-xl p-4 text-center transition-colors">
-                                <p className="text-gray-400 text-sm">{bgAudioFile ? `🎵 ${bgAudioFile.name}` : 'Chọn file nhạc nền (MP3, WAV, OGG...)'}</p>
-                            </div>
-                            <input type="file" accept="audio/*" onChange={e => { const f = e.target.files?.[0]; if(f){ setBgAudioFile(f); setBgAudioUrl(URL.createObjectURL(f)); }}} className="hidden" />
-                        </label>
-                        {bgAudioUrl && (
-                            <div className="space-y-3">
-                                <audio ref={bgAudioRef} src={bgAudioUrl} loop controls className="w-full" />
-                                <div><label className="text-xs text-gray-400 block mb-1">Âm lượng nhạc nền: {Math.round(bgVolume*100)}%</label><input type="range" min={0} max={1} step={0.05} value={bgVolume} onChange={e => setBgVolume(+e.target.value)} className="w-full accent-blue-500" /></div>
-                                <p className="text-xs text-gray-600">💡 Nhạc nền phát cùng video khi xem. Khi export FFmpeg, upload nhạc lên và chán mình sẽ add vào render pipeline.</p>
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* PANEL: Clips / Cuts */}
-                {activePanel === 'cuts' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-                        <h4 className="font-bold text-gray-200">📌 Đánh dấu Clips</h4>
-                        <div className="flex items-center gap-3">
-                            <div>
-                                <p className="text-xs text-gray-500 mb-0.5">Điểm đầu: <strong className="text-white font-mono">{fmt(trimStart)}</strong></p>
-                                <p className="text-xs text-gray-500">Điểm cuối: <strong className="text-white font-mono">{fmt(trimEnd)}</strong></p>
-                            </div>
-                            <button onClick={addCut}
-                                className="flex-1 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-xl text-sm">
-                                + Lưu clip này
-                            </button>
-                        </div>
-                        <p className="text-xs text-gray-600">Dùng trim để chọn đoạn muốn giữ rồi bấm "Lưu clip này". Khi export có thể render từng clip.</p>
-                        {cuts.length > 0 && (
-                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                                {cuts.map(cut => (
-                                    <div key={cut.id} className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2">
-                                        <span className="text-green-400 text-xs">🎞️</span>
-                                        <input value={cut.label} onChange={e => setCuts(prev => prev.map(c => c.id === cut.id ? { ...c, label: e.target.value } : c))}
-                                            className="flex-1 bg-transparent text-white text-sm border-b border-gray-700 focus:border-blue-500 outline-none" />
-                                        <span className="text-xs text-gray-500 font-mono">{fmt(cut.start)} → {fmt(cut.end)}</span>
-                                        <button onClick={() => { setTrimStart(cut.start); setTrimEnd(cut.end); if (videoRef.current) videoRef.current.currentTime = cut.start; }}
-                                            className="text-blue-400 hover:text-blue-300 text-xs">Preview</button>
-                                        <button onClick={() => setCuts(prev => prev.filter(c => c.id !== cut.id))} className="text-red-400 text-lg leading-none">×</button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* PANEL: Audio */}
-                {activePanel === 'audio' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
-                        <h4 className="font-bold text-gray-200">🔊 Âm thanh</h4>
-                        <div className="flex items-center gap-4">
-                            <button onClick={() => setMuted(!muted)} className={`px-4 py-2 rounded-xl font-semibold text-sm transition-all ${muted ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-300 border border-gray-700'}`}>
-                                {muted ? '🔇 Tắt tiếng' : '🔊 Có tiếng'}
-                            </button>
-                        </div>
-                        <div>
-                            <label className="text-sm text-gray-400 block mb-2">Âm lượng: {Math.round(volume * 100)}%</label>
-                            <input type="range" min={0} max={2} step={0.05} value={volume} onChange={e => setVolume(Number(e.target.value))}
-                                className="w-full accent-blue-500" />
-                            <p className="text-xs text-gray-600 mt-1">Có thể tăng lên 200% để khuếch đại âm thanh</p>
-                        </div>
-                    </div>
-                )}
-
-                {/* PANEL: Export */}
-                {activePanel === 'export' && (
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
-                        <h4 className="font-bold text-gray-200">🚀 Xuất video (FFmpeg)</h4>
-
-                        {!ffmpegLoaded ? (
-                            <div className="space-y-3">
-                                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-sm text-yellow-300">
-                                    ⚠️ FFmpeg chưa tải. Nhấn nút dưới để tải (~30MB, chỉ tải 1 lần).
-                                </div>
-                                <button onClick={loadFFmpeg} disabled={ffmpegLoading}
-                                    className="w-full py-3 bg-yellow-600 hover:bg-yellow-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
-                                    {ffmpegLoading
-                                        ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Đang tải FFmpeg...</>
-                                        : '⬇️ Tải FFmpeg để render video'}
-                                </button>
-                                {processLog && <p className="text-xs text-gray-500 font-mono">{processLog}</p>}
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                <div className="text-xs text-gray-500 space-y-1 bg-gray-800/50 rounded-lg p-3">
-                                    <div className="flex justify-between"><span>Trim:</span><span className="text-white">{fmt(trimStart)} → {fmt(trimEnd)} ({fmt(trimEnd - trimStart)})</span></div>
-                                    <div className="flex justify-between"><span>Speed:</span><span className="text-white">{speed}x</span></div>
-                                    <div className="flex justify-between"><span>Filter:</span><span className="text-white">{FILTERS[filterIdx].name}</span></div>
-                                    <div className="flex justify-between"><span>Âm thanh:</span><span className="text-white">{muted ? 'Tắt' : `${Math.round(volume * 100)}%`}</span></div>
-                                </div>
-
-                                {processing && (
-                                    <div className="space-y-2">
-                                        <div className="w-full bg-gray-700 rounded-full h-2">
-                                            <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${processProgress}%` }} />
+                            )}
+                            {activePanel === 'text' && (
+                                <div className="space-y-4">
+                                    <h4 className="font-bold text-white text-sm">Thêm Văn Bản</h4>
+                                    <input value={captionText} onChange={e=>setCaptionText(e.target.value)} placeholder="Nhập phụ đề..." className="w-full bg-gray-900 border border-gray-700 rounded p-2 text-sm text-white" />
+                                    <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                                        <div>
+                                            <label className="text-gray-500 mb-1 block">Màu chữ</label>
+                                            <input type="color" value={captionColor} onChange={e=>setCaptionColor(e.target.value)} className="w-full h-8 bg-transparent cursor-pointer rounded" />
                                         </div>
-                                        <p className="text-xs text-gray-400 font-mono">{processLog}</p>
+                                        <div>
+                                            <label className="text-gray-500 mb-1 block">Màu nền</label>
+                                            <input type="color" value={captionBg} onChange={e=>setCaptionBg(e.target.value)} className="w-full h-8 bg-transparent cursor-pointer rounded" />
+                                        </div>
                                     </div>
-                                )}
-
-                                {!processing && processLog && (
-                                    <p className="text-xs text-gray-400 font-mono bg-gray-800 rounded-lg p-2">{processLog}</p>
-                                )}
-
-                                <button onClick={handleRender} disabled={processing}
-                                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
-                                    {processing
-                                        ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Đang render...</>
-                                        : '🎬 Render & Xuất MP4'}
-                                </button>
-
-                                {outputUrl && (
-                                    <div className="space-y-2">
-                                        <p className="text-green-400 text-sm font-semibold">✅ Video đã render!</p>
-                                        <video src={outputUrl} controls className="w-full rounded-xl bg-black max-h-40" />
-                                        <a href={outputUrl} download={`edited_${videoFile?.name || 'video.mp4'}`}
-                                            className="block w-full py-2.5 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-xl text-center text-sm">
-                                            ⬇️ Tải về máy
-                                        </a>
-                                        {/* Auto Upload & Get Link */}
-                                        {uploadedUrl ? (
-                                            <div className="p-3 bg-green-900/20 border border-green-700/40 rounded-xl space-y-2">
-                                                <p className="text-green-400 text-xs font-semibold">🔗 Link đã tạo:</p>
-                                                <p className="text-white text-xs font-mono break-all bg-gray-800 p-2 rounded-lg">{uploadedUrl}</p>
-                                                <button
-                                                    onClick={() => { navigator.clipboard.writeText(uploadedUrl); }}
-                                                    className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg">
-                                                    📋 Copy link
-                                                </button>
-                                                {onSubmissionReady && (
-                                                    <p className="text-xs text-green-400 text-center">✅ Link đã điền vào form submit bên dưới!</p>
+                                    <div className="grid grid-cols-3 gap-2 text-xs mb-3">
+                                        <div><label className="text-gray-500 block mb-1">Cỡ chữ</label><input type="number" value={captionSize} onChange={e=>setCaptionSize(+e.target.value)} className="w-full bg-gray-800 text-white rounded p-1"/></div>
+                                        <div><label className="text-gray-500 block mb-1">X (%)</label><input type="number" min={0} max={100} value={captionX} onChange={e=>setCaptionX(+e.target.value)} className="w-full bg-gray-800 text-white rounded p-1"/></div>
+                                        <div><label className="text-gray-500 block mb-1">Y (%)</label><input type="number" min={0} max={100} value={captionY} onChange={e=>setCaptionY(+e.target.value)} className="w-full bg-gray-800 text-white rounded p-1"/></div>
+                                    </div>
+                                    <button onClick={addCaption} disabled={!captionText} className="w-full bg-gray-800 hover:bg-blue-600 font-bold text-white p-2 rounded text-sm disabled:opacity-50 transition-colors">+ Thêm vào Track</button>
+                                    
+                                    <div className="relative mt-4 pt-4 border-t border-gray-800">
+                                        <div className="absolute top-0 right-0 w-8 h-8 bg-fuchsia-500/10 rounded-full blur-xl animate-pulse" />
+                                        <button 
+                                            onClick={handleAutoSubtitle} 
+                                            disabled={isAITranscribing || !videoFile}
+                                            className="w-full relative overflow-hidden bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 font-black text-white p-2.5 rounded text-[11px] uppercase tracking-widest disabled:opacity-50 transition-all shadow-[0_0_15px_rgba(192,38,211,0.3)] hover:shadow-[0_0_20px_rgba(192,38,211,0.5)]"
+                                        >
+                                            <span className="relative z-10 flex items-center justify-center gap-2">
+                                                {isAITranscribing ? (
+                                                    <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"/> ĐANG LẮNG NGHE AI...</>
+                                                ) : (
+                                                    <>✨ AUTO DỊCH PHỤ ĐỀ (AI)</>
                                                 )}
+                                            </span>
+                                        </button>
+                                        <p className="text-[9px] text-fuchsia-400 mt-2 text-center uppercase tracking-widest font-mono">Powered by Web3 Neural Net</p>
+                                    </div>
+                                </div>
+                            )}
+                            {activePanel === 'filters' && (
+                                <div className="space-y-4">
+                                    <h4 className="font-bold text-white text-sm">Bộ Lọc</h4>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {FILTERS.map((f, i) => (
+                                            <div key={i} onClick={() => setFilterIdx(i)} className={`cursor-pointer rounded overflow-hidden border-2 ${filterIdx === i ? 'border-blue-500' : 'border-transparent'}`}>
+                                                <div className="h-16 bg-gradient-to-br from-gray-600 to-gray-800" style={{ filter: f.css }} />
+                                                <div className="bg-gray-900 text-center text-xs py-1 text-gray-300">{f.name}</div>
                                             </div>
-                                        ) : (
-                                            <button onClick={handleUpload} disabled={uploading}
-                                                className="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
-                                                {uploading
-                                                    ? <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Đang upload...</>
-                                                    : '⬆️ Upload & Lấy link nộp'}
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {activePanel === 'adjust' && (
+                                <div className="space-y-4">
+                                    <h4 className="font-bold text-white text-sm">Căn Chỉnh Màu</h4>
+                                    {[['Độ sáng', brightness, setBrightness, 0, 200, '%'],['Tương phản', contrast, setContrast, 0, 200, '%'],['Bão hoà', saturation, setSaturation, 0, 200, '%']].map(([l,v,s,mn,mx,u]) => (
+                                        <div key={l}>
+                                            <div className="flex justify-between text-xs text-gray-400 mb-1"><span>{l}</span><span>{v}{u}</span></div>
+                                            <input type="range" min={mn} max={mx} value={v} onChange={e=>s(+e.target.value)} className="w-full accent-blue-500" />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ── CENTER PLAYER ── */}
+                    <div className="flex-1 bg-[#0a0a0a] flex flex-col relative">
+                        <div className="flex-1 flex items-center justify-center p-4">
+                            <div 
+                                className="relative bg-black rounded shadow-2xl overflow-hidden max-w-full max-h-full aspect-video border border-gray-800 ring-1 ring-black/50 cursor-crosshair"
+                                onMouseMove={handleCanvasMouseMove}
+                            >
+                                <video ref={videoRef} src={videoUrl} className="w-full h-full object-contain" style={{ filter: computedFilter(), transform: `rotate(${rotation}deg) scaleX(${flipH?-1:1}) scaleY(${flipV?-1:1})` }} onClick={togglePlay} onContextMenu={e => e.preventDefault()} />
+                                <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+                                
+                                {/* Remote Cursors Overlay */}
+                                {Object.values(remoteCursors).map(cursor => (
+                                    <div 
+                                        key={cursor.userId}
+                                        className="absolute pointer-events-none transition-all duration-75"
+                                        style={{ 
+                                            left: `${cursor.x}%`, 
+                                            top: `${cursor.y}%`,
+                                            zIndex: 100 
+                                        }}
+                                    >
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" style={{ filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.5))` }}>
+                                            <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 01.35-.15h6.87c.45 0 .67-.54.35-.85L6.35 2.86a.5.5 0 00-.85.35z" fill={cursor.color} stroke="white" strokeWidth="1.5"/>
+                                        </svg>
+                                        <div 
+                                            className="absolute left-4 top-4 px-2 py-0.5 rounded text-[10px] font-black font-mono text-white shadow-lg tracking-widest uppercase whitespace-nowrap opacity-90"
+                                            style={{ backgroundColor: cursor.color }}
+                                        >
+                                            {cursor.userName}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Player Controls */}
+                        <div className="h-12 bg-[#141414] border-t border-gray-800 flex items-center justify-between px-4 shrink-0">
+                            <div className="flex items-center gap-4 text-gray-400">
+                                <span className="text-xs font-mono">{fmt(currentTime)} / {fmt(duration)}</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => videoRef.current && (videoRef.current.currentTime -= 1)} className="hover:text-white">⏪ 1s</button>
+                                <button onClick={togglePlay} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 text-white">
+                                    {isPlaying ? '⏸' : '▶'}
+                                </button>
+                                <button onClick={() => videoRef.current && (videoRef.current.currentTime += 1)} className="hover:text-white">1s ⏩</button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">Tốc độ: {speed}x</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── RIGHT PANEL (PROPERTIES) ── */}
+                    <div className="w-72 bg-[#141414] border-l border-gray-800 p-4 overflow-y-auto custom-scrollbar shrink-0">
+                        <h4 className="font-bold text-white text-sm border-b border-gray-800 pb-2 mb-4">Thuộc Tính</h4>
+                        <div className="space-y-6">
+                            {/* Trim Controls */}
+                            <div>
+                                <h5 className="text-xs font-semibold text-gray-400 uppercase mb-2">Cắt Video (Trim)</h5>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                    <div className="bg-gray-900 p-2 rounded border border-gray-800">
+                                        <p className="text-gray-500 mb-1">Bắt đầu</p>
+                                        <input type="number" min={0} step={0.1} value={trimStart.toFixed(1)} onChange={e=>setTrimStart(+e.target.value)} className="w-full bg-transparent text-white outline-none" />
+                                    </div>
+                                    <div className="bg-gray-900 p-2 rounded border border-gray-800">
+                                        <p className="text-gray-500 mb-1">Kết thúc</p>
+                                        <input type="number" step={0.1} value={trimEnd.toFixed(1)} onChange={e=>setTrimEnd(+e.target.value)} className="w-full bg-transparent text-white outline-none" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Audio Controls */}
+                            <div>
+                                <h5 className="text-xs font-semibold text-gray-400 uppercase mb-2">Âm Thanh</h5>
+                                <div className="flex justify-between text-xs text-gray-500 mb-1"><span>Âm lượng gốc</span><span>{Math.round(volume*100)}%</span></div>
+                                <input type="range" min={0} max={2} step={0.05} value={volume} onChange={e=>setVolume(+e.target.value)} className="w-full accent-blue-500" />
+                            </div>
+
+                            {/* Transform Controls */}
+                            <div>
+                                <h5 className="text-xs font-semibold text-gray-400 uppercase mb-2">Biến Đổi</h5>
+                                <div className="flex gap-2 mb-2">
+                                    <button onClick={()=>setRotation((rotation+90)%360)} className="flex-1 bg-gray-900 border border-gray-800 py-1.5 rounded text-xs hover:bg-gray-800">Xoay {rotation}°</button>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>setFlipH(!flipH)} className={`flex-1 py-1.5 rounded text-xs border ${flipH ? 'bg-blue-900/40 border-blue-500 text-blue-400' : 'bg-gray-900 border-gray-800 text-gray-400'}`}>Lật Ngang</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── BOTTOM TIMELINE ── */}
+            {isLoaded && (
+                <div className="h-64 bg-[#111] border-t border-gray-800 flex flex-col shrink-0 relative z-10 w-full overflow-hidden">
+                    <div className="h-8 bg-[#181818] border-b border-gray-800 flex items-center px-4 justify-between shrink-0 w-full">
+                        <div className="text-xs text-gray-500 font-mono">TIMELINE KHUNG HÌNH (0 - {isNaN(duration) || duration <= 0 || duration === Infinity ? '0:00' : fmt(duration)})</div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-400">Kéo chuột trên thước thời gian để seek</span>
+                        </div>
+                    </div>
+                    
+                    <div className="flex-1 overflow-x-auto overflow-y-auto relative custom-scrollbar p-2 w-full">
+                        
+                        <div className="relative min-w-[1000px] h-full" style={{ width: '100%' }} ref={timelineRef}
+                            onMouseDown={(e) => {
+                                e.stopPropagation();
+                                if(!timelineRef.current || !duration || isNaN(duration)) return;
+                                const rect = timelineRef.current.getBoundingClientRect();
+                                const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                                if (videoRef.current) videoRef.current.currentTime = pct * duration;
+                                setDragging('seek');
+                            }}>
+                            {/* Time ruler */}
+                            <div className="h-6 border-b border-gray-800 mb-2 relative select-none overflow-hidden group cursor-pointer pointer-events-none">
+                                <div className="absolute inset-0 group-hover:bg-blue-500/10 transition-colors" />
+                                {Array.from({length: Math.max(1, Math.min(1000, isNaN(duration) || duration <= 0 ? 1 : Math.ceil(duration/5)+1))}).map((_,i) => (
+                                    <div key={i} className="absolute text-[8px] text-gray-500 group-hover:text-blue-400 transition-colors" style={{ left: `${duration > 0 ? (i*5/duration)*100 : 0}%` }}>
+                                        | {fmt(i*5)}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* TRACK 1: TEXT/CAPTIONS */}
+                            <div className="h-10 w-full bg-gray-800/20 mb-1 relative rounded border border-gray-800/50 flex items-center">
+                                <div className="absolute left-0 w-24 bg-[#141414] h-full flex items-center px-2 text-[10px] text-gray-500 font-bold border-r border-gray-800 z-10 select-none shadow-[2px_0_5px_rgba(0,0,0,0.5)]">T (Text)</div>
+                                <div className="absolute left-24 right-0 h-full overflow-hidden">
+                                    {captions.map(c => (
+                                        <div key={c.id} className="absolute top-1 bottom-1 bg-gradient-to-r from-amber-600 to-amber-500 border border-amber-400 rounded cursor-pointer group shadow-md flex items-center justify-between px-2"
+                                            style={{ left: pct(c.startTime), width: `calc(${pct(c.endTime)} - ${pct(c.startTime)})` }}>
+                                            <span className="text-[10px] text-amber-50 font-bold truncate flex-1 drop-shadow-md">{c.text}</span>
+                                            <button onClick={()=>removeCaption(c.id)} className="text-amber-100/50 hover:text-white px-1 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* TRACK 2: MAIN VIDEO */}
+                            <div className="h-20 w-full bg-gray-800/20 mb-1 relative rounded border border-gray-800/50 flex items-center">
+                                <div className="absolute left-0 w-24 bg-[#141414] h-full flex items-center px-2 text-[10px] text-gray-500 font-bold border-r border-gray-800 z-10 select-none shadow-[2px_0_5px_rgba(0,0,0,0.5)]">V1 (Main)</div>
+                                <div className="absolute left-24 right-0 h-full p-2 overflow-hidden">
+                                    {/* Video Clip Block */}
+                                    <div className="absolute top-2 bottom-2 bg-blue-600/30 border border-blue-500/80 rounded shadow-md overflow-hidden group"
+                                        style={{ left: pct(trimStart), width: `calc(${pct(trimEnd)} - ${pct(trimStart)})` }}>
+                                        <div className="absolute inset-0 opacity-20" style={{ background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.5) 10px, rgba(255,255,255,0.5) 20px)' }} />
+                                        <span className="absolute left-3 top-1.5 text-[10px] text-blue-100 font-mono font-bold drop-shadow-md z-10 truncate right-3">{videoFile?.name}</span>
+                                        {/* Trim Handles */}
+                                        <div className="absolute left-0 top-0 bottom-0 w-4 bg-blue-500 hover:bg-white transition-all cursor-col-resize rounded-l flex items-center justify-center z-20 group-hover:w-5 shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+                                            onMouseDown={(e)=>{e.stopPropagation(); setDragging('start');}}>
+                                            <div className="w-0.5 h-6 bg-blue-900 opacity-50 rounded" />
+                                        </div>
+                                        <div className="absolute right-0 top-0 bottom-0 w-4 bg-blue-500 hover:bg-white transition-all cursor-col-resize rounded-r flex items-center justify-center z-20 group-hover:w-5 shadow-[0_0_10px_rgba(0,0,0,0.5)]"
+                                            onMouseDown={(e)=>{e.stopPropagation(); setDragging('end');}}>
+                                            <div className="w-0.5 h-6 bg-blue-900 opacity-50 rounded" />    
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Playhead Indicator */}
+                            <div className="absolute top-0 bottom-0 w-[2px] bg-red-500 z-30 pointer-events-none transition-all duration-75 shadow-[0_0_5px_rgba(239,68,68,0.5)]"
+                                style={{ left: `calc(96px + (${pct(currentTime)} * (100% - 96px) / 100))` }}>
+                                <div className="w-3 h-4 bg-red-500 absolute -top-1 -ml-[5px] rounded-sm clip-polygon-[50%_100%,_0_50%,_0_0,_100%_0,_100%_50%]" style={{ clipPath: 'polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%)' }} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── MODALS ── */}
+            {showExportModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-[#141414] border border-gray-800 rounded-xl max-w-lg w-full overflow-hidden shadow-2xl relative">
+                        <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-600 via-blue-400 to-blue-600" />
+                        <div className="p-5 border-b border-gray-800 flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <span className="bg-blue-600/20 text-blue-400 p-1.5 rounded-lg">🚀</span> Xuất Bản Video
+                            </h3>
+                            <button onClick={()=>setShowExportModal(false)} className="text-gray-500 hover:text-white bg-gray-900 hover:bg-gray-800 w-8 h-8 rounded-full flex items-center justify-center transition-all">✕</button>
+                        </div>
+                        <div className="p-6 space-y-8">
+                            <div className="flex gap-4 items-center bg-gray-900/50 p-3 rounded-xl border border-gray-800/50">
+                                <div className="w-28 aspect-video bg-black rounded-lg border border-gray-700 flex-shrink-0 overflow-hidden relative shadow-inner">
+                                    <video src={videoUrl} className="w-full h-full object-cover" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-semibold text-white mb-1 truncate" title={videoFile?.name}>{videoFile?.name}</p>
+                                    <p className="text-xs font-mono text-gray-400 mb-0.5">Thời lượng: <span className="text-gray-200">{fmt(trimEnd-trimStart)}</span></p>
+                                    <p className="text-xs font-mono text-gray-400">Dung lượng Ước tính: <span className="text-gray-200">~{((trimEnd-trimStart) * 1.5).toFixed(1)} MB</span></p>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest block mb-2">Độ Phân Giải</label>
+                                    <div className="flex gap-2">
+                                        {['720p', '1080p'].map(r => (
+                                            <button key={r} onClick={()=>setExportRes(r)} className={`flex-1 py-2.5 rounded-lg border transition-all text-sm font-medium ${exportRes===r ? 'bg-blue-600/10 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)] ring-1 ring-blue-500' : 'bg-gray-800/50 border-gray-700/50 text-gray-400 hover:bg-gray-800'}`}>
+                                                {r} {r === '1080p' && <span className="text-[10px] ml-1 bg-gradient-to-r from-amber-500 to-orange-500 text-transparent bg-clip-text font-black">HD</span>}
                                             </button>
-                                        )}
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest block mb-2">Tốc Độ Khung Hình (FPS)</label>
+                                    <div className="flex gap-2">
+                                        {['30', '60'].map(f => (
+                                            <button key={f} onClick={()=>setExportFps(f)} className={`flex-1 py-2.5 rounded-lg border transition-all text-sm font-medium ${exportFps===f ? 'bg-blue-600/10 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)] ring-1 ring-blue-500' : 'bg-gray-800/50 border-gray-700/50 text-gray-400 hover:bg-gray-800'}`}>
+                                                {f} fps
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                {processing && (
+                                    <div className="bg-gray-900/50 rounded-xl p-4 border border-blue-500/20 shadow-inner">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-xs font-bold text-blue-400 uppercase tracking-widest animate-pulse">Đang Kết Xuất...</span>
+                                            <span className="text-xs font-mono text-white">{processProgress}%</span>
+                                        </div>
+                                        <div className="h-2 w-full bg-gray-800 rounded-full overflow-hidden shadow-inner mb-2 border border-gray-700/50">
+                                            <div className="h-full bg-gradient-to-r from-blue-600 to-blue-400 transition-all duration-300 relative" style={{width: `${processProgress}%`}}>
+                                                <div className="absolute inset-0 bg-white/20" style={{ backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent)' }}></div>
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] text-gray-500 font-mono text-center truncate">{processLog}</p>
                                     </div>
                                 )}
                             </div>
-                        )}
+                        </div>
+                        
+                        <div className="p-5 bg-gradient-to-t from-[#111] to-[#141414] border-t border-gray-800 flex justify-end gap-3">
+                            {outputUrl ? (
+                                <div className="w-full flex gap-3">
+                                    <a href={outputUrl} download={`export_${videoFile?.name}`} className="flex-1 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                        Tải Về Máy
+                                    </a>
+                                    <button onClick={handleUpload} disabled={uploading} className="flex-1 py-3 bg-gradient-to-r from-green-600 to-teal-500 hover:from-green-500 hover:to-teal-400 rounded-xl text-sm font-bold text-white transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale">
+                                        {uploading ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                                        {uploading ? 'Đang Tải Lên...' : 'Nộp Khách Hàng'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <button onClick={handleRender} disabled={processing || !ffmpegLoaded} className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:grayscale shadow-[0_0_20px_rgba(59,130,246,0.3)] flex items-center justify-center gap-2 uppercase tracking-wide text-sm">
+                                    {processing ? 'Đang Khởi Tạo FFmpeg...' : 'Xác Nhận Xuất Bản'}
+                                </button>
+                            )}
+                        </div>
                     </div>
-                )}
-                </>
+                </div>
             )}
         </div>
     );
 };
-
 export default VideoEditor;

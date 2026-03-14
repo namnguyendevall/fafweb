@@ -11,6 +11,7 @@ export const useToast = () => {
 };
 
 export const ToastProvider = ({ children }) => {
+    console.log('--- TOAST_PROVIDER RENDERED ---');
     const [toasts, setToasts] = useState([]);
 
     const showToast = useCallback((message, type = 'info', duration = 3000) => {

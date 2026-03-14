@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 import FAFLogo from '../assets/FAF-Logo.png';
 
 const ForgotOTP = () => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const toast = useToast();
 
     const handleChange = (index, value) => {
         if (!/^\d*$/.test(value)) return; // Chỉ cho phép số
@@ -74,7 +76,7 @@ const ForgotOTP = () => {
         // Focus vào input đầu tiên
         const firstInput = document.getElementById('otp-0');
         if (firstInput) firstInput.focus();
-        alert('Đã gửi lại mã OTP!');
+        toast.success('Đã gửi lại mã OTP!');
     };
 
     return (

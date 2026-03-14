@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { postsApi } from '../../api/posts.api';
 import { useToast } from '../../contexts/ToastContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const getInitials = (name) => {
     if (!name) return 'U';
@@ -16,6 +17,8 @@ const PostModal = ({ onClose, onPostCreated, user, toast }) => {
     const [image, setImage]               = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { theme } = useTheme();
+    const isLight = theme === 'light';
     const textareaRef = useRef(null);
     const displayName = user?.full_name || user?.email?.split('@')[0] || 'You';
 
@@ -72,10 +75,10 @@ const PostModal = ({ onClose, onPostCreated, user, toast }) => {
                 className="w-full max-w-[520px] flex flex-col overflow-hidden animate-[modalPop_.22s_cubic-bezier(0.34,1.56,0.64,1)] relative"
                 style={{
                     maxHeight: '90vh',
-                    background: 'linear-gradient(145deg, #0d1224 0%, #0f172a 100%)',
-                    border: '1px solid rgba(6,182,212,0.25)',
+                    background: isLight ? 'rgba(255,255,255,0.98)' : 'linear-gradient(145deg, #0d1224 0%, #0f172a 100%)',
+                    border: isLight ? '1px solid rgba(148,163,184,0.3)' : '1px solid rgba(6,182,212,0.25)',
                     borderRadius: '16px',
-                    boxShadow: '0 0 0 1px rgba(6,182,212,0.1), 0 0 40px rgba(6,182,212,0.08), 0 25px 60px rgba(0,0,0,0.6)',
+                    boxShadow: isLight ? '0 10px 40px rgba(0,0,0,0.12)' : '0 0 0 1px rgba(6,182,212,0.1), 0 0 40px rgba(6,182,212,0.08), 0 25px 60px rgba(0,0,0,0.6)',
                 }}
             >
                 {/* Top neon line */}
@@ -204,6 +207,8 @@ const PostModal = ({ onClose, onPostCreated, user, toast }) => {
 const PostForm = ({ onPostCreated }) => {
     const { user } = useAuth();
     const toast    = useToast();
+    const { theme } = useTheme();
+    const isLight = theme === 'light';
     const [showModal, setShowModal] = useState(false);
     const displayName = user?.full_name || user?.email?.split('@')[0] || 'You';
 
@@ -215,9 +220,9 @@ const PostForm = ({ onPostCreated }) => {
             <div
                 className="relative overflow-hidden rounded-xl border"
                 style={{
-                    background: 'linear-gradient(145deg, #0d1224 0%, #0f172a 100%)',
-                    borderColor: 'rgba(6,182,212,0.2)',
-                    boxShadow: '0 0 20px rgba(6,182,212,0.04)',
+                    background: isLight ? '#ffffff' : 'linear-gradient(145deg, #0d1224 0%, #0f172a 100%)',
+                    borderColor: isLight ? 'rgba(148,163,184,0.25)' : 'rgba(6,182,212,0.2)',
+                    boxShadow: isLight ? '0 2px 8px rgba(0,0,0,0.06)' : '0 0 20px rgba(6,182,212,0.04)',
                 }}
             >
                 {/* Top neon line */}
@@ -235,24 +240,22 @@ const PostForm = ({ onPostCreated }) => {
                         {/* Trigger input */}
                         <button
                             onClick={() => setShowModal(true)}
-                            className="flex-1 text-left border rounded-xl py-2.5 px-4 text-[13px] font-mono font-bold tracking-wide transition-all group"
+                            className="flex-1 text-left border rounded-xl py-3 px-5 text-[13px] font-mono font-black tracking-widest transition-all group relative overflow-hidden"
                             style={{
-                                background: 'rgba(15,23,42,0.8)',
-                                borderColor: 'rgba(6,182,212,0.15)',
-                                color: 'rgba(148,163,184,0.7)',
-                            }}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.borderColor = 'rgba(6,182,212,0.4)';
-                                e.currentTarget.style.color = 'rgba(6,182,212,0.85)';
-                                e.currentTarget.style.boxShadow = '0 0 15px rgba(6,182,212,0.08)';
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.borderColor = 'rgba(6,182,212,0.15)';
-                                e.currentTarget.style.color = 'rgba(148,163,184,0.7)';
-                                e.currentTarget.style.boxShadow = 'none';
+                                background: isLight ? 'rgba(248,250,252,0.9)' : 'rgba(15,23,42,0.6)',
+                                borderColor: isLight ? 'rgba(148,163,184,0.3)' : 'rgba(6,182,212,0.15)',
+                                color: isLight ? '#64748b' : 'rgba(148,163,184,0.5)',
                             }}
                         >
-                            {'>'} {displayName.split(' ')[0].toLowerCase()}, what signal are you transmitting?
+                            {/* Inner glow on hover */}
+                            <div className="absolute inset-0 bg-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            
+                            <span className="relative z-10 flex items-center gap-2">
+                                <span className="text-cyan-500 font-black animate-pulse">{'>'}</span>
+                                <span className="group-hover:text-cyan-400 transition-colors uppercase">
+                                    INITIALIZING_SIGNAL... [{displayName.split(' ')[0]}]
+                                </span>
+                            </span>
                         </button>
                     </div>
 

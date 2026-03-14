@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ToastProvider } from "./contexts/ToastContext";
 import PublicLayout from "./components/PublicLayout";
 import HomePage from "./pages/Worker/HomePage";
@@ -15,6 +15,7 @@ import ContractDetail from "./pages/Worker/ContractDetail";
 import Settings from "./pages/Worker/Settings";
 import Wallet from "./pages/Worker/Wallet";
 import Depositpoint from "./pages/Worker/Depositpoint";
+import DepositResult from "./pages/Worker/DepositResult";
 import Withdrawpoint from "./pages/Worker/Withdrawpoint";
 import TaskOwnerPage from "./pages/TaskOwner/TaskOwnerPage";
 import ProfilesPage from "./pages/TaskOwner/ProfilesPage";
@@ -45,18 +46,37 @@ import Messaging from "./pages/Messaging/Messaging";
 import Notifications from "./pages/Notifications";
 import { ChatProvider } from "./contexts/ChatContext";
 import ChatWidget from "./components/Chat/ChatWidget";
+import TaskOwnerLayout from "./components/TaskOwnerLayout";
 import "./App.css";
 import Manager from "./pages/Manager/Request";
 import EmployeeManagement from "./pages/Manager/EmployeeManagement";
 import RequestDetail from "./pages/Manager/RequestDetail";
 import Finances from "./pages/Manager/Finances";
+import JobManagement from "./pages/Manager/JobManagement";
+import Disputes from "./pages/Manager/Disputes";
+import DisputeDetail from "./pages/Manager/DisputeDetail";
+import DisputeView from "./pages/Shared/DisputeView";
+import DisputeRedirector from "./pages/Shared/DisputeRedirector";
+import ManagerLayout from "./components/ManagerLayout";
+import DynamicBackground from "./components/DynamicBackground";
+import WithdrawalManagement from "./pages/Manager/WithdrawalManagement";
+import ManagerManage from "./pages/Admin/ManagerManage";
+import SkillManage from "./pages/Admin/SkillManage";
+import CategoryManage from "./pages/Admin/CategoryManage";
+import AdminNotifications from "./pages/Admin/AdminNotifications";
 
 function App() {
+  console.trace('--- APP MOUNTED / RENDERED ---');
+  const location = useLocation();
+  const hideChatWidgetPaths = ["/forbidden"];
+  const shouldHideChatWidget = hideChatWidgetPaths.includes(location.pathname);
+
   return (
     <ToastProvider>
       <ChatProvider>
-      <Routes>
-      {/* ========== AUTH ROUTES (Public, No Layout) ========== */}
+        <DynamicBackground />
+        <Routes>
+        {/* ========== AUTH ROUTES (Public, No Layout) ========== */}
       <Route path="/signin" element={<Signin />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/otp" element={<OTP />} />
@@ -135,9 +155,25 @@ function App() {
         }
       />
       <Route
+        path="/disputes/:id"
+        element={
+          <ProtectedRoute roles={["worker", "employer", "admin", "manager"]}>
+            <PublicLayout><DisputeView /></PublicLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/disputes/search"
+        element={
+          <ProtectedRoute roles={["worker", "employer", "admin", "manager"]}>
+            <PublicLayout><DisputeRedirector /></PublicLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/settings"
         element={
-          <ProtectedRoute roles={["worker", "admin"]}>
+          <ProtectedRoute roles={["worker", "admin", "manager", "employer"]}>
             <PublicLayout><Settings /></PublicLayout>
           </ProtectedRoute>
         }
@@ -146,7 +182,7 @@ function App() {
       <Route
         path="/wallet"
         element={
-          <ProtectedRoute roles={["worker", "admin"]}>
+          <ProtectedRoute roles={["worker", "admin", "manager", "employer"]}>
             <PublicLayout><Wallet /></PublicLayout>
           </ProtectedRoute>
         }
@@ -156,6 +192,14 @@ function App() {
         element={
           <ProtectedRoute roles={["worker", "admin"]}>
             <PublicLayout><Depositpoint /></PublicLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/wallet/deposit/result"
+        element={
+          <ProtectedRoute roles={["worker", "admin", "employer", "manager"]}>
+            <PublicLayout><DepositResult /></PublicLayout>
           </ProtectedRoute>
         }
       />
@@ -170,7 +214,7 @@ function App() {
       <Route
         path="/messages"
         element={
-          <ProtectedRoute roles={["worker", "employer", "admin"]}>
+          <ProtectedRoute roles={["worker", "employer", "admin", "manager"]}>
             <PublicLayout><Messaging /></PublicLayout>
           </ProtectedRoute>
         }
@@ -178,103 +222,37 @@ function App() {
       <Route
         path="/notifications"
         element={
-          <ProtectedRoute roles={["worker", "employer", "admin"]}>
+          <ProtectedRoute roles={["worker", "employer", "admin", "manager"]}>
             <PublicLayout><Notifications /></PublicLayout>
           </ProtectedRoute>
         }
       />
 
       {/* ========== EMPLOYER ROUTES (Custom Layout with Sidebar) ========== */}
+      {/* ========== TASK OWNER ROUTES ========== */}
       <Route
         path="/task-owner"
         element={
-          <ProtectedRoute roles={['employer', 'admin']}>
-            <PublicLayout><TaskOwnerPage /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/task-owner/contract/:id/sign"
-        element={
-          <ProtectedRoute roles={['employer', 'admin']}>
-            <PublicLayout><EmployerContractSign /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/task-owner/contracts/:contractId/review"
-        element={
-          <ProtectedRoute roles={['employer', 'admin']}>
-            <PublicLayout><CheckpointReview /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/task-owner/jobs"
-        element={
           <ProtectedRoute roles={["employer", "admin"]}>
-            <PublicLayout><Jobs /></PublicLayout>
+            <TaskOwnerLayout />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/task-owner/jobs/:id"
-        element={
-          <ProtectedRoute roles={["employer", "admin"]}>
-            <PublicLayout><JobDetail /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/task-owner/contracts"
-        element={
-          <ProtectedRoute roles={["employer", "admin"]}>
-            <PublicLayout><Contracts /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/task-owner/profiles"
-        element={
-          <ProtectedRoute roles={["employer", "admin"]}>
-            <PublicLayout><ProfilesPage /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/task-owner/talent"
-        element={
-          <ProtectedRoute roles={["employer", "admin"]}>
-            <PublicLayout><Talents /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/task-owner/talent/:id"
-        element={
-          <ProtectedRoute roles={["employer", "admin"]}>
-            <PublicLayout><TalentDetail /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/task-owner/post-job"
-        element={
-          <ProtectedRoute roles={["employer", "admin"]}>
-            <PublicLayout><Postjob /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/task-owner/jobs/:id/edit"
-        element={
-          <ProtectedRoute roles={["employer", "admin"]}>
-            <PublicLayout><EditJob /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route index element={<TaskOwnerPage />} />
+        <Route path="jobs" element={<Jobs />} />
+        <Route path="jobs/:id" element={<JobDetail />} />
+        <Route path="jobs/:id/edit" element={<EditJob />} />
+        <Route path="contracts" element={<Contracts />} />
+        <Route path="contracts/:id/sign" element={<EmployerContractSign />} />
+        <Route path="contracts/:contractId/review" element={<CheckpointReview />} />
+        <Route path="profiles" element={<ProfilesPage />} />
+        <Route path="talent" element={<Talents />} />
+        <Route path="talent/:id" element={<TalentDetail />} />
+        <Route path="post-job" element={<Postjob />} />
+      </Route>
 
       {/* ========== ADMIN ROUTES (Custom Layout with Sidebar) ========== */}
+
       <Route
         path="/admin/dashboard"
         element={
@@ -307,13 +285,45 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/managers"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <ManagerManage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/skills"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <SkillManage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/categories"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <CategoryManage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/notifications"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <AdminNotifications />
+          </ProtectedRoute>
+        }
+      />
 
       {/* ========== OTHER ROUTES ========== */}
       <Route path="/job-list" element={<JobListPage />} />
       <Route
         path="/profile/:id"
         element={
-          <ProtectedRoute roles={["worker", "employer", "admin"]}>
+          <ProtectedRoute roles={["worker", "employer", "admin", "manager"]}>
             <PublicLayout><PublicProfile /></PublicLayout>
           </ProtectedRoute>
         }
@@ -321,43 +331,31 @@ function App() {
 
       {/* ========== MANAGER ROUTES ========== */}
       <Route
-        path="/manager/request"
+        path="/manager"
         element={
           <ProtectedRoute roles={["manager"]}>
-            <Manager />
+            <ManagerLayout />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/manager/request/:id"
-        element={
-          <ProtectedRoute roles={["manager"]}>
-            <RequestDetail />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/manager/employees"
-        element={
-          <ProtectedRoute roles={["manager"]}>
-            <EmployeeManagement />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/manager/finances"
-        element={
-          <ProtectedRoute roles={["manager"]}>
-            <Finances />
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route path="request" element={<Manager />} />
+        <Route path="request/:id" element={<RequestDetail />} />
+        <Route path="management/jobs" element={<JobManagement />} />
+        <Route path="employees" element={<EmployeeManagement />} />
+        <Route path="finances" element={<Finances />} />
+        <Route path="withdrawals" element={<WithdrawalManagement />} />
+        <Route path="disputes" element={<Disputes />} />
+        <Route path="disputes/:id" element={<DisputeDetail />} />
+      </Route>
 
       {/* ========== FALLBACK (Must be last) ========== */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-    <ChatWidget />
+    {!shouldHideChatWidget && <ChatWidget />}
     </ChatProvider>
     </ToastProvider>
   );
 }
 
 export default App;
+

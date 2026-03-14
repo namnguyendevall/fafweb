@@ -1,82 +1,131 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../auth/AuthContext'
+import axiosClient from '../../api/axiosClient'
+import { useToast } from '../../contexts/ToastContext'
 
 const Wallet = () => {
+    const { success: toastSuccess, error: toastError } = useToast();
     const navigate = useNavigate()
+    const { user, fetchMe } = useAuth()
     const [selectedTab, setSelectedTab] = useState('All')
     const [selectedPackage, setSelectedPackage] = useState('Pro')
     const [customAmount, setCustomAmount] = useState('')
     const [withdrawAmount, setWithdrawAmount] = useState('')
     const [copied, setCopied] = useState(false)
+    const [bankName, setBankName] = useState('ZaloPay')
+    const [accountNumber, setAccountNumber] = useState('')
+    const [accountName, setAccountName] = useState('')
+    const [myWithdrawals, setMyWithdrawals] = useState([])
+    const [realTransactions, setRealTransactions] = useState([])
+    const [loading, setLoading] = useState(false)
+    const [currentPage, setCurrentPage] = useState(1)
+    const ITEMS_PER_PAGE = 5
 
-    const user = useMemo(() => {
+    const fetchTransactions = async () => {
         try {
-            const raw = localStorage.getItem('user')
-            return raw ? JSON.parse(raw) : null
-        } catch {
-            return null
+            const res = await axiosClient.get('/wallets/transactions/my');
+            setRealTransactions(res.data || []);
+        } catch (error) {
+            console.error("Failed to fetch transactions", error);
         }
-    }, [])
+    };
 
-    const walletId = user?.walletId || 'faf_8823_xk92_mn44'
-    const totalBalance = user?.walletBalance || 4500
+    const fetchMyWithdrawals = async () => {
+        try {
+            const res = await axiosClient.get('/wallets/withdraw/my');
+            setMyWithdrawals(res.data || []);
+        } catch (error) {
+            console.error("Failed to fetch withdrawals", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchMe();
+        fetchMyWithdrawals();
+        fetchTransactions();
+    }, []);
+
+    const walletId = user?.id ? `faf_${user.id}_wallet` : 'faf_wallet'
+    const totalBalance = user?.balance_points ?? 0
     const usdBalance = (totalBalance * 0.01).toFixed(2)
 
-    const transactions = [
-        {
-            id: 1,
-            type: 'incoming',
-            title: 'Project: Website Redesign',
-            date: 'Oct 24, 2023 • 2:30 PM',
-            amount: '+ 500 CRED',
-            status: 'COMPLETED',
-            statusColor: 'text-emerald-400',
-            icon: 'down'
-        },
-        {
-            id: 2,
-            type: 'outgoing',
-            title: 'Withdrawal to PayPal',
-            date: 'Oct 23, 2023 • 9:15 AM',
-            amount: '- 200 CRED',
-            status: 'PENDING',
-            statusColor: 'text-amber-400',
-            icon: 'up'
-        },
-        {
-            id: 3,
-            type: 'outgoing',
-            title: 'Platform Fee',
-            date: 'Oct 23, 2023 • 9:15 AM',
-            amount: '- 5 CRED',
-            status: 'PROCESSED',
-            statusColor: 'text-slate-500',
-            icon: 'document'
-        },
-        {
-            id: 4,
-            type: 'incoming',
-            title: 'Deposit from Visa •••• 4242',
-            date: 'Oct 20, 2023 • 11:00 AM',
-            amount: '+ 1,000 CRED',
-            status: 'COMPLETED',
-            statusColor: 'text-emerald-400',
-            icon: 'plus'
-        }
-    ]
-
     const filteredTransactions = useMemo(() => {
-        if (selectedTab === 'All') return transactions
-        return transactions.filter(t => t.type === selectedTab.toLowerCase())
-    }, [selectedTab])
+        const formatted = realTransactions.map(t => {
+            let title = t.reference_type;
+            let icon = 'document';
+            let type = 'incoming';
+            let color = 'text-emerald-400';
+
+            switch (t.type) {
+                case 'DEPOSIT':
+                    title = `Nạp tiền (${t.reference_type})`;
+                    icon = 'plus';
+                    type = 'incoming';
+                    color = 'text-cyan-400';
+                    break;
+                case 'WITHDRAW':
+                    title = `Rút tiền (${t.reference_type})`;
+                    icon = 'up';
+                    type = 'outgoing';
+                    color = 'text-rose-400';
+                    break;
+                case 'LOCK':
+                    title = `Ký quỹ dự án #${t.reference_id}`;
+                    icon = 'document';
+                    type = 'outgoing';
+                    color = 'text-slate-400';
+                    break;
+                case 'RELEASE':
+                    title = `Nhận thanh toán #${t.reference_id}`;
+                    icon = 'down';
+                    type = 'incoming';
+                    color = 'text-emerald-400';
+                    break;
+                case 'REFUND':
+                    title = `Hoàn trả Ký quỹ #${t.reference_id}`;
+                    icon = 'plus';
+                    type = 'incoming';
+                    color = 'text-emerald-400';
+                    break;
+                default:
+                    break;
+            }
+
+            return {
+                id: t.id,
+                type,
+                title,
+                date: new Date(t.created_at).toLocaleString('vi-VN'),
+                amount: `${type === 'incoming' ? '+' : '-'} ${Number(t.amount).toLocaleString()} CRED`,
+                status: t.status,
+                statusColor: color,
+                icon
+            };
+        });
+
+        if (selectedTab === 'Incoming') return formatted.filter(t => t.type === 'incoming');
+        if (selectedTab === 'Outgoing') return formatted.filter(t => t.type === 'outgoing');
+        return formatted;
+    }, [selectedTab, realTransactions]);
+
+    // Reset page when tab changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedTab]);
+
+    const paginatedTransactions = useMemo(() => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredTransactions, currentPage]);
+
+    const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
 
     const copyWalletId = async () => {
         try {
             await navigator.clipboard.writeText(walletId)
             setCopied(true)
-            setTimeout(() => {
-                setCopied(false)
-            }, 2000)
+            setTimeout(() => setCopied(false), 2000)
         } catch (err) {
             const textArea = document.createElement('textarea')
             textArea.value = walletId
@@ -87,9 +136,7 @@ const Wallet = () => {
             try {
                 document.execCommand('copy')
                 setCopied(true)
-                setTimeout(() => {
-                    setCopied(false)
-                }, 2000)
+                setTimeout(() => setCopied(false), 2000)
             } catch (err) {
                 console.error('Failed to copy:', err)
             }
@@ -129,25 +176,18 @@ const Wallet = () => {
     }
 
     return (
-        <div className="w-full min-h-screen bg-[#020617] text-slate-300 relative font-sans">
-            {/* Ambient Background */}
-            <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(0,255,255,0.008) 0px,rgba(0,255,255,0.008) 1px,transparent 1px,transparent 3px)' }} />
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 right-1/4 w-[500px] h-[400px] bg-cyan-500/5 rounded-full blur-[100px]" />
-                <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[300px] bg-indigo-500/5 rounded-full blur-[100px]" />
-            </div>
-
+        <div className="w-full min-h-screen bg-transparent text-slate-300 relative font-sans">
             <div className="mx-auto max-w-7xl px-4 py-8 relative z-10 w-full">
                 {/* Header */}
                 <div className="mb-8 flex items-center gap-4">
-                    <div className="h-12 w-12 flex items-center justify-center bg-cyan-900/40 border border-cyan-500/30 rounded xl">
+                    <div className="h-12 w-12 flex items-center justify-center bg-cyan-900/40 border border-cyan-500/30 rounded-xl">
                         <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                         </svg>
                     </div>
                     <div>
-                        <h1 className="text-2xl font-black text-white uppercase tracking-widest font-mono text-shadow-glow-cyan">WALLET_OVERVIEW</h1>
-                        <p className="mt-1 text-[10px] text-cyan-500/70 font-mono tracking-widest uppercase">Manage network earnings, deposits, and routing targets</p>
+                        <h1 className="text-2xl font-black text-white uppercase tracking-widest font-mono text-shadow-glow-cyan">QUẢN LÝ VÍ NGÂN LƯỢNG</h1>
+                        <p className="mt-1 text-[10px] text-cyan-500/70 font-mono tracking-widest uppercase">Quản lý thu nhập, nạp tiền và rút tiền</p>
                     </div>
                 </div>
 
@@ -161,7 +201,7 @@ const Wallet = () => {
 
                             <div className="flex flex-col md:flex-row md:items-start justify-between relative z-10 gap-6">
                                 <div>
-                                    <div className="text-[10px] font-black text-cyan-500 font-mono uppercase tracking-widest mb-3">TOTAL_ASSET_VALUE</div>
+                                    <div className="text-[10px] font-black text-cyan-500 font-mono uppercase tracking-widest mb-3">TỔNG TÀI SẢN</div>
                                     <div className="text-4xl md:text-5xl font-black text-white mb-2 font-mono tracking-tighter">
                                         {totalBalance.toLocaleString()} <span className="text-xl text-cyan-500 tracking-widest">CRED</span>
                                     </div>
@@ -170,7 +210,7 @@ const Wallet = () => {
                                     <div className="mt-8 flex flex-wrap items-center gap-4">
                                         <div className="bg-[#02040a] border border-slate-800 rounded px-4 py-2 flex items-center gap-3 w-max">
                                             <div>
-                                                <div className="text-[9px] font-black text-slate-500 mb-1 font-mono uppercase tracking-widest">WALLET_ID</div>
+                                                <div className="text-[9px] font-black text-slate-500 mb-1 font-mono uppercase tracking-widest">SỐ VÍ</div>
                                                 <div className="text-[12px] font-mono font-bold text-slate-300">{walletId}</div>
                                             </div>
                                             <button
@@ -191,7 +231,7 @@ const Wallet = () => {
                                             </button>
                                         </div>
                                         <span className="inline-flex items-center rounded bg-emerald-900/30 border border-emerald-500/30 px-3 py-1.5 text-[9px] font-black text-emerald-400 font-mono tracking-widest uppercase shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-                                            [OK] NETWORK_ACTIVE
+                                            [OK] ĐANG HOẠT ĐỘNG
                                         </span>
                                     </div>
                                 </div>
@@ -201,13 +241,13 @@ const Wallet = () => {
                                       onClick={() => document.getElementById('buy-points-section').scrollIntoView({ behavior: 'smooth' })}
                                       className="px-6 py-3 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 text-cyan-400 text-[10px] font-black font-mono tracking-widest uppercase rounded flex items-center gap-2 transition-colors">
                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-                                       ACQUIRE_FUNDS
+                                       NẠP TIỀN
                                    </button>
                                    <button 
                                     onClick={() => document.getElementById('withdraw-section').scrollIntoView({ behavior: 'smooth' })}
                                     className="px-6 py-3 bg-[#02040a] hover:bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-black font-mono tracking-widest uppercase rounded flex items-center gap-2 transition-colors">
                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                                       ROUTE_FUNDS
+                                       RÚT TIỀN
                                    </button>
                                 </div>
                             </div>
@@ -218,7 +258,7 @@ const Wallet = () => {
                             <div className="px-6 py-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest flex items-center gap-2">
                                     <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                    TRANSACTION_LOGS
+                                    LỊCH SỬ GIAO DỊCH
                                 </h2>
                                 
                                 {/* Tabs */}
@@ -232,58 +272,118 @@ const Wallet = () => {
                                                 : 'text-slate-500 border border-transparent hover:text-slate-300'
                                                 }`}
                                         >
-                                            {tab}
+                                            {tab === 'All' ? 'Tất cả' : tab === 'Incoming' ? 'Cộng tiền' : tab === 'Outgoing' ? 'Trừ tiền' : tab}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
                             <div className="p-6">
-                                {/* Transactions List */}
-                                <div className="space-y-4">
-                                    {filteredTransactions.map((transaction) => (
-                                        <div
-                                            key={transaction.id}
-                                            className="group flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-slate-800 bg-[#02040a] p-5 hover:border-cyan-500/30 transition-colors relative"
-                                        >
-                                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-slate-800 group-hover:bg-cyan-500/50 transition-colors" />
-                                            
-                                            <div className={`shrink-0 flex h-10 w-10 items-center justify-center rounded border ${
-                                                    transaction.icon === 'plus' ? 'bg-blue-900/20 text-blue-400 border-blue-500/30' : 
-                                                    transaction.type === 'incoming' ? 'bg-emerald-900/20 text-emerald-400 border-emerald-500/30' : 
-                                                    'bg-amber-900/20 text-amber-400 border-amber-500/30'
-                                                }`}>
-                                                {getTransactionIcon(transaction.icon)}
-                                            </div>
-                                            
-                                            <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                                <div className="min-w-0 pr-4">
-                                                    <div className="text-[12px] font-bold text-slate-200 truncate uppercase font-mono tracking-wider">
-                                                        {transaction.title}
-                                                    </div>
-                                                    <div className="mt-1 text-[9px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                        {transaction.date}
-                                                    </div>
+                                {filteredTransactions.length === 0 ? (
+                                    <div className="py-20 text-center">
+                                        <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-900/50 border border-slate-800 mb-4">
+                                            <svg className="w-8 h-8 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        </div>
+                                        <p className="text-[10px] font-black font-mono text-slate-600 uppercase tracking-widest italic">CHƯA CÓ DỮ LIỆU GIAO DỊCH</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {paginatedTransactions.map((transaction) => (
+                                            <div
+                                                key={transaction.id}
+                                                className="group flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-slate-800 bg-[#02040a] p-5 hover:border-cyan-500/30 transition-colors relative"
+                                            >
+                                                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-slate-800 group-hover:bg-cyan-500/50 transition-colors" />
+                                                
+                                                <div className={`shrink-0 flex h-10 w-10 items-center justify-center rounded border ${
+                                                        transaction.icon === 'plus' ? 'bg-cyan-900/20 text-cyan-400 border-cyan-500/30' : 
+                                                        transaction.type === 'incoming' ? 'bg-emerald-900/20 text-emerald-400 border-emerald-500/30' : 
+                                                        'bg-rose-900/20 text-rose-400 border-rose-500/30'
+                                                    }`}>
+                                                    {getTransactionIcon(transaction.icon)}
                                                 </div>
                                                 
-                                                <div className="text-left sm:text-right shrink-0 mt-2 sm:mt-0">
-                                                    <div className={`text-lg font-black font-mono tracking-tighter ${transaction.type === 'incoming' ? 'text-emerald-400' : 'text-slate-300'
-                                                        }`}>
-                                                        {transaction.amount}
+                                                <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                    <div className="min-w-0 pr-4">
+                                                        <div className="text-[12px] font-bold text-slate-200 truncate uppercase font-mono tracking-wider">
+                                                            {transaction.title}
+                                                        </div>
+                                                        <div className="mt-1 text-[9px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                            {transaction.date}
+                                                        </div>
                                                     </div>
-                                                    <div className={`mt-0.5 text-[9px] font-black font-mono uppercase tracking-widest ${transaction.statusColor}`}>
-                                                        [{transaction.status}]
+                                                    
+                                                    <div className="text-left sm:text-right shrink-0 mt-2 sm:mt-0">
+                                                        <div className={`text-lg font-black font-mono tracking-tighter ${transaction.type === 'incoming' ? 'text-emerald-400' : 'text-slate-300'
+                                                            }`}>
+                                                            {transaction.amount}
+                                                        </div>
+                                                        <div className={`mt-0.5 text-[9px] font-black font-mono uppercase tracking-widest ${transaction.statusColor}`}>
+                                                            [{transaction.status === 'SUCCESS' || transaction.status === 'COMPLETED' ? 'THÀNH CÔNG' : transaction.status === 'PENDING' ? 'ĐANG XỬ LÝ' : transaction.status}]
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                        ))}
 
-                                <div className="mt-6 text-center">
+                                        {/* Pagination Controls */}
+                                        {totalPages > 1 && (
+                                            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-800 pt-6">
+                                                <div className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
+                                                    DỮ LIỆU [{(currentPage - 1) * ITEMS_PER_PAGE + 1}] - [
+                                                    {Math.min(currentPage * ITEMS_PER_PAGE, filteredTransactions.length)}
+                                                    ] TRÊN {filteredTransactions.length} GIAO DỊCH
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                        disabled={currentPage === 1}
+                                                        className={`px-3 py-1.5 rounded border font-mono text-[10px] font-black transition-colors ${
+                                                            currentPage === 1
+                                                                ? 'border-slate-800 text-slate-700 cursor-not-allowed'
+                                                                : 'border-slate-700 text-slate-300 hover:border-cyan-500 hover:text-cyan-400'
+                                                        }`}
+                                                    >
+                                                        PREV
+                                                    </button>
+                                                    
+                                                    <div className="flex items-center gap-1">
+                                                        {[...Array(totalPages)].map((_, i) => (
+                                                            <button
+                                                                key={i + 1}
+                                                                onClick={() => setCurrentPage(i + 1)}
+                                                                className={`w-8 h-8 rounded flex items-center justify-center font-mono text-[10px] font-black transition-all ${
+                                                                    currentPage === i + 1
+                                                                        ? 'bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                                                                        : 'text-slate-500 hover:text-slate-300'
+                                                                }`}
+                                                            >
+                                                                {String(i + 1).padStart(2, '0')}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                                        disabled={currentPage === totalPages}
+                                                        className={`px-3 py-1.5 rounded border font-mono text-[10px] font-black transition-colors ${
+                                                            currentPage === totalPages
+                                                                ? 'border-slate-800 text-slate-700 cursor-not-allowed'
+                                                                : 'border-slate-700 text-slate-300 hover:border-cyan-500 hover:text-cyan-400'
+                                                        }`}
+                                                    >
+                                                        NEXT
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="mt-8 text-center">
                                     <button className="text-[10px] font-black font-mono text-cyan-500 hover:text-cyan-400 uppercase tracking-widest items-center inline-flex gap-2 group">
-                                        EXPAND_FULL_LEDGER
+                                        XEM TẤT CẢ GIAO DỊCH
                                         <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                                     </button>
                                 </div>
@@ -304,9 +404,9 @@ const Wallet = () => {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                         </svg>
                                     </div>
-                                    <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest">ACQUIRE_CREDITS</h2>
+                                    <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest">NẠP THÊM TIỀN</h2>
                                 </div>
-                                <p className="mt-2 text-[10px] text-slate-500 font-mono tracking-widest uppercase">Select volume tier to establish link</p>
+                                <p className="mt-2 text-[10px] text-slate-500 font-mono tracking-widest uppercase">Chọn gói nạp hoặc nhập số lượng</p>
                             </div>
                             
                             <div className="px-6 py-5 space-y-5">
@@ -320,7 +420,7 @@ const Wallet = () => {
                                             {pkg.id === 'Pro' && (
                                                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 w-full text-center">
                                                     <span className="inline-flex rounded bg-cyan-500 px-1.5 py-0.5 text-[8px] font-black text-black font-mono tracking-widest">
-                                                        REC
+                                                        GỢI Ý
                                                     </span>
                                                 </div>
                                             )}
@@ -340,7 +440,7 @@ const Wallet = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-black text-cyan-500 mb-2 font-mono uppercase tracking-widest">CUSTOM_VOLUME</label>
+                                    <label className="block text-[10px] font-black text-cyan-500 mb-2 font-mono uppercase tracking-widest">NHẬP SỐ LƯỢNG RIÊNG</label>
                                     <div className="relative">
                                         <input
                                             type="number"
@@ -354,18 +454,27 @@ const Wallet = () => {
                                 </div>
 
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         const packagePoints = {
                                             'Starter': 100,
                                             'Pro': 500,
                                             'Expert': 1000
                                         }
                                         const points = customAmount ? parseInt(customAmount) : packagePoints[selectedPackage] || 500
-                                        navigate('/deposit-points', { state: { points, package: selectedPackage } })
+                                        
+                                        try {
+                                            const res = await axiosClient.post('/wallets/deposit/zalopay', { amount: points });
+                                            if (res.order_url) {
+                                                window.location.href = res.order_url;
+                                            }
+                                        } catch (error) {
+                                            console.error("Deposit failed", error);
+                                            toastError("Có lỗi xảy ra khi tạo giao dịch thanh toán.");
+                                        }
                                     }}
                                     className="w-full rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(6,182,212,0.3)] border border-cyan-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2"
                                 >
-                                    AUTHORIZE_PURCHASE
+                                    XÁC NHẬN NẠP MUA
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                                 </button>
                             </div>
@@ -382,14 +491,14 @@ const Wallet = () => {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                                         </svg>
                                     </div>
-                                    <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest">ROUTE_FUNDS_OUT</h2>
+                                    <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest">YÊU CẦU RÚT TIỀN</h2>
                                 </div>
-                                <p className="mt-2 text-[10px] text-slate-500 font-mono tracking-widest uppercase">Target external fiat gateways</p>
+                                <p className="mt-2 text-[10px] text-slate-500 font-mono tracking-widest uppercase">Rút tiền ra ngân hàng ngoài</p>
                             </div>
                             
                             <div className="px-6 py-5 space-y-5">
                                 <div>
-                                    <div className="text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">LIQUIDITY_AVAILABLE</div>
+                                    <div className="text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">SỐ DƯ KHẢ DỤNG</div>
                                     <div className="rounded border border-slate-800 bg-[#02040a] px-4 py-3 flex items-center justify-between">
                                         <div className="text-xl font-black text-rose-400 font-mono">{totalBalance.toLocaleString()}</div>
                                         <div className="text-[10px] text-slate-500 font-mono">CRED</div>
@@ -397,34 +506,96 @@ const Wallet = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">EXTRACTION_AMOUNT</label>
+                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">SỐ TIỀN RÚT</label>
                                     <input
                                         type="number"
                                         value={withdrawAmount}
                                         onChange={(e) => setWithdrawAmount(e.target.value)}
-                                        placeholder="MIN LIMIT: 100 CRED"
+                                        placeholder="TỐI THIỂU: 100 CRED"
                                         className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-black font-mono text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase placeholder-slate-700"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">TARGET_NODE</label>
-                                    <select className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-[11px] font-black font-mono text-slate-300 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase appearance-none">
-                                        <option>BANK_LINK [ **** 8821 ]</option>
+                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">TÊN NGÂN HÀNG / VÍ</label>
+                                    <select 
+                                        value={bankName}
+                                        onChange={(e) => setBankName(e.target.value)}
+                                        className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-[11px] font-black font-mono text-slate-300 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase appearance-none"
+                                    >
+                                        <option value="ZaloPay">ZaloPay</option>
+                                        <option value="Momo">Momo</option>
+                                        <option value="Vietcombank">Vietcombank</option>
+                                        <option value="Techcombank">Techcombank</option>
+                                        <option value="MB Bank">MB Bank</option>
                                     </select>
                                 </div>
 
+                                <div>
+                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">SỐ TÀI KHOẢN</label>
+                                    <input
+                                        type="text"
+                                        value={accountNumber}
+                                        onChange={(e) => setAccountNumber(e.target.value)}
+                                        placeholder="0123456789..."
+                                        className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-black font-mono text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase placeholder-slate-700"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">TÊN CHỦ TÀI KHOẢN</label>
+                                    <input
+                                        type="text"
+                                        value={accountName}
+                                        onChange={(e) => setAccountName(e.target.value)}
+                                        placeholder="NGUYEN VAN A..."
+                                        className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-black font-mono text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase placeholder-slate-700"
+                                    />
+                                </div>
+
                                 <div className="flex items-center justify-between rounded bg-[#02040a] border border-slate-800 px-4 py-3 font-mono">
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">NETWORK_TAX</span>
+                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">PHÍ GIAO DỊCH</span>
                                     <span className="text-[11px] font-black text-white">$2.50 USD</span>
                                 </div>
 
                                 <button
-                                    onClick={() => navigate('/withdraw-points')}
-                                    className="w-full rounded-lg bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-600 hover:to-indigo-600 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(225,29,72,0.3)] border border-rose-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2"
+                                    disabled={loading}
+                                    onClick={async () => {
+                                        const amount = parseInt(withdrawAmount);
+                                        if (!amount || amount < 100) {
+                                            return toastError("Số lượng rút tối thiểu là 100 CRED");
+                                        }
+                                        if (!accountNumber || !accountName) {
+                                            return toastError("Vui lòng nhập đầy đủ thông tin tài khoản");
+                                        }
+
+                                        setLoading(true);
+                                        try {
+                                            await axiosClient.post('/wallets/withdraw/request', {
+                                                amount,
+                                                bank_info: {
+                                                    bank_name: bankName,
+                                                    account_number: accountNumber,
+                                                    account_name: accountName
+                                                }
+                                            });
+                                            toastSuccess("Yêu cầu rút tiền đã được gửi!");
+                                            setWithdrawAmount('');
+                                            setAccountNumber('');
+                                            setAccountName('');
+                                            fetchMe();
+                                            fetchMyWithdrawals();
+                                        } catch (error) {
+                                            console.error("Withdrawal failed", error);
+                                            toastError(error?.response?.data?.message || "Có lỗi xảy ra khi yêu cầu rút tiền.");
+                                        } finally {
+                                            setLoading(false);
+                                        }
+                                    }}
+                                    className={`w-full rounded-lg bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-600 hover:to-indigo-600 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(225,29,72,0.3)] border border-rose-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    EXECUTE_TRANSFER
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                                    {loading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN RÚT TIỀN'}
+                                    {!loading && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>}
                                 </button>
                             </div>
                         </div>
@@ -435,24 +606,23 @@ const Wallet = () => {
                             <div className="flex flex-col gap-3 relative z-10 pl-2">
                                 <div className="flex items-center gap-3">
                                     <svg className="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-                                    <div className="text-[11px] font-black text-white font-mono uppercase tracking-widest">SUPPORT_BEACON</div>
+                                    <div className="text-[11px] font-black text-white font-mono uppercase tracking-widest">HỖ TRỢ TRỰC TUYẾN</div>
                                 </div>
                                 <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase leading-relaxed">
-                                    ROUTING ERRORS? PING SYSTEM ADMINISTRATORS FOR MANUAL RESOLUTION LOGS.
+                                    CÓ LỖI GIAO DỊCH? HÃY LIÊN HỆ VỚI QUẢN TRỊ VIÊN ĐỂ ĐƯỢC GIẢI QUYẾT.
                                 </p>
                                 <button className="text-[10px] font-black font-mono text-cyan-500 hover:text-cyan-400 uppercase tracking-widest self-start mt-2 border-b border-cyan-500/30 hover:border-cyan-400 pb-0.5 transition-colors">
-                                    INITIATE_COMMS_LINK
+                                    GỬI YÊU CẦU HỖ TRỢ
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
             {/* Minimal styling for custom scrollbars missing from utility class */}
             <style jsx="true">{`
               select {
-                background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
                 background-position: right 0.5rem center;
                 background-repeat: no-repeat;
                 background-size: 1.5em 1.5em;

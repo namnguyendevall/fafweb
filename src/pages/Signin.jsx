@@ -4,6 +4,8 @@ import FAFLogo from "../assets/FAF-Logo.png";
 import Loading from "../components/Loading";
 import { authApi } from "../api/auth.api";
 import { useAuth } from "../auth/AuthContext";
+import { useTranslation } from "react-i18next";
+import { useToast } from "../contexts/ToastContext";
 
 const Signin = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -12,6 +14,8 @@ const Signin = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const toast = useToast();
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
@@ -39,9 +43,19 @@ const Signin = () => {
       const homeRoute = getHomeRoute(userData.role);
       navigate(homeRoute);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "An error occurred during login.",
-      );
+      const message = err.response?.data?.message || err.response?.data?.error;
+      const status = err.response?.status;
+      if (status === 401) {
+        const errorMsg = "Email hoặc mật khẩu không chính xác. Vui lòng thử lại.";
+        setError(errorMsg);
+        toast.error(errorMsg);
+      } else {
+        const errorMsg = message || "Đã xảy ra lỗi. Vui lòng thử lại sau.";
+        setError(errorMsg);
+        toast.error(errorMsg);
+      }
+      // Scroll to top of form to show error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
     }
@@ -71,10 +85,10 @@ const Signin = () => {
                     <div>
                         <div className="text-purple-500 text-xs font-mono mb-1 flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
-                            PROTOCOL_ACTIVE
+                            {t('auth.system_active')}
                         </div>
-                        <h1 className="text-3xl font-black text-white uppercase tracking-tighter text-glitch-effect" data-text="SYSTEM_LOGIN">
-                            SYSTEM_LOGIN
+                        <h1 className="text-3xl font-black text-white uppercase tracking-tighter text-glitch-effect" data-text={t('auth.signin_title')}>
+                            {t('auth.signin_title')}
                         </h1>
                     </div>
                     <Link to="/" className="text-slate-500 hover:text-white transition-colors cursor-crosshair">
@@ -97,7 +111,7 @@ const Signin = () => {
 
                         <div className="space-y-2">
                             <label htmlFor="email" className="text-sm font-mono text-slate-400 uppercase tracking-widest flex justify-between">
-                                Input Matrix: Email <span className="text-purple-500/50">VAR_01</span>
+                                {t('auth.email_label')}
                             </label>
                             <div className="relative group/input">
                                 <div className="absolute inset-0 bg-purple-500/20 rounded-xl blur-md opacity-0 group-focus-within/input:opacity-100 transition-opacity"></div>
@@ -119,7 +133,7 @@ const Signin = () => {
 
                         <div className="space-y-2">
                             <label htmlFor="password" className="text-sm font-mono text-slate-400 uppercase tracking-widest flex justify-between">
-                                Decryption Key <span className="text-blue-500/50">VAR_02</span>
+                                {t('auth.password_label')}
                             </label>
                             <div className="relative group/input">
                                 <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-md opacity-0 group-focus-within/input:opacity-100 transition-opacity"></div>
@@ -154,10 +168,10 @@ const Signin = () => {
                         <div className="flex items-center justify-between text-xs font-mono pb-2">
                             <label className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-300 transition-colors cursor-crosshair">
                                 <input type="checkbox" className="rounded border-white/20 bg-slate-900/50 text-purple-500 focus:ring-purple-500/50" />
-                                PERSIST_SESSION
+                                {t('auth.keep_logged_in')}
                             </label>
                             <Link to="/forgot-password" className="text-slate-400 hover:text-white hover:underline transition-all decoration-purple-500/50 underline-offset-4">
-                                OVERRIDE_KEY?
+                                {t('auth.forgot_password')}
                             </Link>
                         </div>
 
@@ -173,11 +187,11 @@ const Signin = () => {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    EXECUTING...
+                                    {t('auth.executing')}
                                 </span>
                             ) : (
                                 <>
-                                    <span>EXECUTE_LOGIN()</span>
+                                    <span>{t('auth.submit_signin')}</span>
                                     <svg className="w-5 h-5 text-purple-400 group-hover/btn:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                                 </>
                             )}
@@ -187,22 +201,22 @@ const Signin = () => {
                     <div className="mt-6 flex flex-col gap-4 text-center">
                         <div className="flex items-center gap-3 opacity-50">
                             <span className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-white"></span>
-                            <span className="font-mono text-[10px] uppercase tracking-widest text-white">EXTERNAL_NODES</span>
+                            <span className="font-mono text-[10px] uppercase tracking-widest text-white">{t('auth.or_login_with')}</span>
                             <span className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-white"></span>
                         </div>
                         
                         <div className="grid grid-cols-2 gap-3">
-                            <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-2.5 transition-all text-xs font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
-                                <span className="text-white group-hover/btn2:scale-110 transition-transform">G</span> GOOGLE_ID
+                            <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-2.5 transition-all text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
+                                <span className="text-white group-hover/btn2:scale-110 transition-transform">G</span> GOOGLE
                             </button>
-                            <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-2.5 transition-all text-xs font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
-                                <span className="text-blue-500 group-hover/btn2:scale-110 transition-transform">in</span> LINKED_IN
+                            <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-2.5 transition-all text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
+                                <span className="text-blue-500 group-hover/btn2:scale-110 transition-transform">in</span> LINKEDIN
                             </button>
                         </div>
 
                         <div className="flex justify-center mt-6">
                             <span className="text-slate-500 text-xs font-mono">
-                                AWAITING_INPUT
+                                {t('auth.waiting')}
                                 <span className="animate-pulse">_</span>
                             </span>
                         </div>
@@ -210,7 +224,7 @@ const Signin = () => {
                 </div>
                 
                 <div className="mt-8 text-center text-slate-500 font-mono text-xs">
-                    NEW_NODE_CONNECTION? <Link to="/signup" className="text-purple-400 hover:text-purple-300 hover:underline transition-all">INITIALIZE_ACCOUNT</Link>
+                    {t('auth.no_account')} <Link to="/signup" className="text-purple-400 hover:text-purple-300 hover:underline transition-all">{t('auth.register_now')}</Link>
                 </div>
             </main>
         </div>

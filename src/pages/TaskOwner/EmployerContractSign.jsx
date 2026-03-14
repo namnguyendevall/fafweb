@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { contractsApi } from '../../api/contracts.api';
-import TaskOwnerSidebar from '../../components/TaskOwnerSidebar';
+import { useAccount, useSendTransaction } from 'wagmi';
+import { parseEther } from 'viem';
 
 const EmployerContractSign = () => {
     const { id } = useParams();
@@ -16,6 +17,9 @@ const EmployerContractSign = () => {
     const [otp, setOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
     const [countdown, setCountdown] = useState(0);
+
+    const { isConnected } = useAccount();
+    const { sendTransactionAsync } = useSendTransaction();
 
     useEffect(() => {
         let timer;
@@ -65,6 +69,22 @@ const EmployerContractSign = () => {
 
         try {
             setSigning(true);
+            
+            // Web3 Funding Step
+            if (isConnected) {
+                toast.info('Vui lòng xác nhận giao dịch trên MetaMask để nạp tiền vào Escrow contract.');
+                // Simulate funding the contract with a small amount of ETH based on the job price
+                // We use a dummy address for the escrow contract in this demo
+                const txHash = await sendTransactionAsync({
+                    to: '0x000000000000000000000000000000000000dEaD',
+                    value: parseEther('0.001'), // Fake small amount for demo
+                });
+                toast.success(`Giao dịch Web3 thành công! Hash: ${txHash.slice(0, 10)}...`);
+            } else {
+                toast.info('Sử dụng số dư FAF Node mặc định do chưa liên kết ví Web3.');
+            }
+
+            // Database signing step
             await contractsApi.signContract(id, otp);
             toast.success('Contract signed successfully!');
             setShowConfirm(false);
@@ -79,13 +99,10 @@ const EmployerContractSign = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex">
-                <TaskOwnerSidebar />
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-gray-600 font-medium">Loading contract...</p>
-                    </div>
+            <div className="min-h-screen bg-transparent flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-gray-600 dark:text-gray-400 font-medium">Loading contract...</p>
                 </div>
             </div>
         );
@@ -93,22 +110,19 @@ const EmployerContractSign = () => {
 
     if (!contract) {
         return (
-            <div className="min-h-screen bg-gray-50 flex">
-                <TaskOwnerSidebar />
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <svg className="w-24 h-24 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Contract Not Found</h2>
-                        <p className="text-gray-600 mb-6">The contract you're looking for doesn't exist or has been removed.</p>
-                        <button
-                            onClick={() => navigate('/task-owner')}
-                            className="px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                            Back to Dashboard
-                        </button>
-                    </div>
+            <div className="min-h-screen bg-transparent flex items-center justify-center">
+                <div className="text-center">
+                    <svg className="w-24 h-24 text-gray-300 dark:text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Contract Not Found</h2>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">The contract you're looking for doesn't exist or has been removed.</p>
+                    <button
+                        onClick={() => navigate('/task-owner')}
+                        className="px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Back to Dashboard
+                    </button>
                 </div>
             </div>
         );
@@ -119,8 +133,7 @@ const EmployerContractSign = () => {
     const canSign = workerSigned && !employerSigned;
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
-            <TaskOwnerSidebar />
+        <div className="min-h-screen bg-transparent">
             
             <div className="flex-1 overflow-auto">
                 <div className="max-w-4xl mx-auto px-6 py-8">
@@ -518,7 +531,14 @@ const EmployerContractSign = () => {
                                 {signing ? (
                                     <>
                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        Signing...
+                                        Processing...
+                                    </>
+                                ) : isConnected ? (
+                                    <>
+                                        <svg className="w-4 h-4 text-fuchsia-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                        Fund Web3 Escrow & Sign
                                     </>
                                 ) : (
                                     <>

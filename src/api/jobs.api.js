@@ -12,6 +12,10 @@ export const jobsApi = {
     return axiosClient.get("/skills");
   },
 
+  proposeCategory: (data) => {
+    return axiosClient.post("/categories/proposals", data);
+  },
+
   postJobs: (data) => {
     return axiosClient.post("/jobs", data);
   },

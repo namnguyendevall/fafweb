@@ -1,6 +1,5 @@
 import React from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import TaskOwnerSidebar from "../../components/TaskOwnerSidebar";
 
 // Fallback mock data in case user refreshes detail page (no location.state)
 const fallbackWorkers = [
@@ -354,8 +353,7 @@ const TalentDetail = () => {
 
     if (!worker) {
         return (
-            <div className="min-h-screen bg-gray-50 flex">
-                <TaskOwnerSidebar />
+            <div className="min-h-screen bg-transparent flex">
                 <div className="flex-1 flex flex-col items-center justify-center">
                     <p className="text-gray-600 mb-4 text-sm">
                         Talent not found or no data available.
@@ -374,8 +372,7 @@ const TalentDetail = () => {
     const detailed = buildDetailedWorker(worker);
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
-            <TaskOwnerSidebar />
+        <div className="min-h-screen bg-transparent flex">
 
             <div className="flex-1 flex flex-col">
                 {/* Header */}

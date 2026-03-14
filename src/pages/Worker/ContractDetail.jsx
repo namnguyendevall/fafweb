@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../auth/AuthContext';
 import { contractsApi } from '../../api/contracts.api';
+import { reviewsApi } from '../../api/reviews.api';
+import ReviewsList from './components/ReviewsList';
+import axiosClient from '../../api/axiosClient';
 
 const ContractDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const toast = useToast();
+    const { user } = useAuth();
     const [contract, setContract] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
+    const [disputeModal, setDisputeModal] = useState({ open: false, checkpointId: null });
+    const [disputeReason, setDisputeReason] = useState('');
+    const [submittingDispute, setSubmittingDispute] = useState(false);
 
     useEffect(() => {
         fetchContractDetails();
@@ -20,6 +29,14 @@ const ContractDetail = () => {
             const res = await contractsApi.getContractById(id);
             if (res.data) {
                 setContract(res.data);
+                
+                // Fetch reviews for this contract if it's completed (or generally to see if there are any)
+                try {
+                    const revRes = await reviewsApi.getContractReviews(id);
+                    setReviewsData({ reviews: revRes.data || [], summary: revRes.summary || null });
+                } catch(e) {
+                    console.error('Failed to fetch contract reviews', e);
+                }
             } else {
                 toast.error('ERR: NO_CONTRACT_DATA_FOUND');
                 navigate(-1);
@@ -101,7 +118,7 @@ const ContractDetail = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#020617] flex items-center justify-center relative overflow-hidden font-mono text-[10px] uppercase tracking-widest text-cyan-500">
+            <div className="min-h-screen bg-transparent flex items-center justify-center relative overflow-hidden font-mono text-[10px] uppercase tracking-widest text-cyan-500">
                 <div className="flex items-center gap-3 animate-pulse">
                     <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded flex animate-spin"></div>
                     ACCESSING_RECORDS...
@@ -110,24 +127,41 @@ const ContractDetail = () => {
         );
     }
 
-    if (!contract) return <div className="min-h-screen bg-[#020617] flex items-center justify-center font-mono text-rose-500">ERROR_NO_DATA</div>;
+    if (!contract) return <div className="min-h-screen bg-transparent flex items-center justify-center font-mono text-rose-500">ERROR_NO_DATA</div>;
 
     // Calculate checkpoint progress
     const totalCheckpoints = contract.checkpoints?.length || 0;
     const completedCheckpoints = contract.checkpoints?.filter(cp => cp.status === 'APPROVED').length || 0;
     const progress = totalCheckpoints > 0 ? (completedCheckpoints / totalCheckpoints) * 100 : 0;
 
-    return (
-        <div className="min-h-screen bg-[#020617] text-slate-300 relative font-sans">
-            {/* Ambient Background */}
-            <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(0,255,255,0.008) 0px,rgba(0,255,255,0.008) 1px,transparent 1px,transparent 3px)' }} />
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 right-1/4 w-[500px] h-[400px] bg-cyan-500/5 rounded-full blur-[100px]" />
-                <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[300px] bg-indigo-500/5 rounded-full blur-[100px]" />
-            </div>
+    const handleSubmitDispute = async () => {
+        if (!disputeReason.trim()) {
+            toast.error('Vui lòng nhập lý do khiếu nại.');
+            return;
+        }
+        try {
+            setSubmittingDispute(true);
+            await axiosClient.post('/disputes', {
+                contractId: contract.id,
+                checkpointId: disputeModal.checkpointId,
+                reason: disputeReason.trim()
+            });
+            toast.success('Khiếu nại đã được gửi! Manager sẽ xem xét và phản hồi sớm.');
+            setDisputeModal({ open: false, checkpointId: null });
+            setDisputeReason('');
+            fetchContractDetails(); // refresh to show DISPUTED status
+        } catch (err) {
+            toast.error(err?.response?.data?.message || 'Không thể gửi khiếu nại. Vui lòng thử lại.');
+        } finally {
+            setSubmittingDispute(false);
+        }
+    };
 
+    return (
+        <>
+        <div className="min-h-screen bg-transparent text-slate-300 relative font-sans">
             <div className="max-w-6xl mx-auto px-4 py-8 relative z-10 w-full">
-                {/* Header Section */}
+
                 <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.1)] border p-6 mb-6 relative overflow-hidden" style={{ borderColor: 'rgba(6,182,212,0.2)' }}>
                     <div className="absolute top-0 right-10 w-32 h-px bg-cyan-400/50" />
                     
@@ -139,7 +173,7 @@ const ContractDetail = () => {
                             <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                             </svg>
-                            RETURN_TO_PREVIOUS
+                            QUAY LẠI
                         </button>
                     </div>
                     
@@ -159,11 +193,52 @@ const ContractDetail = () => {
                                         contract.status === 'CANCELLED' || contract.status === 'TERMINATED' ? 'bg-rose-400 shadow-[0_0_5px_rgba(244,63,94,1)]' :
                                         'bg-slate-500'
                                     }`}></div>
-                                    {contract.status}
+                                    {contract.status === 'DISPUTED' ? 'TRANH CHẤP' : contract.status}
                                 </span>
                             </div>
+                            
+                            {/* DISPUTE STATUS ACTION */}
+                            {contract.status === 'DISPUTED' && (
+                                <div className="mb-8 p-5 bg-rose-900/20 border-l-4 border-rose-500 rounded-lg flex items-center justify-between shadow-[0_0_15px_rgba(244,63,94,0.1)]">
+                                    <div>
+                                        <h3 className="text-rose-400 font-bold font-mono tracking-widest text-sm mb-1 uppercase">Đang Tranh Chấp (Disputed)</h3>
+                                        <p className="text-slate-300 text-xs">Hợp đồng này đang trong quá trình khiếu nại. Manager đang xem xét bằng chứng từ 2 bên.</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => {
+                                            // We need the dispute ID. It's usually better to fetch it or pass it.
+                                            // For now, let's assume we can navigate to a search page or we fetch it.
+                                            // Actually, the API returns it usually. Let's redirect to a general dispute list or detail if we have ID.
+                                            // Since we don't have dispute.id directly in contract object easily without modification, 
+                                            // let's try to find it via API or just use the contractId in a middle page.
+                                            // I will create a redirector or just fetch it here.
+                                            navigate(`/disputes/search?contractId=${contract.id}`);
+                                        }}
+                                        className="shrink-0 px-6 py-2.5 bg-rose-500 hover:bg-rose-400 text-white font-black text-xs font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all"
+                                    >
+                                        Vào Phòng Chat Khiếu Nại
+                                    </button>
+                                </div>
+                            )}
+
                             <p className="text-sm text-slate-400 mb-8 leading-relaxed max-w-4xl">{contract.job_description}</p>
                             
+                            {/* PENDING SIGNATURE ACTION */}
+                            {['PENDING', 'ACTIVE'].includes(contract.status) && !contract.signature_worker && (
+                                <div className="mb-8 p-5 bg-amber-900/20 border-l-4 border-amber-500 rounded-lg flex items-center justify-between shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+                                    <div>
+                                        <h3 className="text-amber-400 font-bold font-mono tracking-widest text-sm mb-1 uppercase">Yêu Cầu Chữ Ký (OTP)</h3>
+                                        <p className="text-slate-300 text-xs">Khách hàng đã chấp nhận đề xuất. Vui lòng ký điện tử để bắt đầu hợp đồng.</p>
+                                    </div>
+                                    <button 
+                                        onClick={() => navigate(`/contract/${contract.id}/sign`)}
+                                        className="shrink-0 px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black text-xs font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all"
+                                    >
+                                        Ký Hợp Đồng Ngay
+                                    </button>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#02040a] border border-slate-800 rounded-xl p-5">
                                 {/* Details Block */}
                                 <div className="space-y-5">
@@ -174,8 +249,8 @@ const ContractDetail = () => {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">TASK_OWNER</p>
-                                            <p className="text-[14px] font-bold text-slate-200 mt-1">{contract.client_name || 'UNKNOWN_ENTITY'}</p>
+                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">KHÁCH HÀNG</p>
+                                            <p className="text-[14px] font-bold text-slate-200 mt-1">{contract.client_name || 'Đang cập nhật'}</p>
                                         </div>
                                     </div>
                                     
@@ -186,7 +261,7 @@ const ContractDetail = () => {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">TOTAL_VALUE</p>
+                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">TỔNG GIÁ TRỊ</p>
                                             <p className="text-[18px] font-black font-mono text-emerald-400 mt-1">${Number(contract.total_amount || 0).toLocaleString()}</p>
                                         </div>
                                     </div>
@@ -200,11 +275,11 @@ const ContractDetail = () => {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">TIMEFRAME</p>
+                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">THỜI GIAN</p>
                                             <p className="text-[12px] font-bold text-slate-300 mt-1 uppercase tracking-wider">
-                                                {contract.job_start_date ? new Date(contract.job_start_date).toLocaleDateString() : 'PENDING'} 
-                                                <span className="text-cyan-500 mx-2">TILL</span> 
-                                                {contract.job_end_date ? new Date(contract.job_end_date).toLocaleDateString() : 'OPEN'}
+                                                {contract.job_start_date ? new Date(contract.job_start_date).toLocaleDateString() : (contract.status === 'ACTIVE' || contract.status === 'COMPLETED' ? new Date(contract.created_at || contract.updated_at).toLocaleDateString() : 'CHƯA BẮT ĐẦU')} 
+                                                <span className="text-cyan-500 mx-2">-</span> 
+                                                {contract.job_end_date ? new Date(contract.job_end_date).toLocaleDateString() : (contract.status === 'COMPLETED' ? new Date(contract.updated_at).toLocaleDateString() : 'MỞ (VÔ THỜI HẠN)')}
                                             </p>
                                         </div>
                                     </div>
@@ -216,14 +291,14 @@ const ContractDetail = () => {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest mb-1.5">CRYPTOGRAPHIC_SIGS</p>
+                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest mb-1.5">CHỮ KÝ XÁC NHẬN</p>
                                             <div className="flex gap-2">
                                                 <span className={`text-[9px] uppercase font-black px-2 py-1 rounded inline-flex items-center border ${
                                                     contract.signature_worker ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/50' : 'bg-slate-800 text-slate-500 border-slate-700'
-                                                }`}>OPERATOR</span>
+                                                }`}>NGƯỜI LÀM</span>
                                                 <span className={`text-[9px] uppercase font-black px-2 py-1 rounded inline-flex items-center border ${
                                                     contract.signature_client ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/50' : 'bg-slate-800 text-slate-500 border-slate-700'
-                                                }`}>CLIENT</span>
+                                                }`}>KHÁCH HÀNG</span>
                                             </div>
                                         </div>
                                     </div>
@@ -241,10 +316,10 @@ const ContractDetail = () => {
                     <div className="flex justify-between items-end mb-4 relative z-10">
                         <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest flex items-center gap-2">
                             <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                            MISSION_PROGRESS
+                            TIẾN ĐỘ CÔNG VIỆC
                         </h2>
                         <span className="text-[10px] font-black text-cyan-500 uppercase tracking-widest font-mono">
-                            {completedCheckpoints} / {totalCheckpoints} NODES_CLEARED
+                            {completedCheckpoints} / {totalCheckpoints} HOÀN THÀNH
                         </span>
                     </div>
                     <div className="w-full bg-[#02040a] rounded h-2 relative border border-slate-800 overflow-hidden z-10 mb-2">
@@ -254,16 +329,16 @@ const ContractDetail = () => {
                         />
                     </div>
                     <p className="text-[10px] text-slate-500 font-mono text-right flex justify-end gap-2 z-10 relative">
-                        SYNC_LEVEL: <span className="text-cyan-400 font-bold">{progress.toFixed(0)}%</span>
+                        TIẾN ĐỘ: <span className="text-cyan-400 font-bold">{progress.toFixed(0)}%</span>
                     </p>
                 </div>
 
                 {/* Checkpoints List (Read Only) */}
                 <div className="bg-[#090e17]/60 rounded-xl border border-slate-800 p-6 shadow-xl">
                     <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
-                        <h2 className="text-sm font-black text-white font-mono uppercase tracking-widest">DELIVERY_NODES</h2>
+                        <h2 className="text-sm font-black text-white font-mono uppercase tracking-widest">DANH SÁCH CHECKPOINT</h2>
                         <span className={`px-3 py-1 bg-slate-800 border-l-2 ${contract.status === 'ACTIVE' ? 'border-cyan-500 text-cyan-400' : 'border-slate-500 text-slate-400'} font-black text-[9px] uppercase tracking-widest font-mono`}>
-                            {contract.status === 'ACTIVE' ? 'ACTION_REQUIRED' : 'VIEW_ONLY'}
+                            {contract.status === 'ACTIVE' ? 'CẦN XỬ LÝ' : 'CHỈ XEM'}
                         </span>
                     </div>
                     
@@ -296,7 +371,7 @@ const ContractDetail = () => {
                                                 </div>
                                                 <div>
                                                     <h3 className="font-black text-white text-lg tracking-wider font-mono flex items-center gap-2">
-                                                        <span className="text-slate-500 text-[10px]">NODE_{checkpoint.checkpoint_index}:</span> 
+                                                        <span className="text-slate-500 text-[10px]">CHECKPOINT 0{checkpoint.checkpoint_index || index + 1}:</span> 
                                                         {checkpoint.title}
                                                     </h3>
                                                     <p className="text-sm text-slate-400 mt-2 leading-relaxed max-w-2xl">{checkpoint.description}</p>
@@ -315,7 +390,7 @@ const ContractDetail = () => {
                                             <div className="pl-14">
                                                 <p className="text-[10px] text-cyan-500/70 font-mono flex items-center gap-2 uppercase tracking-widest">
                                                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                                    DEADLINE: {new Date(checkpoint.due_date).toLocaleDateString()}
+                                                    HẠN CHÓT: {new Date(checkpoint.due_date).toLocaleDateString()}
                                                 </p>
                                             </div>
                                         )}
@@ -326,7 +401,7 @@ const ContractDetail = () => {
                                                 <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500/50"></div>
                                                 <p className="text-[10px] font-black text-blue-400 mb-2 font-mono uppercase tracking-widest flex items-center gap-2">
                                                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                                                    OPERATOR_PAYLOAD
+                                                    BÀI NỘP CỦA BẠN
                                                 </p>
                                                 <a 
                                                     href={checkpoint.submission_url} 
@@ -338,13 +413,13 @@ const ContractDetail = () => {
                                                 </a>
                                                 {checkpoint.submission_notes && (
                                                     <div className="bg-[#02040a] p-3 rounded text-sm text-slate-300 border border-slate-800/50 mb-2">
-                                                        <span className="text-slate-500 font-mono text-[10px] uppercase block mb-1">LOGS:</span>
+                                                        <span className="text-slate-500 font-mono text-[10px] uppercase block mb-1">GHI CHÚ:</span>
                                                         {checkpoint.submission_notes}
                                                     </div>
                                                 )}
                                                 {checkpoint.submitted_at && (
                                                     <p className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">
-                                                        TX_TIME: {new Date(checkpoint.submitted_at).toLocaleString()}
+                                                        THỜI GIAN NỘP: {new Date(checkpoint.submitted_at).toLocaleString()}
                                                     </p>
                                                 )}
                                             </div>
@@ -360,16 +435,35 @@ const ContractDetail = () => {
                                                 <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${checkpoint.status === 'APPROVED' ? 'bg-emerald-500/50' : 'bg-rose-500/50'}`}></div>
                                                 <p className={`text-[10px] font-black mb-2 font-mono uppercase tracking-widest flex items-center gap-2 ${checkpoint.status === 'APPROVED' ? 'text-emerald-400' : 'text-rose-400'}`}>
                                                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                    CLIENT_EVALUATION
+                                                    ĐÁNH GIÁ TỪ KHÁCH HÀNG
                                                 </p>
                                                 <div className="bg-[#02040a] p-3 rounded text-sm text-slate-300 border border-slate-800/50 mb-2">
                                                     {checkpoint.review_notes}
                                                 </div>
                                                 {checkpoint.reviewed_at && (
                                                     <p className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">
-                                                        RX_TIME: {new Date(checkpoint.reviewed_at).toLocaleString()}
+                                                        THỜI GIAN DUYỆT: {new Date(checkpoint.reviewed_at).toLocaleString()}
                                                     </p>
                                                 )}
+                                            </div>
+                                        )}
+
+                                        {/* Dispute Button — shown when checkpoint is REJECTED/SUBMITTED and contract is ACTIVE (Worker only) */}
+                                        {(checkpoint.status === 'REJECTED' || checkpoint.status === 'SUBMITTED') && contract.status === 'ACTIVE' && user?.role?.toLowerCase() === 'worker' && (
+                                            <div className="mt-4 pt-4 border-t border-rose-500/20">
+                                                <div className="bg-rose-900/10 border border-rose-500/20 rounded-xl p-4">
+                                                    <p className="text-[10px] font-mono text-rose-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                                        {checkpoint.status === 'REJECTED' ? 'CHECKPOINT BỊ TỪ CHỐI — Bạn có quyền khiếu nại' : 'ĐANG CHỜ DUYỆT — Bạn có thể khiếu nại nếu quá hạn'}
+                                                    </p>
+                                                    <button
+                                                        onClick={() => setDisputeModal({ open: true, checkpointId: checkpoint.id })}
+                                                        className="w-full py-3 rounded-xl border border-rose-500/60 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 text-[11px] font-black font-mono tracking-widest uppercase transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+                                                        ⚖️ Mở Khiếu Nại (Dispute)
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
 
@@ -380,13 +474,13 @@ const ContractDetail = () => {
                                                 className="mt-6 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black rounded-xl hover:from-cyan-500 hover:to-blue-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transform active:scale-[0.98] text-[11px] font-mono tracking-widest uppercase border border-cyan-400/50"
                                             >
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                START CHECKPOINT
+                                                BẮT ĐẦU LÀM
                                             </button>
                                         )}
 
                                         {!canSubmit && contract.status === 'ACTIVE' && checkpoint.status === 'PENDING' && index > 0 && (
                                             <p className="mt-4 text-[10px] text-slate-500 font-mono tracking-widest uppercase text-center w-full block">
-                                                Complete previous node first
+                                                Vui lòng hoàn thành checkpoint trước đó
                                             </p>
                                         )}
 
@@ -394,7 +488,7 @@ const ContractDetail = () => {
                                             <div className="mt-4 pt-4 border-t border-slate-700/50 flex flex-col items-center gap-3">
                                                 <p className="text-[10px] text-amber-500 font-mono tracking-widest uppercase flex items-center justify-center gap-2">
                                                     <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                                    WAITING FOR CLIENT REVIEW...
+                                                    ĐANG CHỜ KHÁCH HÀNG KIỂM DUYỆT...
                                                 </p>
                                                 {contract.status === 'ACTIVE' && (
                                                     <button
@@ -419,8 +513,68 @@ const ContractDetail = () => {
                         )}
                     </div>
                 </div>
+
+                {/* Contract Reviews Section */}
+                {contract.status === 'COMPLETED' && reviewsData.reviews.length > 0 && (
+                    <div className="mt-8">
+                        <ReviewsList data={reviewsData} type="contract" />
+                    </div>
+                )}
             </div>
         </div>
+
+        {/* Dispute Modal */}
+        {disputeModal.open && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                <div className="bg-[#090e17] border border-rose-500/30 rounded-2xl shadow-[0_0_40px_rgba(244,63,94,0.2)] p-8 w-full max-w-lg">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2.5 bg-rose-500/10 border border-rose-500/30 rounded-xl">
+                            <svg className="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-black text-white font-mono uppercase tracking-wider">Mở Khiếu Nại</h2>
+                            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Contract #{contract.id} — Yêu cầu Manager xem xét</p>
+                        </div>
+                    </div>
+
+                    <div className="mb-4 p-4 bg-rose-900/10 border border-rose-500/10 rounded-xl">
+                        <p className="text-[11px] text-rose-400/80 font-mono leading-relaxed">
+                            ⚠️ Sau khi gửi khiếu nại, Manager sẽ xem xét tất cả bằng chứng và đưa ra phán quyết cuối cùng.
+                            Quyết định của Manager có giá trị ràng buộc.
+                        </p>
+                    </div>
+
+                    <label className="block mb-2 text-[10px] font-black font-mono text-rose-400 uppercase tracking-widest">
+                        Lý Do Khiếu Nại *
+                    </label>
+                    <textarea
+                        value={disputeReason}
+                        onChange={(e) => setDisputeReason(e.target.value)}
+                        placeholder="Mô tả chi tiết lý do bạn không đồng ý với quyết định từ chối của Employer..."
+                        className="w-full min-h-[120px] bg-slate-950/50 border border-rose-500/20 focus:border-rose-500/50 rounded-xl p-4 text-sm font-mono text-slate-300 placeholder:text-slate-700 outline-none transition-all resize-none mb-6"
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <button
+                            onClick={() => { setDisputeModal({ open: false, checkpointId: null }); setDisputeReason(''); }}
+                            className="py-3 rounded-xl border border-slate-700 text-slate-400 hover:border-slate-600 hover:text-white text-[11px] font-black font-mono uppercase tracking-widest transition-all"
+                        >
+                            Hủy Bỏ
+                        </button>
+                        <button
+                            onClick={handleSubmitDispute}
+                            disabled={submittingDispute || !disputeReason.trim()}
+                            className="py-3 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[11px] font-black font-mono uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(244,63,94,0.3)] flex items-center justify-center gap-2"
+                        >
+                            {submittingDispute ? (
+                                <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Đang Gửi...</>
+                            ) : '⚖️ Gửi Khiếu Nại'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 };
 

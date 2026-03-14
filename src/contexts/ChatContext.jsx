@@ -6,7 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useToast } from './ToastContext';
 
 const SOCKET_SERVER_URL = import.meta.env.VITE_SOCKET_URL || 
-    (import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '')) || 
+    (import.meta.env.VITE_API_BASE_URL?.replace(/\/api\/?$/, '')) || 
     "http://localhost:5000";
 
 const ChatContext = createContext();
@@ -21,6 +21,7 @@ export const useChatContext = () => {
 };
 
 export const ChatProvider = ({ children }) => {
+    console.log('--- CHAT_PROVIDER RENDERED ---');
     const { user } = useAuth();
     const toast = useToast();
     const [isOpen, setIsOpen] = useState(false);
@@ -130,6 +131,14 @@ export const ChatProvider = ({ children }) => {
         setActiveConvId(null);
     }, []);
 
+    const decrementUnreadCount = useCallback((amount = 1) => {
+        setUnreadCount(prev => Math.max(0, prev - amount));
+    }, []);
+
+    const decrementUnreadNotifications = useCallback((amount = 1) => {
+        setUnreadNotifications(prev => Math.max(0, prev - amount));
+    }, []);
+
     // eslint-disable-next-line react-hooks/refs
     const value = {
         isOpen,
@@ -143,6 +152,8 @@ export const ChatProvider = ({ children }) => {
         setMinimized,
         setUnreadCount,
         setUnreadNotifications,
+        decrementUnreadCount,
+        decrementUnreadNotifications,
         openChat,
         toggleChat,
         closeChat

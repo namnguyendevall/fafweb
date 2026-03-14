@@ -1,100 +1,195 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const JobTable = ({ contracts = [] }) => {
     const navigate = useNavigate();
     const [filter, setFilter] = useState('ALL');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const { t } = useTranslation();
 
+    const itemsPerPage = 3;
+
+    // Filter by status AND search term
     const filteredContracts = contracts.filter(c => {
-        if (filter === 'ALL') return true;
-        return c.status === filter;
-    });
+        const matchesStatus = filter === 'ALL' || c.status === filter;
+        const matchesSearch = (c.job_title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            (c.client_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            String(c.id).includes(searchTerm);
+        return matchesStatus && matchesSearch;
+    }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    // Pagination logic
+    const totalPages = Math.ceil(filteredContracts.length / itemsPerPage);
+    const paginatedContracts = filteredContracts.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
+    // Reset pagination when filter or search changes
+    const handleFilterChange = (newFilter) => {
+        setFilter(newFilter);
+        setCurrentPage(1);
+    };
+
+    const handleSearchChange = (e) => {
+        setSearchTerm(e.target.value);
+        setCurrentPage(1);
+    };
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'ACTIVE': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-cyan-900/30 text-cyan-400 border border-cyan-500/30">ACTIVE</span>;
-            case 'COMPLETED': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-emerald-900/30 text-emerald-400 border border-emerald-500/30">COMPLETED</span>;
+            case 'ACTIVE': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-cyan-900/30 text-cyan-400 border border-cyan-500/30">{t('dashboard.job_table.active')}</span>;
+            case 'DISPUTED': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-rose-900/30 text-rose-400 border border-rose-500/30 animate-pulse">TRANH CHẤP</span>;
+            case 'COMPLETED': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-emerald-900/30 text-emerald-400 border border-emerald-500/30">{t('dashboard.job_table.completed')}</span>;
             case 'CANCELLED': 
-            case 'TERMINATED': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-rose-900/30 text-rose-400 border border-rose-500/30">TERMINATED</span>;
+            case 'TERMINATED': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-rose-900/30 text-rose-400 border border-rose-500/30">{t('dashboard.job_table.cancelled')}</span>;
             default: return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-slate-800 text-slate-400 border border-slate-700">{status}</span>;
         }
     };
 
     return (
-        <div className="rounded-xl border border-slate-700/50 bg-[#090e17] overflow-hidden">
-            {/* Tabs */}
-            <div className="flex border-b border-slate-700/50 bg-slate-900/40 overflow-x-auto no-scrollbar">
-                {['ALL', 'ACTIVE', 'COMPLETED', 'CANCELLED'].map(tab => {
-                    let label = tab;
-                    if (tab === 'ALL') label = 'ALL LOGS';
-                    if (tab === 'COMPLETED') label = 'COMPLETED (HISTORY)';
-                    if (tab === 'CANCELLED') label = 'TERMINATED';
-                    return (
-                        <button
-                            key={tab}
-                            onClick={() => setFilter(tab)}
-                            className={`whitespace-nowrap px-6 py-4 text-[10px] font-black font-mono tracking-widest uppercase border-b-2 transition-all ${
-                                filter === tab 
-                                ? 'border-cyan-400 text-cyan-400 bg-cyan-950/40' 
-                                : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/40'
-                            }`}
-                        >
-                            {label}
-                        </button>
-                    );
-                })}
+        <div className="space-y-4">
+            {/* Search Bar */}
+            <div className="relative group/search">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg className="w-4 h-4 text-slate-500 group-focus-within/search:text-cyan-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </div>
+                <input
+                    type="text"
+                    placeholder="SCAN_FOR_CONTRACT_TITLE_OR_CLIENT..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    className="w-full bg-[#090e17] border border-slate-700/50 rounded-xl py-3 pl-11 pr-4 text-[11px] font-mono text-cyan-500 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all uppercase tracking-widest"
+                />
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[600px]">
-                    <thead>
-                        <tr className="bg-slate-800/30 border-b border-slate-700/50">
-                            <th className="px-6 py-3 text-[9px] font-black text-slate-500 tracking-widest uppercase font-mono">Job Title</th>
-                            <th className="px-6 py-3 text-[9px] font-black text-slate-500 tracking-widest uppercase font-mono">Employer</th>
-                            <th className="px-6 py-3 text-[9px] font-black text-slate-500 tracking-widest uppercase font-mono">Status</th>
-                            <th className="px-6 py-3 text-[9px] font-black text-slate-500 tracking-widest uppercase font-mono text-right">Yield</th>
-                            <th className="px-6 py-3 text-[9px] font-black text-slate-500 tracking-widest uppercase font-mono text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700/50">
-                        {filteredContracts.length === 0 ? (
-                            <tr>
-                                <td colSpan="5" className="px-6 py-12 text-center text-[10px] font-mono tracking-widest uppercase text-slate-500 italic">
-                                    No records found in database.
-                                </td>
+            <div className="rounded-xl border border-slate-700/50 bg-[#090e17] overflow-hidden">
+                {/* Tabs */}
+                <div className="flex border-b border-slate-700/50 bg-slate-900/40 overflow-x-auto no-scrollbar">
+                    {['ALL', 'ACTIVE', 'DISPUTED', 'COMPLETED', 'CANCELLED'].map(tab => {
+                        let label = tab;
+                        if (tab === 'ALL') label = t('dashboard.job_table.all');
+                        if (tab === 'ACTIVE') label = t('dashboard.job_table.active');
+                        if (tab === 'DISPUTED') label = 'TRANH CHẤP';
+                        if (tab === 'COMPLETED') label = t('dashboard.job_table.completed');
+                        if (tab === 'CANCELLED') label = t('dashboard.job_table.cancelled');
+                        return (
+                            <button
+                                key={tab}
+                                onClick={() => handleFilterChange(tab)}
+                                className={`whitespace-nowrap px-6 py-4 text-[10px] font-black font-mono tracking-widest uppercase border-b-2 transition-all ${
+                                    filter === tab 
+                                    ? 'border-cyan-400 text-cyan-400 bg-cyan-950/40' 
+                                    : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/40'
+                                }`}
+                            >
+                                {label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[600px]">
+                        <thead>
+                            <tr className="bg-slate-800/30 border-b border-slate-700/50">
+                                <th className="px-6 py-3 text-[9px] font-black text-slate-500 tracking-widest uppercase font-mono">{t('dashboard.job_table.job_name')}</th>
+                                <th className="px-6 py-3 text-[9px] font-black text-slate-500 tracking-widest uppercase font-mono">{t('dashboard.job_table.client')}</th>
+                                <th className="px-6 py-3 text-[9px] font-black text-slate-500 tracking-widest uppercase font-mono">{t('dashboard.job_table.status')}</th>
+                                <th className="px-6 py-3 text-[9px] font-black text-slate-500 tracking-widest uppercase font-mono text-right">{t('dashboard.job_table.earnings')}</th>
+                                <th className="px-6 py-3 text-[9px] font-black text-slate-500 tracking-widest uppercase font-mono text-center">{t('dashboard.job_table.action')}</th>
                             </tr>
-                        ) : (
-                            filteredContracts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(contract => (
-                                <tr key={contract.id} className="hover:bg-slate-800/40 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <p className="font-bold text-[13px] text-slate-200 group-hover:text-cyan-400 transition-colors cursor-pointer truncate max-w-[200px]" onClick={() => navigate(`/contract/${contract.id}/view`)}>
-                                            {contract.job_title}
-                                        </p>
-                                        <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase tracking-widest">TS: {new Date(contract.updated_at || contract.created_at).toLocaleDateString()}</p>
-                                    </td>
-                                    <td className="px-6 py-4 text-[12px] text-slate-400 font-mono truncate max-w-[150px]">
-                                        {contract.client_name || 'UNKNOWN ENTITY'}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {getStatusBadge(contract.status)}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <p className="font-black text-cyan-400 font-mono">${Number(contract.total_amount || 0).toLocaleString()}</p>
-                                    </td>
-                                    <td className="px-6 py-4 text-center">
-                                        <button 
-                                            onClick={() => navigate(`/contract/${contract.id}/view`)}
-                                            className="px-4 py-2 text-[10px] font-black font-mono tracking-widest uppercase text-cyan-400 bg-cyan-900/20 hover:bg-cyan-900/40 border border-cyan-500/20 hover:border-cyan-500/50 rounded transition-all"
-                                        >
-                                            ACCESS
-                                        </button>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/50">
+                            {paginatedContracts.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-12 text-center text-[10px] font-mono tracking-widest uppercase text-slate-500 italic">
+                                        {searchTerm ? 'NO_MATCHING_RECORDS_FOUND' : t('dashboard.job_table.no_data')}
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ) : (
+                                paginatedContracts.map(contract => (
+                                    <tr key={contract.id} className="hover:bg-slate-800/40 transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <p className="font-bold text-[13px] text-slate-200 group-hover:text-cyan-400 transition-colors cursor-pointer truncate max-w-[200px]" onClick={() => navigate(`/contract/${contract.id}/view`)}>
+                                                {contract.job_title}
+                                            </p>
+                                            <p className="text-[10px] font-mono text-slate-500 mt-1 uppercase tracking-widest">{t('dashboard.job_table.updated')} {new Date(contract.updated_at || contract.created_at).toLocaleDateString()}</p>
+                                        </td>
+                                        <td className="px-6 py-4 text-[12px] text-slate-400 font-mono truncate max-w-[150px]">
+                                            {contract.client_name || t('dashboard.anonymous_client')}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {getStatusBadge(contract.status)}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <p className="font-black text-cyan-400 font-mono">${Number(contract.total_amount || 0).toLocaleString()}</p>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <button 
+                                                onClick={() => navigate(`/contract/${contract.id}/view`)}
+                                                className="px-4 py-2 text-[10px] font-black font-mono tracking-widest uppercase text-cyan-400 bg-cyan-900/20 hover:bg-cyan-900/40 border border-cyan-500/20 hover:border-cyan-500/50 rounded transition-all"
+                                            >
+                                                {t('dashboard.view_details')}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="px-6 py-4 bg-slate-900/20 border-t border-slate-700/50 flex items-center justify-between">
+                        <div className="text-[9px] font-mono text-slate-600 uppercase tracking-widest">
+                            PAGE_{currentPage}_OF_{totalPages} · {filteredContracts.length}_RECORDS_MATCHED
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                className={`px-3 py-1 text-[10px] font-mono tracking-tighter border rounded transition-all ${
+                                    currentPage === 1 
+                                    ? 'border-slate-800 text-slate-700 cursor-not-allowed' 
+                                    : 'border-slate-700 text-slate-400 hover:border-cyan-500/50 hover:text-cyan-400'
+                                }`}
+                            >
+                                PREV
+                            </button>
+                            <div className="flex gap-1">
+                                {[...Array(totalPages)].map((_, i) => (
+                                    <button
+                                        key={i + 1}
+                                        onClick={() => setCurrentPage(i + 1)}
+                                        className={`w-6 h-6 flex items-center justify-center text-[9px] font-mono border rounded transition-all ${
+                                            currentPage === i + 1
+                                            ? 'bg-cyan-500/10 border-cyan-500 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.2)]'
+                                            : 'border-slate-700 text-slate-500 hover:border-slate-600 hover:text-slate-300'
+                                        }`}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                className={`px-3 py-1 text-[10px] font-mono tracking-tighter border rounded transition-all ${
+                                    currentPage === totalPages 
+                                    ? 'border-slate-800 text-slate-700 cursor-not-allowed' 
+                                    : 'border-slate-700 text-slate-400 hover:border-cyan-500/50 hover:text-cyan-400'
+                                }`}
+                            >
+                                NEXT
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

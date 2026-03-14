@@ -35,7 +35,8 @@ export const AuthProvider = ({ children }) => {
 
   // Helper to get role-based home route
   const getHomeRoute = (role) => {
-    switch (role) {
+    const r = role?.toLowerCase();
+    switch (r) {
       case "admin":
         return "/admin/dashboard";
       case "employer":

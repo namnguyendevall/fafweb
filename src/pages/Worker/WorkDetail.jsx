@@ -21,6 +21,7 @@ const WorkDetail = () => {
     const [contractDetail, setContractDetail] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [hasActiveContract, setHasActiveContract] = useState(false);
 
     useEffect(() => {
         const fetchJobDetails = async () => {
@@ -44,6 +45,18 @@ const WorkDetail = () => {
             }
         };
         fetchJobDetails();
+
+        // Check if worker already has an active contract
+        contractsApi.getMyActiveContract()
+            .then(res => {
+                if (res.data && (res.data.status === 'ACTIVE' || res.data.status === 'IN_PROGRESS')) {
+                    setHasActiveContract(true);
+                }
+            })
+            .catch(() => {
+                // No active contract or error — allow apply
+                setHasActiveContract(false);
+            });
     }, [id]);
 
     const handleContactEmployer = async () => {
@@ -57,7 +70,7 @@ const WorkDetail = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#020617]">
+            <div className="min-h-screen flex items-center justify-center bg-transparent">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-10 h-10 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
                     <span className="text-cyan-400 font-mono text-[10px] tracking-widest uppercase animate-pulse">Scanning Data...</span>
@@ -68,7 +81,7 @@ const WorkDetail = () => {
 
     if (error || !job) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#020617] p-4">
+            <div className="min-h-screen flex items-center justify-center bg-transparent p-4">
                 <div className="max-w-md w-full rounded-2xl border p-8 text-center" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(239,68,68,0.3)' }}>
                     <div className="text-4xl mb-4">⚠️</div>
                     <h2 className="text-lg font-black text-white uppercase tracking-widest font-mono mb-2">SIGNAL LOST</h2>
@@ -83,13 +96,7 @@ const WorkDetail = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#020617] text-slate-300">
-            {/* Ambient Background */}
-            <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg,rgba(0,255,255,0.008) 0px,rgba(0,255,255,0.008) 1px,transparent 1px,transparent 3px)' }} />
-            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                <div className="absolute top-0 right-1/4 w-[500px] h-[400px] bg-cyan-500/5 rounded-full blur-[100px]" />
-                <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[300px] bg-indigo-500/5 rounded-full blur-[100px]" />
-            </div>
+        <div className="min-h-screen bg-transparent text-slate-300">
 
             <div className="relative z-10 w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Breadcrumb */}
@@ -152,25 +159,65 @@ const WorkDetail = () => {
                             </div>
                         )}
 
+                        {/* Project Resources (NEW) */}
+                        {job.resource_urls && job.resource_urls.length > 0 && (
+                            <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
+                                <SectionLabel>PROJECT RESOURCES</SectionLabel>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+                                    {job.resource_urls.map((url, idx) => (
+                                        <a 
+                                            key={idx} 
+                                            href={url} 
+                                            target="_blank" 
+                                            rel="noreferrer" 
+                                            className="aspect-video relative rounded-xl border border-white/5 bg-black/40 overflow-hidden group hover:border-cyan-500/50 transition-all font-mono"
+                                        >
+                                            {url.match(/\.(mp4|webm|ogg)$/i) ? (
+                                                <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                                                    <svg className="w-8 h-8 text-cyan-500/30" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                                                    <span className="text-[9px] font-black text-cyan-500/40 tracking-widest uppercase">REF_VID_{idx + 1}</span>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <img src={url} alt={`Res ${idx}`} className="w-full h-full object-cover opacity-40 group-hover:opacity-100 grayscale group-hover:grayscale-0 transition-all duration-700" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 group-hover:opacity-20 transition-opacity" />
+                                                    <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_5px_rgba(6,182,212,1)]" />
+                                                        <span className="text-[9px] font-black text-cyan-400 tracking-widest uppercase truncate max-w-[80px]">REF_{idx+1}.IMG</span>
+                                                    </div>
+                                                </>
+                                            )}
+                                            
+                                            {/* Hover HUD */}
+                                            <div className="absolute inset-0 border border-cyan-500/0 group-hover:border-cyan-500/30 transition-all pointer-events-none">
+                                                <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Milestones */}
                         {job.checkpoints?.length > 0 && (
                             <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
-                                <SectionLabel>PROJECT MILESTONES</SectionLabel>
+                                <SectionLabel>TIẾN ĐỘ DỰ ÁN</SectionLabel>
                                 <div className="space-y-4 mt-4">
                                     {job.checkpoints.map((cp, idx) => (
                                         <div key={cp.id || idx} className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-5 hover:border-cyan-500/30 transition-colors">
                                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                                                 <div>
                                                     <div className="flex items-center gap-3 mb-2">
-                                                        <span className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-widest">MILESTONE 0{idx + 1}</span>
+                                                        <span className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-widest">GIAI ĐOẠN 0{idx + 1}</span>
                                                         <span className={`px-2 py-0.5 rounded border text-[9px] font-black font-mono tracking-widest uppercase ${
                                                             cp.status === 'COMPLETED' || cp.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' :
                                                             cp.status === 'SUBMITTED' ? 'bg-amber-900/30 text-amber-400 border-amber-500/30' :
                                                             cp.status === 'IN_PROGRESS' ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/30' :
                                                             'bg-slate-800 text-slate-400 border-slate-600'
-                                                        }`}>{cp.status === 'SUBMITTED' ? 'WAITING REVIEW' : (cp.status || 'PENDING')}</span>
+                                                        }`}>{cp.status === 'SUBMITTED' ? 'ĐANG CHỜ DUYỆT' : (cp.status || 'PENDING')}</span>
                                                     </div>
-                                                    <h3 className="text-sm font-black text-white tracking-wide uppercase">{cp.name || `Phase ${idx+1}`}</h3>
+                                                    <h3 className="text-sm font-black text-white tracking-wide uppercase">{cp.name || `Giai đoạn ${idx+1}`}</h3>
                                                     {cp.description && <p className="text-[12px] text-slate-400 font-mono mt-2">{cp.description}</p>}
                                                 </div>
                                                 {cp.amount && (
@@ -185,7 +232,7 @@ const WorkDetail = () => {
                                                 <div className="mt-4 pt-4 border-t border-slate-700/50 bg-slate-900/30 rounded-lg p-3">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                                                        <span className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono">OPERATOR_PAYLOAD</span>
+                                                        <span className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono">BÀI NỘP CỦA BẠN</span>
                                                     </div>
                                                     <div className="bg-[#02040a] border border-cyan-500/20 p-2.5 rounded text-[11px] font-mono mb-3 break-all">
                                                         <a href={cp.submission_url} target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors">
@@ -194,14 +241,14 @@ const WorkDetail = () => {
                                                     </div>
                                                     {cp.submission_notes && (
                                                         <div className="mb-3 border-l-2 border-slate-600 pl-3">
-                                                            <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase block mb-1">LOGS:</span>
+                                                            <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase block mb-1">GHI CHÚ:</span>
                                                             <p className="text-sm text-slate-300 font-mono whitespace-pre-wrap">{cp.submission_notes}</p>
                                                         </div>
                                                     )}
                                                     {cp.submitted_at && (
                                                         <div className="text-[9px] font-mono text-slate-500 tracking-widest uppercase mt-2 border-t border-slate-700/50 pt-2 flex items-center gap-1.5">
                                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                            TX_TIME: {new Date(cp.submitted_at).toLocaleString()}
+                                                            THỜI GIAN NỘP: {new Date(cp.submitted_at).toLocaleString()}
                                                         </div>
                                                     )}
                                                 </div>
@@ -210,11 +257,11 @@ const WorkDetail = () => {
                                             {/* Review details */}
                                             {cp.review_notes && (
                                                 <div className={`mt-3 border-l-[3px] p-3 rounded-r-lg ${cp.status === 'APPROVED' ? 'border-emerald-500 bg-emerald-900/10' : 'border-rose-500 bg-rose-900/10'}`}>
-                                                    <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono block mb-1">COMMAND_REVIEW:</span>
+                                                    <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono block mb-1">ĐÁNH GIÁ TỪ KHÁCH HÀNG:</span>
                                                     <p className="text-sm text-slate-300 font-mono">{cp.review_notes}</p>
                                                     {cp.reviewed_at && (
                                                         <p className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">
-                                                            VERIFIED: {new Date(cp.reviewed_at).toLocaleString()}
+                                                            THỜI GIAN DUYỆT: {new Date(cp.reviewed_at).toLocaleString()}
                                                         </p>
                                                     )}
                                                 </div>
@@ -229,18 +276,18 @@ const WorkDetail = () => {
                         {contractDetail && (
                             <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(168,85,247,0.2)' }}>
                                 <div className="flex items-center justify-between mb-6">
-                                    <SectionLabel><span className="text-purple-400">CONTRACT DOCUMENT</span></SectionLabel>
+                                    <SectionLabel><span className="text-purple-400">TÀI LIỆU HỢP ĐỒNG</span></SectionLabel>
                                     <span className="px-2 py-1 bg-purple-900/30 border border-purple-500/30 rounded text-[9px] font-black text-purple-400 tracking-widest font-mono">
                                         {contractDetail.status || 'DRAFT'}
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 mb-6 p-4 rounded-xl border border-slate-700/50 bg-slate-800/30">
                                     <div>
-                                        <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mb-1">TOTAL VALUE</div>
+                                        <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mb-1">TỔNG GIÁ TRỊ</div>
                                         <div className="text-xl font-black text-white font-mono">${Number(contractDetail.total_amount || 0).toLocaleString()}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mb-1">CONTRACT UID</div>
+                                        <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mb-1">MÃ HỢP ĐỒNG</div>
                                         <div className="text-sm font-bold text-slate-300 font-mono">#{contractDetail.id}</div>
                                     </div>
                                 </div>
@@ -249,7 +296,7 @@ const WorkDetail = () => {
                                     <div className="border border-slate-700/50 rounded-xl overflow-hidden bg-[#090e17]">
                                         <div className="bg-slate-800/80 px-4 py-3 border-b border-slate-700/50 flex items-center gap-3">
                                             <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                            <span className="text-[11px] font-black tracking-widest font-mono text-slate-300 uppercase">FAF STANDARD AGREEMENT</span>
+                                            <span className="text-[11px] font-black tracking-widest font-mono text-slate-300 uppercase">THỎA THUẬN TIÊU CHUẨN FAF</span>
                                         </div>
                                         <div className="p-6 prose prose-invert prose-sm max-w-none prose-p:text-slate-400 prose-headings:text-slate-200" dangerouslySetInnerHTML={{ __html: contractDetail.contract_content || contractDetail.terms }} />
                                     </div>
@@ -262,30 +309,37 @@ const WorkDetail = () => {
                     <aside className="space-y-6">
                         {/* Budget Card */}
                         <div className="rounded-2xl border p-6 text-center" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.3)' }}>
-                            <div className="text-[10px] font-black tracking-widest text-slate-400 uppercase font-mono mb-2">PROJECT BUDGET</div>
+                            <div className="text-[10px] font-black tracking-widest text-slate-400 uppercase font-mono mb-2">NGÂN SÁCH DỰ ÁN</div>
                             <div className="text-4xl font-black text-white font-mono mb-1 tracking-tight">
                                 ${Number(job.budget || 0).toLocaleString()}
                             </div>
-                            <div className="text-[10px] font-mono text-cyan-500/70">SECURED VIA FAF ESCROW</div>
+                            <div className="text-[10px] font-mono text-cyan-500/70">BẢO ĐẢM BỞI FAF ESCROW</div>
                         </div>
 
                         {/* Actions */}
                         <div className="space-y-3">
-                            <button onClick={() => navigate(`/apply/${id}`)}
-                                className="w-full py-4 rounded-xl font-black text-[13px] tracking-widest uppercase font-mono bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] border border-cyan-400/50 transition-all hover:scale-[1.02]">
-                                Apply Now
-                            </button>
+                            {hasActiveContract ? (
+                                <div className="w-full py-4 rounded-xl font-black text-[12px] tracking-widest uppercase font-mono bg-red-900/20 text-red-400 border border-red-500/30 text-center cursor-not-allowed flex flex-col items-center gap-1">
+                                    <span>🚫 Đang Có Việc Làm</span>
+                                    <span className="text-[9px] font-mono text-red-500/60 tracking-widest normal-case">Hoàn thành hoặc thoát hợp đồng hiện tại để ứng tuyển.</span>
+                                </div>
+                            ) : (
+                                <button onClick={() => navigate(`/apply/${id}`)}
+                                    className="w-full py-4 rounded-xl font-black text-[13px] tracking-widest uppercase font-mono bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] border border-cyan-400/50 transition-all hover:scale-[1.02]">
+                                    Ứng Tuyển Ngay
+                                </button>
+                            )}
                             <button onClick={handleContactEmployer}
                                 className="w-full py-3.5 rounded-xl font-black text-[11px] tracking-widest uppercase font-mono bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-600/50 hover:border-cyan-500/50 hover:text-cyan-400 transition-all flex items-center justify-center gap-2">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                                Message Client
+                                Nhắn Tin Cho Khách Hàng
                             </button>
                         </div>
 
                         {/* About Client */}
                         {job.client && (
                             <div className="rounded-2xl border p-6" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
-                                <SectionLabel>ABOUT CLIENT</SectionLabel>
+                                <SectionLabel>THÔNG TIN KHÁCH HÀNG</SectionLabel>
                                 <div className="flex items-center gap-4 mb-5 mt-4">
                                     <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-black text-lg text-slate-300">
                                         {(job.client.full_name || job.client.email)?.charAt(0).toUpperCase()}

@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "../contexts/ToastContext";
 import FAFLogo from "../assets/FAF-Logo.png";
 import { authApi } from "../api/auth.api";
+import { useTranslation } from "react-i18next";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Signup = () => {
     tos: false,
   });
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
   const togglePassword = () => setShowPassword((prev) => !prev);
   const toggleConfirm = () => setShowConfirm((prev) => !prev);
@@ -108,29 +110,29 @@ const Signup = () => {
       <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20 pointer-events-auto transition-opacity duration-300">
           <Link to="/" className="flex items-center gap-2 group cursor-crosshair">
               <svg className="w-5 h-5 text-purple-500 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-              <span className="font-mono text-xs uppercase tracking-widest text-slate-400 group-hover:text-purple-400 transition-colors">Abort Initialization</span>
+              <span className="font-mono text-xs uppercase tracking-widest text-slate-400 group-hover:text-purple-400 transition-colors">{t('auth.cancel_registration')}</span>
           </Link>
           <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 relative">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
               </span>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Registration Module Online</span>
+              <span className="font-mono text-[10px] uppercase tracking-widest text-slate-500">{t('auth.registration_system_active')}</span>
           </div>
       </div>
 
       <main className={`w-full max-w-2xl px-6 relative z-20 overflow-y-auto max-h-[100dvh] pt-24 pb-12 custom-scrollbar ${loading ? "pointer-events-none opacity-60" : ""}`}>
         <div className="text-center mb-8">
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight text-glitch-effect cursor-crosshair inline-block mb-2">
-              INITIALIZE PROFILE
+              {t('auth.signup_title')}
             </h1>
             <p className="text-sm font-mono text-slate-400">
-              Establish your on-chain identity. Already registered?{" "}
+              {t('auth.signup_subtitle')}{" "}
               <Link
                 to="/signin"
                 className="text-white border-b border-transparent hover:border-purple-400 hover:text-purple-400 transition-all font-semibold"
               >
-                Access Terminal
+                {t('auth.login_now')}
               </Link>
             </p>
         </div>
@@ -154,7 +156,7 @@ const Signup = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 21v-1a6 6 0 1112 0v1" />
               </svg>
-              <span className="z-10 relative">Execution Node<br/>(Worker)</span>
+              <span className="z-10 relative">{t('auth.role_worker')}</span>
             </button>
             <button
               type="button"
@@ -169,7 +171,7 @@ const Signup = () => {
               <svg className={`w-6 h-6 z-10 ${role === "employer" ? 'text-purple-400' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              <span className="z-10 relative">Contract Issuer<br/>(Employer)</span>
+              <span className="z-10 relative">{t('auth.role_employer')}</span>
             </button>
           </div>
 
@@ -177,7 +179,7 @@ const Signup = () => {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label htmlFor="fullName" className="text-xs font-mono text-slate-400 uppercase tracking-widest flex justify-between">
-                    Entity Name
+                    {t('auth.fullname_label')}
                 </label>
                 <div className="relative group/input">
                     <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-md opacity-0 group-focus-within/input:opacity-100 transition-opacity"></div>
@@ -195,7 +197,7 @@ const Signup = () => {
 
               <div className="space-y-2">
                 <label htmlFor="email" className="text-xs font-mono text-slate-400 uppercase tracking-widest flex justify-between">
-                    Comms Vector (Email)
+                    {t('auth.email_label')}
                 </label>
                 <div className="relative group/input">
                     <div className="absolute inset-0 bg-purple-500/20 rounded-xl blur-md opacity-0 group-focus-within/input:opacity-100 transition-opacity"></div>
@@ -215,7 +217,7 @@ const Signup = () => {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label htmlFor="password" className="text-xs font-mono text-slate-400 uppercase tracking-widest flex justify-between">
-                    Encryption Key
+                    {t('auth.password_label')}
                 </label>
                 <div className="relative group/input">
                     <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-md opacity-0 group-focus-within/input:opacity-100 transition-opacity"></div>
@@ -240,7 +242,7 @@ const Signup = () => {
 
               <div className="space-y-2">
                 <label htmlFor="confirmPassword" className="text-xs font-mono text-slate-400 uppercase tracking-widest flex justify-between">
-                    Verify Key
+                    {t('auth.confirm_password_label')}
                 </label>
                 <div className="relative group/input">
                     <div className="absolute inset-0 bg-blue-500/20 rounded-xl blur-md opacity-0 group-focus-within/input:opacity-100 transition-opacity"></div>
@@ -274,7 +276,7 @@ const Signup = () => {
                 className="mt-1 flex-shrink-0 cursor-crosshair rounded border-white/20 bg-slate-900/50 text-purple-500 focus:ring-purple-500/50"
               />
               <label htmlFor="tos" className="cursor-crosshair leading-relaxed">
-                Accept <span className="text-purple-400">PROTOCOL_TOS</span> and <span className="text-purple-400">PRIVACY_POLICY</span>. Committing data implies binding cryptographic agreement.
+                {t('auth.tos_text_1')} <span className="text-purple-400">{t('auth.tos_text_2')}</span> {t('auth.tos_text_3')} <span className="text-purple-400">{t('auth.tos_text_4')}</span>.
               </label>
             </div>
 
@@ -290,11 +292,11 @@ const Signup = () => {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        EXECUTING...
+                        {t('auth.processing')}
                     </span>
                 ) : (
                     <>
-                        <span>EXECUTE_INITIALIZATION()</span>
+                        <span>{t('auth.submit_signup')}</span>
                         <svg className="w-5 h-5 text-blue-400 group-hover/btn:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                     </>
                 )}
@@ -304,16 +306,16 @@ const Signup = () => {
           <div className="mt-8 flex flex-col gap-4 text-center">
               <div className="flex items-center gap-3 opacity-50">
                   <span className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-white"></span>
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-white">EXTERNAL_NODES</span>
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-white">{t('auth.or_signup_with')}</span>
                   <span className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-white"></span>
               </div>
               
               <div className="grid grid-cols-2 gap-3">
-                  <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-3 transition-all text-xs font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
-                      <span className="text-white group-hover/btn2:scale-110 transition-transform">G</span> GOOGLE_ID
+                  <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-3 transition-all text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
+                      <span className="text-white group-hover/btn2:scale-110 transition-transform">G</span> GOOGLE
                   </button>
-                  <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-3 transition-all text-xs font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
-                      <span className="text-blue-500 group-hover/btn2:scale-110 transition-transform">in</span> LINKED_IN
+                  <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-3 transition-all text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
+                      <span className="text-blue-500 group-hover/btn2:scale-110 transition-transform">in</span> LINKEDIN
                   </button>
               </div>
           </div>

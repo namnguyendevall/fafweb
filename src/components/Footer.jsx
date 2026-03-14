@@ -69,7 +69,7 @@ const Footer = () => {
                 {/* Bottom bar */}
                 <div className="mt-12 pt-6 border-t flex flex-col sm:flex-row justify-between items-center gap-4"
                     style={{ borderColor: 'rgba(51,65,85,0.4)' }}>
-                    <p className="text-[10px] font-mono text-slate-600">© 2026 FAF Workforce Technologies. All rights reserved.</p>
+                    <p className="text-[10px] font-mono text-slate-600">© {new Date().getFullYear()} FAF Workforce Technologies. All rights reserved.</p>
                     <div className="flex items-center gap-4 text-[10px] font-mono text-slate-600">
                         <span className="flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-sm shadow-cyan-400" />
