@@ -7,7 +7,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { chatApi } from '../api/chat.api';
 import { notificationApi } from '../api/notification.api';
 import { useTranslation } from 'react-i18next';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
 
 /* ─── helpers ─── */
 const getInitials = (u) => {
@@ -194,7 +193,6 @@ const MessagesDropdown = ({ onClose, navigate, user }) => {
    NOTIFICATIONS DROPDOWN  (Cyberpunk-style)
 ══════════════════════════════════════════════════════ */
 const NotificationsDropdown = ({ onClose, navigate, onMarkAllRead, user }) => {
-    const { decrementUnreadNotifications } = useChatContext();
     const [notifs, setNotifs]   = useState([]);
     const [loading, setLoading] = useState(true);
     const [tab, setTab]         = useState('all');
@@ -220,7 +218,6 @@ const NotificationsDropdown = ({ onClose, navigate, onMarkAllRead, user }) => {
         if (!n.is_read) {
             await notificationApi.markAsRead(n.id).catch(() => {});
             setNotifs(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x));
-            decrementUnreadNotifications();
         }
 
         let path = '';
@@ -428,11 +425,6 @@ const Navbar = () => {
 
     const toggleLang = () => setLang(prev => prev === 'vi' ? 'en' : 'vi');
 
-    // Wagmi Web3 Auth
-    const { address, isConnected } = useAccount();
-    const { connectors, connect } = useConnect();
-    const { disconnect } = useDisconnect();
-
     /* close on outside click */
     useEffect(() => {
         if (!openPanel) return;
@@ -491,10 +483,8 @@ const Navbar = () => {
         );
     };
 
-    const isAdmin = user?.role?.toLowerCase() === 'admin';
-    const isManager = user?.role?.toLowerCase() === 'manager';
-    const isEmployer = user?.role?.toLowerCase() === 'employer';
-    const accentColor = isManager ? 'emerald' : isAdmin ? 'indigo' : 'cyan';
+    const isManager = user?.role === 'manager';
+    const accentColor = isManager ? 'emerald' : 'cyan';
 
     return (
         <nav className="sticky top-0 z-50 w-full border-b" style={{ background: 'rgba(2,6,23,0.95)', borderColor: isManager ? 'rgba(16,185,129,0.15)' : 'rgba(6,182,212,0.15)', backdropFilter: 'blur(12px)' }} ref={panelRef}>
@@ -538,11 +528,7 @@ const Navbar = () => {
                             { to: '/', label: t('navbar.home'), exact: true,
                               icon: <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                             },
-                            ...(isAdmin ? [
-                                { to: '/admin/dashboard', label: 'CONTROL PANEL',
-                                  icon: <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg> // Admin icon
-                                },
-                            ] : isManager ? [
+                            ...(isManager ? [
                                 { to: '/manager/management/jobs', label: 'DASHBOARD',
                                   icon: <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                                 },
@@ -561,7 +547,7 @@ const Navbar = () => {
                         ]
                         .map(({ to, label, exact, icon }) => {
                             const loc = window.location.pathname;
-                            const active = exact ? loc === to : (to === '/manager/management/jobs' || to === '/admin/dashboard' ? loc.startsWith(to.split('/')[1]) : loc.startsWith(to) && to !== '/');
+                            const active = exact ? loc === to : (to === '/manager/management/jobs' ? loc.startsWith('/manager') : loc.startsWith(to) && to !== '/');
                             return (
                                 <NavLink
                                     key={to}
@@ -594,25 +580,6 @@ const Navbar = () => {
                             >
                                 {lang === 'vi' ? 'VI' : 'EN'}
                             </button>
-
-                            {/* Web3 Connect */}
-                            {isConnected ? (
-                                <button
-                                    onClick={() => disconnect()}
-                                    title="Disconnect Web3 Wallet"
-                                    className="px-3 h-9 flex items-center justify-center rounded bg-emerald-950/30 border border-emerald-500/50 text-emerald-400 hover:bg-rose-950/30 hover:border-rose-500/50 hover:text-rose-400 font-mono text-[9px] font-black tracking-widest transition-all shadow-[0_0_10px_rgba(16,185,129,0.2)]"
-                                >
-                                    {address.slice(0, 6)}...{address.slice(-4)}
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => connect({ connector: connectors[0] })}
-                                    title="Connect MetaMask"
-                                    className="px-3 h-9 flex items-center justify-center rounded bg-[#02040a] border border-fuchsia-500/50 text-fuchsia-400 hover:bg-fuchsia-950/30 hover:shadow-[0_0_15px_rgba(217,70,239,0.3)] font-mono text-[9px] font-black tracking-widest transition-all"
-                                >
-                                    LINK_WALLET
-                                </button>
-                            )}
 
                             {/* Theme Switcher */}
                             <button
@@ -697,13 +664,13 @@ const Navbar = () => {
                                             <div className="flex flex-col mb-3">
                                                 <p className={`font-black text-white text-sm uppercase tracking-widest font-mono ${isManager ? 'text-shadow-glow-emerald' : 'text-shadow-glow-cyan'} leading-tight`}>{user?.full_name || 'UNKNOWN_NODE'}</p>
                                                 <p className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-1">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${user?.role === 'employer' ? 'bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.8)]' : isAdmin ? 'bg-indigo-500 shadow-[0_0_5px_rgba(99,102,241,0.8)]' : isManager ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]' : 'bg-cyan-500 shadow-[0_0_5px_rgba(34,211,238,0.8)]'}`}></span>
-                                                    {user?.role === 'employer' ? 'CLIENT_OP' : isAdmin ? 'ADMIN_OP' : isManager ? 'MASTER_OP' : 'WORKER_OP'}
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${user?.role === 'employer' ? 'bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.8)]' : isManager ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]' : 'bg-cyan-500 shadow-[0_0_5px_rgba(34,211,238,0.8)]'}`}></span>
+                                                    {user?.role === 'employer' ? 'CLIENT_OP' : isManager ? 'MASTER_OP' : 'WORKER_OP'}
                                                 </p>
                                             </div>
                                             <button
-                                                onClick={() => { close(); navigate(user?.role === 'employer' ? '/task-owner/profiles' : isAdmin ? '/admin/dashboard' : isManager ? '/manager/request' : '/dashboard'); }}
-                                                className={`w-full py-1.5 rounded font-black text-[9px] tracking-widest uppercase font-mono transition-all bg-[#02040a] ${isAdmin ? 'hover:bg-indigo-950 text-indigo-500 hover:text-indigo-300 hover:border-indigo-500/50' : isManager ? 'hover:bg-emerald-950 text-emerald-500 hover:text-emerald-300 hover:border-emerald-500/50' : 'hover:bg-cyan-950 text-cyan-500 hover:text-cyan-300 hover:border-cyan-500/50'} border border-slate-700`}
+                                                onClick={() => { close(); navigate(user?.role === 'employer' ? '/task-owner/profiles' : isManager ? '/manager/request' : '/dashboard'); }}
+                                                className={`w-full py-1.5 rounded font-black text-[9px] tracking-widest uppercase font-mono transition-all bg-[#02040a] ${isManager ? 'hover:bg-emerald-950 text-emerald-500 hover:text-emerald-300 hover:border-emerald-500/50' : 'hover:bg-cyan-950 text-cyan-500 hover:text-cyan-300 hover:border-cyan-500/50'} border border-slate-700`}
                                             >
                                                 VIEW_DETAILS
                                             </button>

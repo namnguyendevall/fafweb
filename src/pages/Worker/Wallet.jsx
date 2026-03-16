@@ -1,11 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
-import axiosClient from '../../api/axiosClient'
-import { useToast } from '../../contexts/ToastContext'
 
 const Wallet = () => {
-    const { success: toastSuccess, error: toastError } = useToast();
     const navigate = useNavigate()
     const { user, fetchMe } = useAuth()
     const [selectedTab, setSelectedTab] = useState('All')
@@ -13,119 +10,70 @@ const Wallet = () => {
     const [customAmount, setCustomAmount] = useState('')
     const [withdrawAmount, setWithdrawAmount] = useState('')
     const [copied, setCopied] = useState(false)
-    const [bankName, setBankName] = useState('ZaloPay')
-    const [accountNumber, setAccountNumber] = useState('')
-    const [accountName, setAccountName] = useState('')
-    const [myWithdrawals, setMyWithdrawals] = useState([])
-    const [realTransactions, setRealTransactions] = useState([])
-    const [loading, setLoading] = useState(false)
-    const [currentPage, setCurrentPage] = useState(1)
-    const ITEMS_PER_PAGE = 5
-
-    const fetchTransactions = async () => {
-        try {
-            const res = await axiosClient.get('/wallets/transactions/my');
-            setRealTransactions(res.data || []);
-        } catch (error) {
-            console.error("Failed to fetch transactions", error);
-        }
-    };
-
-    const fetchMyWithdrawals = async () => {
-        try {
-            const res = await axiosClient.get('/wallets/withdraw/my');
-            setMyWithdrawals(res.data || []);
-        } catch (error) {
-            console.error("Failed to fetch withdrawals", error);
-        }
-    };
 
     useEffect(() => {
         fetchMe();
-        fetchMyWithdrawals();
-        fetchTransactions();
     }, []);
 
     const walletId = user?.id ? `faf_${user.id}_wallet` : 'faf_wallet'
     const totalBalance = user?.balance_points ?? 0
     const usdBalance = (totalBalance * 0.01).toFixed(2)
 
+    const transactions = [
+        {
+            id: 1,
+            type: 'incoming',
+            title: 'Project: Website Redesign',
+            date: 'Oct 24, 2023 • 2:30 PM',
+            amount: '+ 500 CRED',
+            status: 'COMPLETED',
+            statusColor: 'text-emerald-400',
+            icon: 'down'
+        },
+        {
+            id: 2,
+            type: 'outgoing',
+            title: 'Withdrawal to PayPal',
+            date: 'Oct 23, 2023 • 9:15 AM',
+            amount: '- 200 CRED',
+            status: 'PENDING',
+            statusColor: 'text-amber-400',
+            icon: 'up'
+        },
+        {
+            id: 3,
+            type: 'outgoing',
+            title: 'Platform Fee',
+            date: 'Oct 23, 2023 • 9:15 AM',
+            amount: '- 5 CRED',
+            status: 'PROCESSED',
+            statusColor: 'text-slate-500',
+            icon: 'document'
+        },
+        {
+            id: 4,
+            type: 'incoming',
+            title: 'Deposit from Visa •••• 4242',
+            date: 'Oct 20, 2023 • 11:00 AM',
+            amount: '+ 1,000 CRED',
+            status: 'COMPLETED',
+            statusColor: 'text-emerald-400',
+            icon: 'plus'
+        }
+    ]
+
     const filteredTransactions = useMemo(() => {
-        const formatted = realTransactions.map(t => {
-            let title = t.reference_type;
-            let icon = 'document';
-            let type = 'incoming';
-            let color = 'text-emerald-400';
-
-            switch (t.type) {
-                case 'DEPOSIT':
-                    title = `Nạp tiền (${t.reference_type})`;
-                    icon = 'plus';
-                    type = 'incoming';
-                    color = 'text-cyan-400';
-                    break;
-                case 'WITHDRAW':
-                    title = `Rút tiền (${t.reference_type})`;
-                    icon = 'up';
-                    type = 'outgoing';
-                    color = 'text-rose-400';
-                    break;
-                case 'LOCK':
-                    title = `Ký quỹ dự án #${t.reference_id}`;
-                    icon = 'document';
-                    type = 'outgoing';
-                    color = 'text-slate-400';
-                    break;
-                case 'RELEASE':
-                    title = `Nhận thanh toán #${t.reference_id}`;
-                    icon = 'down';
-                    type = 'incoming';
-                    color = 'text-emerald-400';
-                    break;
-                case 'REFUND':
-                    title = `Hoàn trả Ký quỹ #${t.reference_id}`;
-                    icon = 'plus';
-                    type = 'incoming';
-                    color = 'text-emerald-400';
-                    break;
-                default:
-                    break;
-            }
-
-            return {
-                id: t.id,
-                type,
-                title,
-                date: new Date(t.created_at).toLocaleString('vi-VN'),
-                amount: `${type === 'incoming' ? '+' : '-'} ${Number(t.amount).toLocaleString()} CRED`,
-                status: t.status,
-                statusColor: color,
-                icon
-            };
-        });
-
-        if (selectedTab === 'Incoming') return formatted.filter(t => t.type === 'incoming');
-        if (selectedTab === 'Outgoing') return formatted.filter(t => t.type === 'outgoing');
-        return formatted;
-    }, [selectedTab, realTransactions]);
-
-    // Reset page when tab changes
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [selectedTab]);
-
-    const paginatedTransactions = useMemo(() => {
-        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-        return filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    }, [filteredTransactions, currentPage]);
-
-    const totalPages = Math.ceil(filteredTransactions.length / ITEMS_PER_PAGE);
+        if (selectedTab === 'All') return transactions
+        return transactions.filter(t => t.type === selectedTab.toLowerCase())
+    }, [selectedTab])
 
     const copyWalletId = async () => {
         try {
             await navigator.clipboard.writeText(walletId)
             setCopied(true)
-            setTimeout(() => setCopied(false), 2000)
+            setTimeout(() => {
+                setCopied(false)
+            }, 2000)
         } catch (err) {
             const textArea = document.createElement('textarea')
             textArea.value = walletId
@@ -136,7 +84,9 @@ const Wallet = () => {
             try {
                 document.execCommand('copy')
                 setCopied(true)
-                setTimeout(() => setCopied(false), 2000)
+                setTimeout(() => {
+                    setCopied(false)
+                }, 2000)
             } catch (err) {
                 console.error('Failed to copy:', err)
             }
@@ -177,10 +127,11 @@ const Wallet = () => {
 
     return (
         <div className="w-full min-h-screen bg-transparent text-slate-300 relative font-sans">
+
             <div className="mx-auto max-w-7xl px-4 py-8 relative z-10 w-full">
                 {/* Header */}
                 <div className="mb-8 flex items-center gap-4">
-                    <div className="h-12 w-12 flex items-center justify-center bg-cyan-900/40 border border-cyan-500/30 rounded-xl">
+                    <div className="h-12 w-12 flex items-center justify-center bg-cyan-900/40 border border-cyan-500/30 rounded xl">
                         <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                         </svg>
@@ -279,109 +230,49 @@ const Wallet = () => {
                             </div>
 
                             <div className="p-6">
-                                {filteredTransactions.length === 0 ? (
-                                    <div className="py-20 text-center">
-                                        <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-900/50 border border-slate-800 mb-4">
-                                            <svg className="w-8 h-8 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                {/* Transactions List */}
+                                <div className="space-y-4">
+                                    {filteredTransactions.map((transaction) => (
+                                        <div
+                                            key={transaction.id}
+                                            className="group flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-slate-800 bg-[#02040a] p-5 hover:border-cyan-500/30 transition-colors relative"
+                                        >
+                                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-slate-800 group-hover:bg-cyan-500/50 transition-colors" />
+                                            
+                                            <div className={`shrink-0 flex h-10 w-10 items-center justify-center rounded border ${
+                                                    transaction.icon === 'plus' ? 'bg-blue-900/20 text-blue-400 border-blue-500/30' : 
+                                                    transaction.type === 'incoming' ? 'bg-emerald-900/20 text-emerald-400 border-emerald-500/30' : 
+                                                    'bg-amber-900/20 text-amber-400 border-amber-500/30'
+                                                }`}>
+                                                {getTransactionIcon(transaction.icon)}
+                                            </div>
+                                            
+                                            <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                <div className="min-w-0 pr-4">
+                                                    <div className="text-[12px] font-bold text-slate-200 truncate uppercase font-mono tracking-wider">
+                                                        {transaction.title}
+                                                    </div>
+                                                    <div className="mt-1 text-[9px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                        {transaction.date}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="text-left sm:text-right shrink-0 mt-2 sm:mt-0">
+                                                    <div className={`text-lg font-black font-mono tracking-tighter ${transaction.type === 'incoming' ? 'text-emerald-400' : 'text-slate-300'
+                                                        }`}>
+                                                        {transaction.amount}
+                                                    </div>
+                                                    <div className={`mt-0.5 text-[9px] font-black font-mono uppercase tracking-widest ${transaction.statusColor}`}>
+                                                        [{transaction.status === 'COMPLETED' ? 'THÀNH CÔNG' : transaction.status === 'PENDING' ? 'ĐANG XỬ LÝ' : transaction.status === 'PROCESSED' ? 'ĐÃ XỬ LÝ' : transaction.status}]
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <p className="text-[10px] font-black font-mono text-slate-600 uppercase tracking-widest italic">CHƯA CÓ DỮ LIỆU GIAO DỊCH</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {paginatedTransactions.map((transaction) => (
-                                            <div
-                                                key={transaction.id}
-                                                className="group flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border border-slate-800 bg-[#02040a] p-5 hover:border-cyan-500/30 transition-colors relative"
-                                            >
-                                                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-slate-800 group-hover:bg-cyan-500/50 transition-colors" />
-                                                
-                                                <div className={`shrink-0 flex h-10 w-10 items-center justify-center rounded border ${
-                                                        transaction.icon === 'plus' ? 'bg-cyan-900/20 text-cyan-400 border-cyan-500/30' : 
-                                                        transaction.type === 'incoming' ? 'bg-emerald-900/20 text-emerald-400 border-emerald-500/30' : 
-                                                        'bg-rose-900/20 text-rose-400 border-rose-500/30'
-                                                    }`}>
-                                                    {getTransactionIcon(transaction.icon)}
-                                                </div>
-                                                
-                                                <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                                    <div className="min-w-0 pr-4">
-                                                        <div className="text-[12px] font-bold text-slate-200 truncate uppercase font-mono tracking-wider">
-                                                            {transaction.title}
-                                                        </div>
-                                                        <div className="mt-1 text-[9px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                            {transaction.date}
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="text-left sm:text-right shrink-0 mt-2 sm:mt-0">
-                                                        <div className={`text-lg font-black font-mono tracking-tighter ${transaction.type === 'incoming' ? 'text-emerald-400' : 'text-slate-300'
-                                                            }`}>
-                                                            {transaction.amount}
-                                                        </div>
-                                                        <div className={`mt-0.5 text-[9px] font-black font-mono uppercase tracking-widest ${transaction.statusColor}`}>
-                                                            [{transaction.status === 'SUCCESS' || transaction.status === 'COMPLETED' ? 'THÀNH CÔNG' : transaction.status === 'PENDING' ? 'ĐANG XỬ LÝ' : transaction.status}]
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                    ))}
+                                </div>
 
-                                        {/* Pagination Controls */}
-                                        {totalPages > 1 && (
-                                            <div className="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-800 pt-6">
-                                                <div className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-widest">
-                                                    DỮ LIỆU [{(currentPage - 1) * ITEMS_PER_PAGE + 1}] - [
-                                                    {Math.min(currentPage * ITEMS_PER_PAGE, filteredTransactions.length)}
-                                                    ] TRÊN {filteredTransactions.length} GIAO DỊCH
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                                                        disabled={currentPage === 1}
-                                                        className={`px-3 py-1.5 rounded border font-mono text-[10px] font-black transition-colors ${
-                                                            currentPage === 1
-                                                                ? 'border-slate-800 text-slate-700 cursor-not-allowed'
-                                                                : 'border-slate-700 text-slate-300 hover:border-cyan-500 hover:text-cyan-400'
-                                                        }`}
-                                                    >
-                                                        PREV
-                                                    </button>
-                                                    
-                                                    <div className="flex items-center gap-1">
-                                                        {[...Array(totalPages)].map((_, i) => (
-                                                            <button
-                                                                key={i + 1}
-                                                                onClick={() => setCurrentPage(i + 1)}
-                                                                className={`w-8 h-8 rounded flex items-center justify-center font-mono text-[10px] font-black transition-all ${
-                                                                    currentPage === i + 1
-                                                                        ? 'bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.4)]'
-                                                                        : 'text-slate-500 hover:text-slate-300'
-                                                                }`}
-                                                            >
-                                                                {String(i + 1).padStart(2, '0')}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                                                        disabled={currentPage === totalPages}
-                                                        className={`px-3 py-1.5 rounded border font-mono text-[10px] font-black transition-colors ${
-                                                            currentPage === totalPages
-                                                                ? 'border-slate-800 text-slate-700 cursor-not-allowed'
-                                                                : 'border-slate-700 text-slate-300 hover:border-cyan-500 hover:text-cyan-400'
-                                                        }`}
-                                                    >
-                                                        NEXT
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div className="mt-8 text-center">
+                                <div className="mt-6 text-center">
                                     <button className="text-[10px] font-black font-mono text-cyan-500 hover:text-cyan-400 uppercase tracking-widest items-center inline-flex gap-2 group">
                                         XEM TẤT CẢ GIAO DỊCH
                                         <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
@@ -454,23 +345,14 @@ const Wallet = () => {
                                 </div>
 
                                 <button
-                                    onClick={async () => {
+                                    onClick={() => {
                                         const packagePoints = {
                                             'Starter': 100,
                                             'Pro': 500,
                                             'Expert': 1000
                                         }
                                         const points = customAmount ? parseInt(customAmount) : packagePoints[selectedPackage] || 500
-                                        
-                                        try {
-                                            const res = await axiosClient.post('/wallets/deposit/zalopay', { amount: points });
-                                            if (res.order_url) {
-                                                window.location.href = res.order_url;
-                                            }
-                                        } catch (error) {
-                                            console.error("Deposit failed", error);
-                                            toastError("Có lỗi xảy ra khi tạo giao dịch thanh toán.");
-                                        }
+                                        navigate('/deposit-points', { state: { points, package: selectedPackage } })
                                     }}
                                     className="w-full rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(6,182,212,0.3)] border border-cyan-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2"
                                 >
@@ -517,40 +399,10 @@ const Wallet = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">TÊN NGÂN HÀNG / VÍ</label>
-                                    <select 
-                                        value={bankName}
-                                        onChange={(e) => setBankName(e.target.value)}
-                                        className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-[11px] font-black font-mono text-slate-300 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase appearance-none"
-                                    >
-                                        <option value="ZaloPay">ZaloPay</option>
-                                        <option value="Momo">Momo</option>
-                                        <option value="Vietcombank">Vietcombank</option>
-                                        <option value="Techcombank">Techcombank</option>
-                                        <option value="MB Bank">MB Bank</option>
+                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">CHỌN NGÂN HÀNG</label>
+                                    <select className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-[11px] font-black font-mono text-slate-300 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase appearance-none">
+                                        <option>NGÂN HÀNG [ **** 8821 ]</option>
                                     </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">SỐ TÀI KHOẢN</label>
-                                    <input
-                                        type="text"
-                                        value={accountNumber}
-                                        onChange={(e) => setAccountNumber(e.target.value)}
-                                        placeholder="0123456789..."
-                                        className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-black font-mono text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase placeholder-slate-700"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">TÊN CHỦ TÀI KHOẢN</label>
-                                    <input
-                                        type="text"
-                                        value={accountName}
-                                        onChange={(e) => setAccountName(e.target.value)}
-                                        placeholder="NGUYEN VAN A..."
-                                        className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-black font-mono text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase placeholder-slate-700"
-                                    />
                                 </div>
 
                                 <div className="flex items-center justify-between rounded bg-[#02040a] border border-slate-800 px-4 py-3 font-mono">
@@ -559,43 +411,11 @@ const Wallet = () => {
                                 </div>
 
                                 <button
-                                    disabled={loading}
-                                    onClick={async () => {
-                                        const amount = parseInt(withdrawAmount);
-                                        if (!amount || amount < 100) {
-                                            return toastError("Số lượng rút tối thiểu là 100 CRED");
-                                        }
-                                        if (!accountNumber || !accountName) {
-                                            return toastError("Vui lòng nhập đầy đủ thông tin tài khoản");
-                                        }
-
-                                        setLoading(true);
-                                        try {
-                                            await axiosClient.post('/wallets/withdraw/request', {
-                                                amount,
-                                                bank_info: {
-                                                    bank_name: bankName,
-                                                    account_number: accountNumber,
-                                                    account_name: accountName
-                                                }
-                                            });
-                                            toastSuccess("Yêu cầu rút tiền đã được gửi!");
-                                            setWithdrawAmount('');
-                                            setAccountNumber('');
-                                            setAccountName('');
-                                            fetchMe();
-                                            fetchMyWithdrawals();
-                                        } catch (error) {
-                                            console.error("Withdrawal failed", error);
-                                            toastError(error?.response?.data?.message || "Có lỗi xảy ra khi yêu cầu rút tiền.");
-                                        } finally {
-                                            setLoading(false);
-                                        }
-                                    }}
-                                    className={`w-full rounded-lg bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-600 hover:to-indigo-600 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(225,29,72,0.3)] border border-rose-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    onClick={() => navigate('/withdraw-points')}
+                                    className="w-full rounded-lg bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-600 hover:to-indigo-600 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(225,29,72,0.3)] border border-rose-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2"
                                 >
-                                    {loading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN RÚT TIỀN'}
-                                    {!loading && <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>}
+                                    XÁC NHẬN RÚT TIỀN
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
                                 </button>
                             </div>
                         </div>
@@ -619,10 +439,11 @@ const Wallet = () => {
                     </div>
                 </div>
             </div>
+            
             {/* Minimal styling for custom scrollbars missing from utility class */}
             <style jsx="true">{`
               select {
-                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+                background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
                 background-position: right 0.5rem center;
                 background-repeat: no-repeat;
                 background-size: 1.5em 1.5em;

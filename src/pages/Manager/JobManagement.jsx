@@ -111,16 +111,7 @@ const JobManagement = () => {
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-xs font-mono font-black text-white group-hover:text-emerald-400 transition-colors">#{j.id}</span>
                                                     {j.has_dispute && (
-                                                        <span 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                if (j.dispute_id) navigate(`/manager/disputes/${j.dispute_id}`);
-                                                            }}
-                                                            className="animate-pulse flex items-center justify-center w-4 h-4 rounded-full bg-rose-500/20 border border-rose-500/50 text-rose-500 text-[8px] font-black cursor-pointer hover:bg-rose-500/40 transition-all"
-                                                            title="OPEN_DISPUTE_HUB"
-                                                        >
-                                                            !
-                                                        </span>
+                                                        <span className="animate-pulse flex items-center justify-center w-4 h-4 rounded-full bg-rose-500/20 border border-rose-500/50 text-rose-500 text-[8px] font-black">!</span>
                                                     )}
                                                 </div>
                                             </td>

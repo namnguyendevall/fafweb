@@ -15,7 +15,6 @@ import ContractDetail from "./pages/Worker/ContractDetail";
 import Settings from "./pages/Worker/Settings";
 import Wallet from "./pages/Worker/Wallet";
 import Depositpoint from "./pages/Worker/Depositpoint";
-import DepositResult from "./pages/Worker/DepositResult";
 import Withdrawpoint from "./pages/Worker/Withdrawpoint";
 import TaskOwnerPage from "./pages/TaskOwner/TaskOwnerPage";
 import ProfilesPage from "./pages/TaskOwner/ProfilesPage";
@@ -55,18 +54,10 @@ import Finances from "./pages/Manager/Finances";
 import JobManagement from "./pages/Manager/JobManagement";
 import Disputes from "./pages/Manager/Disputes";
 import DisputeDetail from "./pages/Manager/DisputeDetail";
-import DisputeView from "./pages/Shared/DisputeView";
-import DisputeRedirector from "./pages/Shared/DisputeRedirector";
 import ManagerLayout from "./components/ManagerLayout";
 import DynamicBackground from "./components/DynamicBackground";
-import WithdrawalManagement from "./pages/Manager/WithdrawalManagement";
-import ManagerManage from "./pages/Admin/ManagerManage";
-import SkillManage from "./pages/Admin/SkillManage";
-import CategoryManage from "./pages/Admin/CategoryManage";
-import AdminNotifications from "./pages/Admin/AdminNotifications";
 
 function App() {
-  console.trace('--- APP MOUNTED / RENDERED ---');
   const location = useLocation();
   const hideChatWidgetPaths = ["/forbidden"];
   const shouldHideChatWidget = hideChatWidgetPaths.includes(location.pathname);
@@ -155,22 +146,6 @@ function App() {
         }
       />
       <Route
-        path="/disputes/:id"
-        element={
-          <ProtectedRoute roles={["worker", "employer", "admin", "manager"]}>
-            <PublicLayout><DisputeView /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/disputes/search"
-        element={
-          <ProtectedRoute roles={["worker", "employer", "admin", "manager"]}>
-            <PublicLayout><DisputeRedirector /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/settings"
         element={
           <ProtectedRoute roles={["worker", "admin", "manager", "employer"]}>
@@ -192,14 +167,6 @@ function App() {
         element={
           <ProtectedRoute roles={["worker", "admin"]}>
             <PublicLayout><Depositpoint /></PublicLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/wallet/deposit/result"
-        element={
-          <ProtectedRoute roles={["worker", "admin", "employer", "manager"]}>
-            <PublicLayout><DepositResult /></PublicLayout>
           </ProtectedRoute>
         }
       />
@@ -252,7 +219,6 @@ function App() {
       </Route>
 
       {/* ========== ADMIN ROUTES (Custom Layout with Sidebar) ========== */}
-
       <Route
         path="/admin/dashboard"
         element={
@@ -285,38 +251,6 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/admin/managers"
-        element={
-          <ProtectedRoute roles={["admin"]}>
-            <ManagerManage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/skills"
-        element={
-          <ProtectedRoute roles={["admin"]}>
-            <SkillManage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/categories"
-        element={
-          <ProtectedRoute roles={["admin"]}>
-            <CategoryManage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/notifications"
-        element={
-          <ProtectedRoute roles={["admin"]}>
-            <AdminNotifications />
-          </ProtectedRoute>
-        }
-      />
 
       {/* ========== OTHER ROUTES ========== */}
       <Route path="/job-list" element={<JobListPage />} />
@@ -343,7 +277,6 @@ function App() {
         <Route path="management/jobs" element={<JobManagement />} />
         <Route path="employees" element={<EmployeeManagement />} />
         <Route path="finances" element={<Finances />} />
-        <Route path="withdrawals" element={<WithdrawalManagement />} />
         <Route path="disputes" element={<Disputes />} />
         <Route path="disputes/:id" element={<DisputeDetail />} />
       </Route>

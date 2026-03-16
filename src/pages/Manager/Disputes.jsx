@@ -86,9 +86,9 @@ const Disputes = () => {
                                 <div>
                                     <div className="flex items-center gap-3 mb-1">
                                         <h3 className="text-white font-black uppercase tracking-tight group-hover:text-rose-400 transition-colors text-sm">
-                                            #{d.id} - {d.checkpoint_title ? `[CP] ${d.checkpoint_title}` : 'Hợp Đồng'} - {d.reason || "NO_REASON_PROVIDED"}
+                                            #{d.id} - {d.reason || "NO_REASON_PROVIDED"}
                                         </h3>
-                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black font-mono tracking-widest uppercase ${d.status === 'OPEN' || d.status === 'PENDING' ? 'bg-amber-500/20 text-amber-500' : 'bg-emerald-500/20 text-emerald-500'}`}>
+                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black font-mono tracking-widest uppercase ${d.status === 'PENDING' ? 'bg-amber-500/20 text-amber-500' : 'bg-emerald-500/20 text-emerald-500'}`}>
                                             {d.status}
                                         </span>
                                     </div>

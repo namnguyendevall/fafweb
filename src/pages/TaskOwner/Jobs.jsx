@@ -150,27 +150,11 @@ const Jobs = () => {
                                                     <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase ${
                                                         job.status === "OPEN" ? "bg-emerald-900/30 text-emerald-400 border border-emerald-500/30" :
                                                         job.status === "IN_PROGRESS" ? "bg-cyan-900/30 text-cyan-400 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.1)]" :
-                                                        job.status === "DISPUTED" ? "bg-rose-900/30 text-rose-400 border border-rose-500/30 animate-pulse" :
                                                         job.status === "CANCELLED" ? "bg-red-900/30 text-red-400 border border-red-500/30" :
-                                                        job.status === "REJECTED" ? "bg-orange-900/30 text-orange-400 border border-orange-500/30" :
                                                         "bg-slate-800 text-slate-400 border border-slate-700"
                                                     }`}>
                                                         {job.status}
                                                     </span>
-                                                    {job.status === "REJECTED" && job.admin_comment && (
-                                                        <div className="mt-2 group/tooltip relative inline-flex ml-2 align-middle">
-                                                            <svg className="w-3.5 h-3.5 text-orange-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                            </svg>
-                                                            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 opacity-0 transition-opacity group-hover/tooltip:opacity-100 z-50">
-                                                                <div className="bg-slate-800 border border-orange-500/30 text-orange-200 text-[10px] p-2 rounded shadow-xl whitespace-normal break-words z-50">
-                                                                    <span className="font-bold border-b border-orange-500/30 pb-1 mb-1 block">Lý do từ chối:</span>
-                                                                    {job.admin_comment}
-                                                                </div>
-                                                                <div className="w-2 h-2 bg-slate-800 border-b border-r border-orange-500/30 transform rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2"></div>
-                                                            </div>
-                                                        </div>
-                                                    )}
                                                 </td>
                                                 <td className="px-6 py-5 text-right">
                                                     <div className="flex justify-end gap-3 opacity-60 group-hover:opacity-100 transition-opacity">
@@ -187,20 +171,8 @@ const Jobs = () => {
                                                             {t('task_owner.edit_btn', 'EDIT')}
                                                         </button>
                                                         <button
-                                                            onClick={() => {
-                                                                if (job.status !== 'OPEN') {
-                                                                    toast.error(t('task_owner.delete_error_status', 'Cannot delete a job that is already in progress or completed.'));
-                                                                    return;
-                                                                }
-                                                                handleDeleteJob(job.id);
-                                                            }}
-                                                            disabled={job.status !== 'OPEN'}
-                                                            className={`text-[9px] font-black uppercase tracking-widest transition-colors border border-white/10 px-2 py-1 rounded hover:bg-white/5 ${
-                                                                job.status === 'OPEN' 
-                                                                    ? 'text-red-400 hover:text-red-300' 
-                                                                    : 'text-slate-600 cursor-not-allowed opacity-50'
-                                                            }`}
-                                                            title={job.status !== 'OPEN' ? t('task_owner.delete_disabled_tooltip', 'Only OPEN jobs can be deleted') : ''}
+                                                            onClick={() => handleDeleteJob(job.id)}
+                                                            className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-300 transition-colors border border-white/10 px-2 py-1 rounded hover:bg-white/5"
                                                         >
                                                             {t('task_owner.delete_btn', 'DESTRUCT')}
                                                         </button>

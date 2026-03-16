@@ -158,12 +158,7 @@ const Step3BudgetMilestones = ({
                         type="text"
                         value={checkpoint.title}
                         onChange={(e) => onUpdateCheckpoint(checkpoint.id, "title", e.target.value)}
-                        placeholder={t('postjob.checkpoint_title_pl', 'e.g. ALPHA_V01_DELIVERY')}
-                        onFocus={(e) => {
-                          if (e.target.value === "INITIAL_ASSETS" || e.target.value === "BETA_RELEASE" || e.target.value === "FINAL_PRODUCT") {
-                            onUpdateCheckpoint(checkpoint.id, "title", "");
-                          }
-                        }}
+                        placeholder="e.g. ALPHA_V01_DELIVERY"
                         className="w-full px-4 py-2.5 bg-black/40 border border-white/5 rounded-lg text-white font-mono text-sm outline-none focus:border-fuchsia-500/40 transition-all"
                       />
                     </div>

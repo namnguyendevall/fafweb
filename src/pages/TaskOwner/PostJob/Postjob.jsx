@@ -47,9 +47,6 @@ const Postjob = () => {
   // Step 4
   const [contractAccepted, setContractAccepted] = useState(false);
 
-  // New Resources State
-  const [resourceUrls, setResourceUrls] = useState([]);
-
   useEffect(() => {
     if (isEditing) {
       setLoading(true);
@@ -64,7 +61,6 @@ const Postjob = () => {
           setTotalBudget(String(job.budget));
           setCategory({ id: job.category_id, name: job.category_name });
           setSkills(job.skills || []);
-          setResourceUrls(job.resource_urls || []);
         })
         .catch(err => {
           console.error("Error fetching job for edit:", err);
@@ -184,8 +180,8 @@ const Postjob = () => {
         budget: totalBudgetNum,
         categoryId: Number(category?.id),
         skills: skills.filter(s => s && s.id).map(s => Number(s.id)),
-        start_date: startDate ? new Date(startDate).toISOString().split("T")[0] : null,
-        end_date: endDate ? new Date(endDate).toISOString().split("T")[0] : null,
+        startDate: startDate ? new Date(startDate).toISOString().split("T")[0] : null,
+        endDate: endDate ? new Date(endDate).toISOString().split("T")[0] : null,
         checkpoints: checkpoints.map(cp => ({
           title: cp.title || cp.name,
           description: cp.description || "",
@@ -193,21 +189,12 @@ const Postjob = () => {
           duration_days: parseInt(cp.duration_days) || 7
         })),
         contractContent: contractHtml || "Standard FAF Contract",
-        resourceUrls,
       };
 
       if (isEditing) {
         await jobsApi.updateJob(id, payload);
         toast.success(t('postjob.msg_job_updated'));
       } else {
-        if (category?.id === 'other') {
-          await jobsApi.proposeCategory({
-            name: category.proposedName,
-            description: category.proposedDescription
-          });
-          // For now, post the job with a default or null category since it's not approved yet
-          payload.categoryId = null; 
-        }
         await jobsApi.postJobs(payload);
         toast.success(t('postjob.msg_job_posted'));
       }
@@ -268,8 +255,6 @@ const Postjob = () => {
               setEndDate={setEndDate}
               skills={skills}
               setSkills={setSkills}
-              resourceUrls={resourceUrls}
-              setResourceUrls={setResourceUrls}
               onContinue={handleContinue}
               onBack={handleBack}
             />
@@ -321,7 +306,6 @@ const Postjob = () => {
               checkpoints={checkpoints}
               startDate={startDate}
               endDate={endDate}
-              resourceUrls={resourceUrls}
               onEditStep1={() => setCurrentStep(1)}
               onEditStep2={() => setCurrentStep(2)}
               onEditStep3={() => setCurrentStep(3)}

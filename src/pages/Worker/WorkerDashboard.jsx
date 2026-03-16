@@ -107,68 +107,33 @@ const WorkerDashboard = () => {
 
     const todayGreeting = useMemo(() => {
         const hour = new Date().getHours();
-        if (hour < 12) return t('home.status_bar.morning');
-        if (hour < 18) return t('home.status_bar.afternoon');
-        return t('home.status_bar.evening');
-    }, [t]);
-
-    const calculateProgress = (checkpoints = []) => {
-        if (!checkpoints || checkpoints.length === 0) return 0;
-        const approved = checkpoints.filter(cp => cp.status === 'APPROVED').length;
-        return Math.round((approved / checkpoints.length) * 100);
-    };
-
-    const progressPercent = useMemo(() => calculateProgress(activeContract?.checkpoints), [activeContract]);
+        if (hour < 12) return 'CHÀO BUỔI SÁNG';
+        if (hour < 18) return 'CHÀO BUỔI CHIỀU';
+        return 'CHÀO BUỔI TỐI';
+    }, []);
 
     // Get user name from AuthContext (full_name is the field from backend)
     const userName = authUser?.full_name || authUser?.email || t('dashboard.you');
     const userObj = authUser || {};
 
-    // Dynamic Activity Log Events
-    const logEvents = useMemo(() => {
-        const now = new Date();
-        const formatTime = (minusMinutes) => {
-            const time = new Date(now.getTime() - minusMinutes * 60000);
-            return `${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')}`;
-        };
-        return [
-            { time: formatTime(2), text: 'ENCRYPTED_CHANNEL_ESTABLISHED', color: 'text-cyan-500/70' },
-            { time: formatTime(8), text: 'AUTH_VERIFIED::TOKEN_G2X_39', color: 'text-slate-500' },
-            { time: formatTime(15), text: 'GRID_SCAN_COMPLETE::0_MIS_FOUND', color: 'text-slate-500' },
-            { time: formatTime(32), text: 'DATALINK_STABLE::UP_99.9%', color: 'text-emerald-500/70' }
-        ];
-    }, []);
-
     useEffect(() => {
         const fetchRecommendations = async () => {
             try {
                 setLoading(true);
-                const res = await matchingApi.getRecommendedJobs({ limit: 15 }); // Fetch more to allow for filtering
-                const seenTitles = new Set();
-                const mappedJobs = [];
-                
-                (res?.data ?? []).forEach(job => {
-                    const title = job.title || '';
-                    // Simple deduplication logic
-                    if (seenTitles.has(title)) return;
-                    seenTitles.add(title);
-                    
-                    if (mappedJobs.length >= 5) return; // Keep only top 5 unique
-
-                    mappedJobs.push({
-                        id: job.id,
-                        title: title,
-                        company: job.category_name || t('dashboard.other'),
-                        price: `$${Number(job.budget).toLocaleString()}`,
-                        meta: [
-                            { icon: 'calendar', text: new Date(job.created_at).toLocaleDateString() },
-                            { icon: 'spark', text: `${job.job_type === 'SHORT_TERM' ? t('dashboard.short_term') : t('dashboard.long_term')}` }
-                        ],
-                        badge: `${job.match_score}${t('dashboard.match_percent')}`,
-                        extra: `${job.matching_skills_count} ${t('dashboard.matching_skills')}`,
-                        img: warehouseImg
-                    });
-                });
+                const res = await matchingApi.getRecommendedJobs({ limit: 5 });
+                const mappedJobs = (res?.data ?? []).map(job => ({
+                    id: job.id,
+                    title: job.title,
+                    company: job.category_name || t('dashboard.other'),
+                    price: `$${Number(job.budget).toLocaleString()}`,
+                    meta: [
+                        { icon: 'calendar', text: new Date(job.created_at).toLocaleDateString() },
+                        { icon: 'spark', text: `${job.job_type === 'SHORT_TERM' ? t('dashboard.short_term') : t('dashboard.long_term')}` }
+                    ],
+                    badge: `${job.match_score}${t('dashboard.match_percent')}`,
+                    extra: `${job.matching_skills_count} ${t('dashboard.matching_skills')}`,
+                    img: warehouseImg
+                }));
                 setRecommendedJobs(mappedJobs);
             } catch (error) {
                 console.error("Error fetching recommendations:", error);
@@ -179,15 +144,7 @@ const WorkerDashboard = () => {
             try {
                 setProposalsLoading(true);
                 const res = await proposalsApi.getMyProposals();
-                // Filter out ACCEPTED proposals from "Pending" and deduplicate titles
-                const seenProposalTitles = new Set();
-                const filtered = (res.data || []).filter(p => {
-                    if (p.status !== 'PENDING') return false;
-                    if (seenProposalTitles.has(p.job_title)) return false;
-                    seenProposalTitles.add(p.job_title);
-                    return true;
-                });
-                setMyProposals(filtered);
+                setMyProposals(res.data || []);
             } catch (error) { console.error("Error fetching proposals:", error); } 
             finally { setProposalsLoading(false); }
         };
@@ -229,118 +186,35 @@ const WorkerDashboard = () => {
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
                     {/* ── LEFT SIDEBAR ── */}
                     <aside className="lg:col-span-3">
-                        <div className="rounded-2xl border p-5 relative overflow-hidden group/sidebar" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
+                        <div className="rounded-2xl border p-5 relative overflow-hidden group" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
                             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
-                            <div className="absolute -right-10 -top-10 w-32 h-32 bg-cyan-500/5 blur-[40px] rounded-full pointer-events-none" />
-                            
-                            <div className="mb-6 min-w-0 relative z-10">
+                            <div className="mb-6 min-w-0">
                                 <div className="flex flex-col gap-1 mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                                        <p className="truncate text-[9px] font-mono tracking-widest text-emerald-400 uppercase">SYS_LOGGED_IN</p>
-                                    </div>
-                                    <h2 className="truncate text-xl font-black text-white uppercase tracking-wider group-hover/sidebar:text-cyan-400 transition-colors">{userName}</h2>
+                                    <p className="truncate text-[10px] font-mono tracking-widest text-cyan-500 uppercase">{t('dashboard.your_profile')}</p>
+                                    <h2 className="truncate text-lg font-black text-white uppercase tracking-wider">{userName}</h2>
                                 </div>
                                 {userObj.tier && (
-                                    <div className="flex items-center gap-2">
-                                        <span className={`inline-block text-[9px] font-black px-2 py-0.5 rounded font-mono uppercase tracking-widest transition-all ${
-                                            userObj.tier === 'EXPERT' ? 'bg-purple-900/40 text-purple-400 border border-purple-500/40 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 
-                                            userObj.tier === 'PRO' ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 
-                                            'bg-slate-800 text-slate-400 border border-slate-700'
-                                        }`}>
-                                            {t('dashboard.tier')} {userObj.tier}
-                                        </span>
-                                        <span className="text-[8px] font-mono text-slate-500 uppercase tracking-tighter">LVL_42</span>
-                                    </div>
+                                    <span className={`inline-block text-[9px] font-black px-2 py-0.5 rounded font-mono uppercase tracking-widest ${
+                                        userObj.tier === 'EXPERT' ? 'bg-purple-900/30 text-purple-400 border border-purple-500/30' : 
+                                        userObj.tier === 'PRO' ? 'bg-cyan-900/30 text-cyan-400 border border-cyan-500/30' : 
+                                        'bg-slate-800 text-slate-400 border border-slate-700'
+                                    }`}>
+                                        {t('dashboard.tier')} {userObj.tier}
+                                    </span>
                                 )}
                             </div>
 
-                            <div className="space-y-4 relative z-10">
-                                <div className="rounded-xl border p-4 group/card transition-all hover:bg-slate-800/40" style={{ background: 'rgba(15,23,42,0.8)', borderColor: 'rgba(6,182,212,0.2)' }}>
-                                    <div className="mb-4 flex items-center justify-between">
-                                        <div className="flex flex-col">
-                                            <p className="text-[10px] font-black text-slate-300 font-mono tracking-widest uppercase">{t('dashboard.active_contracts')}</p>
-                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                <div className={`w-1 h-1 rounded-full ${activeContract && activeContract.id ? 'bg-emerald-500 animate-pulse' : 'bg-slate-600'}`} />
-                                                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">
-                                                    {activeContract && activeContract.id ? 'LIVE_DATALINK' : 'NODE_STANDBY'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="relative">
-                                            <div className={`absolute inset-0 blur-[8px] rounded-full ${activeContract && activeContract.id ? 'bg-cyan-500/40' : 'bg-slate-500/10'}`} />
-                                            <span className={`relative rounded px-2 py-1 text-[10px] font-black font-mono border transition-all ${
-                                                activeContract && activeContract.id 
-                                                    ? 'bg-cyan-900/30 text-cyan-400 border-cyan-500/40' 
-                                                    : 'bg-slate-900/30 text-slate-500 border-slate-700/50'
-                                            }`}>
-                                                {activeContract && activeContract.id ? '01' : '00'}
-                                            </span>
-                                        </div>
+                            <div className="space-y-4">
+                                <div className="rounded-xl border p-4" style={{ background: 'rgba(15,23,42,0.6)', borderColor: 'rgba(6,182,212,0.15)' }}>
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <p className="text-[10px] font-black text-slate-300 font-mono tracking-widest uppercase">{t('dashboard.active_contracts')}</p>
+                                        <span className="rounded bg-cyan-900/30 border border-cyan-500/30 px-1.5 py-0.5 text-[9px] font-black text-cyan-400 font-mono">
+                                            {activeContract ? t('dashboard.one_active') : t('dashboard.zero_active')}
+                                        </span>
                                     </div>
-
-                                    <div className="pt-3 border-t border-slate-700/50">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <p className="text-[8px] font-mono text-slate-500 uppercase tracking-tighter">GRID_STATUS</p>
-                                            <p className={`text-[8px] font-mono font-black uppercase ${activeContract && activeContract.id ? 'text-emerald-500' : 'text-slate-600'}`}>
-                                                {activeContract && activeContract.id ? '[ ONLINE ]' : '[ OFFLINE ]'}
-                                            </p>
-                                        </div>
-                                        <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
-                                            <div className={`h-full transition-all duration-1000 ${activeContract && activeContract.id ? 'w-full bg-emerald-500/50' : 'w-0'}`} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Wallet Status Card */}
-                                <div className="rounded-xl border p-4 transition-all hover:bg-slate-800/40 relative overflow-hidden" style={{ background: 'rgba(15,23,42,0.8)', borderColor: 'rgba(16,185,129,0.2)' }}>
-                                    <div className="absolute top-0 right-0 p-1 opacity-10 pointer-events-none">
-                                        <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    </div>
-                                    <p className="text-[10px] font-black text-slate-300 font-mono tracking-widest uppercase mb-3 flex items-center justify-between">
-                                        <span>WALLET_STATUS</span>
-                                        <span className="text-[8px] text-emerald-500">ENCRYPTED</span>
+                                    <p className="text-[10px] text-slate-500 italic font-mono uppercase tracking-widest">
+                                        {activeContract ? t('dashboard.tracking_contract') : t('dashboard.no_active_contract')}
                                     </p>
-                                    <div className="space-y-3">
-                                        <div>
-                                            <div className="flex justify-between text-[8px] font-mono text-slate-500 uppercase mb-0.5">
-                                                <span>AVAILABLE_BALANCE</span>
-                                                <span className="text-emerald-400">READY</span>
-                                            </div>
-                                            <p className="text-lg font-black text-white font-mono leading-none">
-                                                ${Number(userObj.balance_points || 0).toLocaleString()} <span className="text-[9px] text-slate-500">PTS</span>
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between text-[8px] font-mono text-slate-500 uppercase mb-0.5">
-                                                <span>ESCROW_LOCKED</span>
-                                                <span className="text-amber-400">SECURE</span>
-                                            </div>
-                                            <p className="text-md font-black text-slate-300 font-mono leading-none">
-                                                ${Number(userObj.locked_points || 0).toLocaleString()} <span className="text-[9px] text-slate-500">PTS</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* System Activity Log */}
-                                <div className="rounded-xl border p-4 transition-all hover:bg-slate-800/40 relative overflow-hidden" style={{ background: 'rgba(15,23,42,0.8)', borderColor: 'rgba(34,211,238,0.2)' }}>
-                                    <p className="text-[10px] font-black text-slate-300 font-mono tracking-widest uppercase mb-3 flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
-                                        SYS_ACTIVITY_LOG
-                                    </p>
-                                    <div className="space-y-2 font-mono text-[8px] uppercase tracking-tighter">
-                                        {logEvents.map((evt, idx) => (
-                                            <div key={idx} className={`flex gap-2 ${evt.color} border-l border-cyan-500/30 pl-2`}>
-                                                <span className="shrink-0 opacity-50">[{evt.time}]</span>
-                                                <span className="truncate">{evt.text}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="mt-3 pt-2 border-t border-slate-700/50 flex justify-between items-center text-[7px] font-mono text-slate-600 uppercase tracking-widest">
-                                        <span>NETWORK: GLOBAL_HUB_01</span>
-                                        <span>LATENCY: 14MS</span>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -385,141 +259,40 @@ const WorkerDashboard = () => {
                             {activeTab === 'overview' && (
                                 <div className="space-y-6 animate-[fadeIn_.3s_ease-out]">
                                     {/* Active Mission */}
-                                    {activeContract && activeContract.id && activeContract.job_title ? (
-                                        <div className="rounded-2xl border p-6 mb-8 relative overflow-hidden group/mission" style={{ background: 'linear-gradient(165deg,#061226 0%,#020617 100%)', borderColor: 'rgba(34,211,238,0.3)' }}>
-                                            {/* Technical background elements */}
-                                            <div className="absolute top-0 right-0 p-2 opacity-5 pointer-events-none">
-                                                <svg className="w-64 h-64 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
+                                    {activeContract && (
+                                        <div className="rounded-2xl border p-6 mb-6 relative overflow-hidden" style={{ background: 'linear-gradient(145deg,#082f49,#0f172a)', borderColor: 'rgba(34,211,238,0.4)' }}>
+                                            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                                                <svg className="w-32 h-32 text-cyan-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 3.8l7.2 14.2H4.8L12 5.8z"/></svg>
                                             </div>
-                                            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-cyan-500/10 blur-[80px] rounded-full pointer-events-none" />
-                                            
                                             <div className="relative z-10">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <SectionLabel>{t('dashboard.current_job')}</SectionLabel>
-                                                    <div className="flex gap-2">
-                                                        <span className="hidden sm:inline-block px-2 py-0.5 rounded border border-cyan-500/20 bg-cyan-500/5 text-[8px] font-mono text-cyan-400 uppercase tracking-widest">
-                                                            {`ID: #${String(activeContract.id).padStart(6, '0')}`}
+                                                <SectionLabel>{t('dashboard.current_job')}</SectionLabel>
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-4">
+                                                    <div>
+                                                        <h3 className="text-xl font-black text-white uppercase tracking-wider">{activeContract.job_title}</h3>
+                                                        <p className="text-[12px] font-mono text-cyan-400 mt-1 uppercase tracking-widest">{activeContract.client_name || t('dashboard.anonymous_client')}</p>
+                                                    </div>
+                                                    <div className="flex flex-col md:items-end gap-2">
+                                                        <span className={`inline-block px-3 py-1 rounded text-[10px] font-black font-mono tracking-widest uppercase border ring-1 blur-[0.3px] ${
+                                                            (activeContract.status === 'PENDING' || !activeContract.signature_worker)
+                                                                ? 'bg-amber-900/40 text-amber-400 border-amber-500/50 ring-amber-400/20' 
+                                                                : 'bg-cyan-900/40 text-cyan-400 border-cyan-500/50 ring-cyan-400/20'
+                                                        }`}>
+                                                            {(activeContract.status === 'PENDING' || !activeContract.signature_worker) ? 'CHỜ KÝ HỢP ĐỒNG (OTP)' : t('dashboard.in_progress')}
                                                         </span>
-                                                        <span className="px-2 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-[8px] font-mono text-emerald-400 uppercase tracking-widest">
-                                                            SECURE_ESCROW_ENCRYPTED
-                                                        </span>
+                                                        <p className="text-lg font-black text-emerald-400 font-mono">${Number(activeContract.total_amount || 0).toLocaleString()}</p>
                                                     </div>
                                                 </div>
-
-                                                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 transition-all group-hover/mission:translate-x-1">
-                                                    <div className="flex-1">
-                                                        <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-1 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">
-                                                            {activeContract.job_title || 'UNTITLED_MISSION'}
-                                                        </h3>
-                                                        <div className="flex items-center gap-2">
-                                                            <p className="text-[11px] font-mono text-cyan-400 uppercase tracking-[0.2em]">{activeContract.client_name || t('dashboard.anonymous_client')}</p>
-                                                            <span className="w-1 h-1 rounded-full bg-slate-700" />
-                                                            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">v0.8.2_SYNCED</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex flex-col items-start md:items-end gap-3 shrink-0">
-                                                        <div className="flex flex-col items-start md:items-end">
-                                                            <span className={`px-3 py-1 rounded text-[10px] font-black font-mono tracking-[0.15em] uppercase border ring-1 blur-[0.2px] transition-all ${
-                                                                (activeContract.status === 'PENDING' || !activeContract.signature_worker)
-                                                                    ? 'bg-amber-900/30 text-amber-400 border-amber-500/40 ring-amber-400/10' 
-                                                                    : 'bg-cyan-900/30 text-cyan-400 border-cyan-500/40 ring-cyan-400/10 shadow-[0_0_15px_rgba(6,182,212,0.1)]'
-                                                            }`}>
-                                                                {(activeContract.status === 'PENDING' || !activeContract.signature_worker) ? 'AWAITING_INITIALIZATION' : t('dashboard.in_progress')}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-1">
-                                                            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">VAL:</span>
-                                                            <p className="text-2xl font-black text-white font-mono leading-none">
-                                                                ${Number(activeContract.total_amount || 0).toLocaleString()}
-                                                                <span className="text-[10px] ml-1 text-emerald-500">PTS</span>
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Progress Section */}
-                                                <div className="mt-8 mb-6">
-                                                    <div className="flex justify-between items-end mb-2">
-                                                        <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                                            <span className="animate-pulse">●</span> COMPLETION_STATUS
-                                                        </p>
-                                                        <p className="text-[11px] font-black font-mono text-cyan-400">{progressPercent}%</p>
-                                                    </div>
-                                                    <div className="h-2 w-full bg-slate-800/50 rounded-full overflow-hidden border border-slate-700/50 relative">
-                                                        <div 
-                                                            className="absolute top-0 left-0 h-full bg-gradient-to-r from-cyan-600 to-cyan-400 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(34,211,238,0.5)]"
-                                                            style={{ width: `${progressPercent}%` }}
-                                                        />
-                                                        {/* Scanning glare over progress */}
-                                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-32 -skew-x-12 animate-[shimmer_2s_infinite]" />
-                                                    </div>
-                                                    <div className="mt-2 flex justify-between">
-                                                        <div className="text-[8px] font-mono text-slate-600 uppercase tracking-tighter">
-                                                            {activeContract.checkpoints?.filter(cp => cp.status === 'APPROVED').length || 0} / {activeContract.checkpoints?.length || 0} NODES_VERIFIED
-                                                        </div>
-                                                        <div className="text-[8px] font-mono text-slate-600 uppercase tracking-tighter">
-                                                            INTEGRITY_CHECK_PASS
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex flex-col sm:flex-row gap-4 pt-2 border-t border-slate-700/30">
+                                                <div className="mt-6 flex flex-col sm:flex-row gap-3">
                                                     {!activeContract.signature_worker ? (
-                                                        <button 
-                                                            onClick={() => navigate(`/contract/${activeContract.id}/sign`)} 
-                                                            className="flex items-center justify-center gap-3 px-8 py-3 text-[11px] font-black font-mono tracking-[0.2em] uppercase bg-amber-500 hover:bg-amber-400 text-slate-900 transition-all rounded shadow-[0_0_20px_rgba(245,158,11,0.3)] hover:scale-[1.02] active:scale-95"
-                                                        >
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                                            INITIALIZE_SIGNATURE
+                                                        <button onClick={() => navigate(`/contract/${activeContract.id}/sign`)} className="w-full sm:w-auto px-6 py-2.5 text-[10px] font-black font-mono tracking-widest uppercase bg-amber-500 hover:bg-amber-400 text-slate-900 transition-colors rounded shadow-[0_0_15px_rgba(245,158,11,0.4)]">
+                                                            KÝ HỢP ĐỒNG
                                                         </button>
                                                     ) : (
-                                                        <div className="flex flex-wrap gap-3 w-full">
-                                                            <button 
-                                                                onClick={() => navigate(`/contract/${activeContract.id}/view`)} 
-                                                                className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 py-3 text-[11px] font-black font-mono tracking-[0.2em] uppercase bg-cyan-500 hover:bg-cyan-400 text-[#020617] transition-all rounded shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:scale-[1.02] active:scale-95"
-                                                            >
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                                                {t('dashboard.view_details')}
-                                                            </button>
-                                                            <div className="flex-1 sm:flex-none flex items-center px-4 py-2 border border-slate-700/50 bg-slate-900/50 rounded pointer-events-none">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="flex gap-1">
-                                                                        {[1,2,3].map(i => <div key={i} className="w-1 h-3 bg-cyan-500/20" />)}
-                                                                        <div className="w-1 h-3 bg-cyan-400 animate-pulse" />
-                                                                    </div>
-                                                                    <span className="text-[9px] font-mono text-slate-400 uppercase tracking-tighter">DATA_STREAM_ACTIVE</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                                        <button onClick={() => navigate(`/contract/${activeContract.id}/view`)} className="w-full sm:w-auto px-6 py-2.5 text-[10px] font-black font-mono tracking-widest uppercase bg-cyan-500 hover:bg-cyan-400 text-[#020617] transition-colors rounded shadow-[0_0_15px_rgba(6,182,212,0.4)]">
+                                                            {t('dashboard.view_details')}
+                                                        </button>
                                                     )}
                                                 </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        /* Enhanced Empty State */
-                                        <div className="rounded-2xl border border-dashed p-12 text-center relative overflow-hidden group" style={{ background: 'rgba(15,23,42,0.4)', borderColor: 'rgba(6,182,212,0.2)' }}>
-                                            {/* Laser scanning effect */}
-                                            <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden opacity-20">
-                                                <div className="absolute top-0 left-0 w-full h-[1px] bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,1)] animate-[scan_4s_ease-in-out_infinite]" />
-                                            </div>
-                                            
-                                            <div className="relative z-10 flex flex-col items-center">
-                                                <div className="w-16 h-16 rounded-full border border-slate-700 flex items-center justify-center mb-6 bg-slate-800/50 group-hover:border-cyan-500/50 transition-colors">
-                                                    <svg className="w-8 h-8 text-slate-600 group-hover:text-cyan-400 group-hover:animate-pulse transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                                    </svg>
-                                                </div>
-                                                <h3 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em] mb-2">{t('dashboard.no_active_contract')}</h3>
-                                                <p className="text-[10px] font-mono text-slate-600 uppercase tracking-widest max-w-[280px]">
-                                                    {t('dashboard.ready_to_work')} · GRID_SCAN_FOR_MISSIONS_INITIALIZED...
-                                                </p>
-                                                <button 
-                                                    onClick={() => navigate('/find-work')}
-                                                    className="mt-8 px-6 py-2 text-[9px] font-black font-mono tracking-widest uppercase border border-cyan-500/30 text-cyan-500 hover:bg-cyan-500/10 transition-all rounded"
-                                                >
-                                                    INITIALIZE_GRID_SCAN
-                                                </button>
                                             </div>
                                         </div>
                                     )}

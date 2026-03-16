@@ -1,23 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
-import { useAuth } from '../../auth/AuthContext';
 import { contractsApi } from '../../api/contracts.api';
 import { reviewsApi } from '../../api/reviews.api';
 import ReviewsList from './components/ReviewsList';
-import axiosClient from '../../api/axiosClient';
 
 const ContractDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const toast = useToast();
-    const { user } = useAuth();
     const [contract, setContract] = useState(null);
     const [loading, setLoading] = useState(true);
     const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
-    const [disputeModal, setDisputeModal] = useState({ open: false, checkpointId: null });
-    const [disputeReason, setDisputeReason] = useState('');
-    const [submittingDispute, setSubmittingDispute] = useState(false);
 
     useEffect(() => {
         fetchContractDetails();
@@ -134,34 +128,11 @@ const ContractDetail = () => {
     const completedCheckpoints = contract.checkpoints?.filter(cp => cp.status === 'APPROVED').length || 0;
     const progress = totalCheckpoints > 0 ? (completedCheckpoints / totalCheckpoints) * 100 : 0;
 
-    const handleSubmitDispute = async () => {
-        if (!disputeReason.trim()) {
-            toast.error('Vui lòng nhập lý do khiếu nại.');
-            return;
-        }
-        try {
-            setSubmittingDispute(true);
-            await axiosClient.post('/disputes', {
-                contractId: contract.id,
-                checkpointId: disputeModal.checkpointId,
-                reason: disputeReason.trim()
-            });
-            toast.success('Khiếu nại đã được gửi! Manager sẽ xem xét và phản hồi sớm.');
-            setDisputeModal({ open: false, checkpointId: null });
-            setDisputeReason('');
-            fetchContractDetails(); // refresh to show DISPUTED status
-        } catch (err) {
-            toast.error(err?.response?.data?.message || 'Không thể gửi khiếu nại. Vui lòng thử lại.');
-        } finally {
-            setSubmittingDispute(false);
-        }
-    };
-
     return (
-        <>
         <div className="min-h-screen bg-transparent text-slate-300 relative font-sans">
-            <div className="max-w-6xl mx-auto px-4 py-8 relative z-10 w-full">
 
+            <div className="max-w-6xl mx-auto px-4 py-8 relative z-10 w-full">
+                {/* Header Section */}
                 <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.1)] border p-6 mb-6 relative overflow-hidden" style={{ borderColor: 'rgba(6,182,212,0.2)' }}>
                     <div className="absolute top-0 right-10 w-32 h-px bg-cyan-400/50" />
                     
@@ -193,34 +164,9 @@ const ContractDetail = () => {
                                         contract.status === 'CANCELLED' || contract.status === 'TERMINATED' ? 'bg-rose-400 shadow-[0_0_5px_rgba(244,63,94,1)]' :
                                         'bg-slate-500'
                                     }`}></div>
-                                    {contract.status === 'DISPUTED' ? 'TRANH CHẤP' : contract.status}
+                                    {contract.status}
                                 </span>
                             </div>
-                            
-                            {/* DISPUTE STATUS ACTION */}
-                            {contract.status === 'DISPUTED' && (
-                                <div className="mb-8 p-5 bg-rose-900/20 border-l-4 border-rose-500 rounded-lg flex items-center justify-between shadow-[0_0_15px_rgba(244,63,94,0.1)]">
-                                    <div>
-                                        <h3 className="text-rose-400 font-bold font-mono tracking-widest text-sm mb-1 uppercase">Đang Tranh Chấp (Disputed)</h3>
-                                        <p className="text-slate-300 text-xs">Hợp đồng này đang trong quá trình khiếu nại. Manager đang xem xét bằng chứng từ 2 bên.</p>
-                                    </div>
-                                    <button 
-                                        onClick={() => {
-                                            // We need the dispute ID. It's usually better to fetch it or pass it.
-                                            // For now, let's assume we can navigate to a search page or we fetch it.
-                                            // Actually, the API returns it usually. Let's redirect to a general dispute list or detail if we have ID.
-                                            // Since we don't have dispute.id directly in contract object easily without modification, 
-                                            // let's try to find it via API or just use the contractId in a middle page.
-                                            // I will create a redirector or just fetch it here.
-                                            navigate(`/disputes/search?contractId=${contract.id}`);
-                                        }}
-                                        className="shrink-0 px-6 py-2.5 bg-rose-500 hover:bg-rose-400 text-white font-black text-xs font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all"
-                                    >
-                                        Vào Phòng Chat Khiếu Nại
-                                    </button>
-                                </div>
-                            )}
-
                             <p className="text-sm text-slate-400 mb-8 leading-relaxed max-w-4xl">{contract.job_description}</p>
                             
                             {/* PENDING SIGNATURE ACTION */}
@@ -277,9 +223,9 @@ const ContractDetail = () => {
                                         <div>
                                             <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">THỜI GIAN</p>
                                             <p className="text-[12px] font-bold text-slate-300 mt-1 uppercase tracking-wider">
-                                                {contract.job_start_date ? new Date(contract.job_start_date).toLocaleDateString() : (contract.status === 'ACTIVE' || contract.status === 'COMPLETED' ? new Date(contract.created_at || contract.updated_at).toLocaleDateString() : 'CHƯA BẮT ĐẦU')} 
+                                                {contract.job_start_date ? new Date(contract.job_start_date).toLocaleDateString() : 'CHƯA BẮT ĐẦU'} 
                                                 <span className="text-cyan-500 mx-2">-</span> 
-                                                {contract.job_end_date ? new Date(contract.job_end_date).toLocaleDateString() : (contract.status === 'COMPLETED' ? new Date(contract.updated_at).toLocaleDateString() : 'MỞ (VÔ THỜI HẠN)')}
+                                                {contract.job_end_date ? new Date(contract.job_end_date).toLocaleDateString() : 'MỞ'}
                                             </p>
                                         </div>
                                     </div>
@@ -448,25 +394,6 @@ const ContractDetail = () => {
                                             </div>
                                         )}
 
-                                        {/* Dispute Button — shown when checkpoint is REJECTED/SUBMITTED and contract is ACTIVE (Worker only) */}
-                                        {(checkpoint.status === 'REJECTED' || checkpoint.status === 'SUBMITTED') && contract.status === 'ACTIVE' && user?.role?.toLowerCase() === 'worker' && (
-                                            <div className="mt-4 pt-4 border-t border-rose-500/20">
-                                                <div className="bg-rose-900/10 border border-rose-500/20 rounded-xl p-4">
-                                                    <p className="text-[10px] font-mono text-rose-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                                                        {checkpoint.status === 'REJECTED' ? 'CHECKPOINT BỊ TỪ CHỐI — Bạn có quyền khiếu nại' : 'ĐANG CHỜ DUYỆT — Bạn có thể khiếu nại nếu quá hạn'}
-                                                    </p>
-                                                    <button
-                                                        onClick={() => setDisputeModal({ open: true, checkpointId: checkpoint.id })}
-                                                        className="w-full py-3 rounded-xl border border-rose-500/60 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 text-[11px] font-black font-mono tracking-widest uppercase transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
-                                                        ⚖️ Mở Khiếu Nại (Dispute)
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
                                         {/* Submit Button */}
                                         {canSubmit && (
                                             <button
@@ -522,59 +449,6 @@ const ContractDetail = () => {
                 )}
             </div>
         </div>
-
-        {/* Dispute Modal */}
-        {disputeModal.open && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                <div className="bg-[#090e17] border border-rose-500/30 rounded-2xl shadow-[0_0_40px_rgba(244,63,94,0.2)] p-8 w-full max-w-lg">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-2.5 bg-rose-500/10 border border-rose-500/30 rounded-xl">
-                            <svg className="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-black text-white font-mono uppercase tracking-wider">Mở Khiếu Nại</h2>
-                            <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Contract #{contract.id} — Yêu cầu Manager xem xét</p>
-                        </div>
-                    </div>
-
-                    <div className="mb-4 p-4 bg-rose-900/10 border border-rose-500/10 rounded-xl">
-                        <p className="text-[11px] text-rose-400/80 font-mono leading-relaxed">
-                            ⚠️ Sau khi gửi khiếu nại, Manager sẽ xem xét tất cả bằng chứng và đưa ra phán quyết cuối cùng.
-                            Quyết định của Manager có giá trị ràng buộc.
-                        </p>
-                    </div>
-
-                    <label className="block mb-2 text-[10px] font-black font-mono text-rose-400 uppercase tracking-widest">
-                        Lý Do Khiếu Nại *
-                    </label>
-                    <textarea
-                        value={disputeReason}
-                        onChange={(e) => setDisputeReason(e.target.value)}
-                        placeholder="Mô tả chi tiết lý do bạn không đồng ý với quyết định từ chối của Employer..."
-                        className="w-full min-h-[120px] bg-slate-950/50 border border-rose-500/20 focus:border-rose-500/50 rounded-xl p-4 text-sm font-mono text-slate-300 placeholder:text-slate-700 outline-none transition-all resize-none mb-6"
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <button
-                            onClick={() => { setDisputeModal({ open: false, checkpointId: null }); setDisputeReason(''); }}
-                            className="py-3 rounded-xl border border-slate-700 text-slate-400 hover:border-slate-600 hover:text-white text-[11px] font-black font-mono uppercase tracking-widest transition-all"
-                        >
-                            Hủy Bỏ
-                        </button>
-                        <button
-                            onClick={handleSubmitDispute}
-                            disabled={submittingDispute || !disputeReason.trim()}
-                            className="py-3 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[11px] font-black font-mono uppercase tracking-widest transition-all shadow-[0_0_20px_rgba(244,63,94,0.3)] flex items-center justify-center gap-2"
-                        >
-                            {submittingDispute ? (
-                                <><svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Đang Gửi...</>
-                            ) : '⚖️ Gửi Khiếu Nại'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-        </>
     );
 };
 

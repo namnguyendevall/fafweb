@@ -240,22 +240,24 @@ const PostForm = ({ onPostCreated }) => {
                         {/* Trigger input */}
                         <button
                             onClick={() => setShowModal(true)}
-                            className="flex-1 text-left border rounded-xl py-3 px-5 text-[13px] font-mono font-black tracking-widest transition-all group relative overflow-hidden"
+                            className="flex-1 text-left border rounded-xl py-2.5 px-4 text-[13px] font-mono font-bold tracking-wide transition-all group"
                             style={{
-                                background: isLight ? 'rgba(248,250,252,0.9)' : 'rgba(15,23,42,0.6)',
+                                background: isLight ? 'rgba(248,250,252,0.9)' : 'rgba(15,23,42,0.8)',
                                 borderColor: isLight ? 'rgba(148,163,184,0.3)' : 'rgba(6,182,212,0.15)',
-                                color: isLight ? '#64748b' : 'rgba(148,163,184,0.5)',
+                                color: isLight ? '#64748b' : 'rgba(148,163,184,0.7)',
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.borderColor = isLight ? 'rgba(6,182,212,0.3)' : 'rgba(6,182,212,0.4)';
+                                e.currentTarget.style.color = 'rgba(6,182,212,0.85)';
+                                e.currentTarget.style.boxShadow = '0 0 15px rgba(6,182,212,0.08)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.borderColor = isLight ? 'rgba(148,163,184,0.3)' : 'rgba(6,182,212,0.15)';
+                                e.currentTarget.style.color = isLight ? '#64748b' : 'rgba(148,163,184,0.7)';
+                                e.currentTarget.style.boxShadow = 'none';
                             }}
                         >
-                            {/* Inner glow on hover */}
-                            <div className="absolute inset-0 bg-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            
-                            <span className="relative z-10 flex items-center gap-2">
-                                <span className="text-cyan-500 font-black animate-pulse">{'>'}</span>
-                                <span className="group-hover:text-cyan-400 transition-colors uppercase">
-                                    INITIALIZING_SIGNAL... [{displayName.split(' ')[0]}]
-                                </span>
-                            </span>
+                            {'>'} {displayName.split(' ')[0].toLowerCase()}, what signal are you transmitting?
                         </button>
                     </div>
 

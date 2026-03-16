@@ -29,7 +29,6 @@ const Step5ReviewPublish = ({
   contractHtml,
   startDate,
   endDate,
-  resourceUrls = [],
 }) => {
   const { t } = useTranslation();
 
@@ -118,38 +117,6 @@ const Step5ReviewPublish = ({
             </div>
           </div>
         </section>
-
-        {/* PROJECT ASSETS (NEW) */}
-        {resourceUrls.length > 0 && (
-          <section className="bg-[#090e17]/80 backdrop-blur-md border border-white/5 rounded-3xl p-8 relative overflow-hidden group hover:border-fuchsia-500/20 transition-all">
-            <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-500 border border-fuchsia-500/20">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 00-2 2z" /></svg>
-                </div>
-                <h2 className="text-xs font-black text-white uppercase tracking-[0.2em] font-mono">{t('postjob.assets_label', 'MISSION_ASSETS')}</h2>
-              </div>
-              <button onClick={onEditStep2} className="text-[10px] font-black text-fuchsia-500 hover:text-fuchsia-400 font-mono tracking-widest uppercase transition-colors">
-                [ MANAGE ]
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
-              {resourceUrls.map((url, idx) => (
-                <div key={idx} className="aspect-square relative rounded-xl border border-white/10 overflow-hidden group/asset">
-                  {url.match(/\.(mp4|webm|ogg)$/) ? (
-                    <div className="w-full h-full bg-black/40 flex items-center justify-center">
-                      <svg className="w-8 h-8 text-fuchsia-500/50" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                    </div>
-                  ) : (
-                    <img src={url} alt={`Asset ${idx}`} className="w-full h-full object-cover grayscale opacity-60 group-hover/asset:grayscale-0 group-hover/asset:opacity-100 transition-all duration-700" title={`DOCUMENT_${idx + 1}`} />
-                  )}
-                  <div className="absolute inset-0 bg-fuchsia-500/10 opacity-0 group-hover/asset:opacity-100 pointer-events-none transition-opacity" />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* Protocol Schedule */}
         <section className="bg-[#090e17]/80 backdrop-blur-md border border-white/5 rounded-3xl p-8 relative overflow-hidden group hover:border-fuchsia-500/20 transition-all">

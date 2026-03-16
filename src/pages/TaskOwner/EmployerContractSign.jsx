@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { contractsApi } from '../../api/contracts.api';
-import { useAccount, useSendTransaction } from 'wagmi';
-import { parseEther } from 'viem';
 
 const EmployerContractSign = () => {
     const { id } = useParams();
@@ -17,9 +15,6 @@ const EmployerContractSign = () => {
     const [otp, setOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
     const [countdown, setCountdown] = useState(0);
-
-    const { isConnected } = useAccount();
-    const { sendTransactionAsync } = useSendTransaction();
 
     useEffect(() => {
         let timer;
@@ -69,22 +64,6 @@ const EmployerContractSign = () => {
 
         try {
             setSigning(true);
-            
-            // Web3 Funding Step
-            if (isConnected) {
-                toast.info('Vui lòng xác nhận giao dịch trên MetaMask để nạp tiền vào Escrow contract.');
-                // Simulate funding the contract with a small amount of ETH based on the job price
-                // We use a dummy address for the escrow contract in this demo
-                const txHash = await sendTransactionAsync({
-                    to: '0x000000000000000000000000000000000000dEaD',
-                    value: parseEther('0.001'), // Fake small amount for demo
-                });
-                toast.success(`Giao dịch Web3 thành công! Hash: ${txHash.slice(0, 10)}...`);
-            } else {
-                toast.info('Sử dụng số dư FAF Node mặc định do chưa liên kết ví Web3.');
-            }
-
-            // Database signing step
             await contractsApi.signContract(id, otp);
             toast.success('Contract signed successfully!');
             setShowConfirm(false);
@@ -531,14 +510,7 @@ const EmployerContractSign = () => {
                                 {signing ? (
                                     <>
                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        Processing...
-                                    </>
-                                ) : isConnected ? (
-                                    <>
-                                        <svg className="w-4 h-4 text-fuchsia-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                        Fund Web3 Escrow & Sign
+                                        Signing...
                                     </>
                                 ) : (
                                     <>

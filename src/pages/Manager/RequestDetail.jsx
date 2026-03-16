@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { jobsApi } from "../../api/jobs.api";
 import managerApi from "../../api/manager.api";
 import { useToast } from "../../contexts/ToastContext";
-import CyberModal from "../../components/CyberModal";
 
 const RequestDetail = () => {
     const toast = useToast();
@@ -12,8 +11,6 @@ const RequestDetail = () => {
     const [job, setJob] = useState(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
-    const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
-    const [rejectReason, setRejectReason] = useState("");
 
     useEffect(() => {
         fetchJobDetail();
@@ -37,7 +34,7 @@ const RequestDetail = () => {
             setProcessing(true);
             await managerApi.approveJob(id);
             toast.success(`Packet #${id} injection authorized.`);
-            setTimeout(() => navigate("/manager/request"), 500);
+            navigate("/manager/request");
         } catch (error) {
             console.error("Failed to approve job:", error);
             toast.error("Hệ thống: Lỗi khi duyệt yêu cầu.");
@@ -47,17 +44,14 @@ const RequestDetail = () => {
     };
 
     const handleReject = async () => {
-        if (!rejectReason.trim()) {
-            toast.error("Hệ thống: Vui lòng nhập lý do từ chối (REJECTION_REASON)");
-            return;
-        }
+        const reason = prompt("Nhập lý do từ chối (REJECTION_REASON):");
+        if (reason === null) return;
         
         try {
             setProcessing(true);
-            await managerApi.rejectJob(id, rejectReason.trim());
+            await managerApi.rejectJob(id, reason || "No reason provided.");
             toast.success(`Packet #${id} rejection protocol executed.`);
-            setIsRejectModalOpen(false);
-            setTimeout(() => navigate("/manager/request"), 500);
+            navigate("/manager/request");
         } catch (error) {
             console.error("Failed to reject job:", error);
             toast.error("Hệ thống: Lỗi khi từ chối yêu cầu.");
@@ -111,25 +105,6 @@ const RequestDetail = () => {
                     </span>
                 </div>
             </header>
-            
-            {/* Dispute Alert Banner */}
-            {job.dispute_id && (
-                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                    <div className="flex items-center gap-3">
-                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-rose-500 text-white text-xs font-black shadow-[0_0_15px_rgba(244,63,94,0.5)] animate-pulse">!</span>
-                        <div>
-                            <p className="text-[10px] font-black font-mono text-rose-500 uppercase tracking-widest">CRITICAL_CONFLICT_DETECTED</p>
-                            <p className="text-[9px] font-mono text-rose-500/70 uppercase">This packet is currently under official dispute protocol. Review mediation logs immediately.</p>
-                        </div>
-                    </div>
-                    <button 
-                        onClick={() => navigate(`/manager/disputes/${job.dispute_id}`)}
-                        className="px-6 py-3 rounded-xl bg-rose-500 text-[#020617] text-[10px] font-black font-mono tracking-widest uppercase hover:bg-rose-400 transition-all shadow-[0_0_20px_rgba(244,63,94,0.3)] active:scale-95"
-                    >
-                        RESOLVE_CONFLICT_NOW
-                    </button>
-                </div>
-            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Data Section */}
@@ -252,20 +227,11 @@ const RequestDetail = () => {
                                 <span className="text-slate-300 text-[8px] truncate max-w-[120px]">{job.client?.email}</span>
                             </div>
                         </div>
-                        
-                        {job.dispute_id && (
-                            <button 
-                                onClick={() => navigate(`/manager/disputes/${job.dispute_id}`)}
-                                className="w-full py-4 mb-4 rounded-xl bg-rose-500/10 border border-rose-500/50 text-rose-500 text-[10px] font-black font-mono tracking-[0.3em] uppercase hover:bg-rose-500/20 transition-all active:scale-95 shadow-[0_0_20px_rgba(244,63,94,0.1)]"
-                            >
-                                VIEW_DISPUTE_DETAILS
-                            </button>
-                        )}
-                        
+
                         {job.status === 'PENDING' && (
                             <div className="grid grid-cols-1 gap-4">
                                 <button 
-                                    onClick={() => setIsRejectModalOpen(true)}
+                                    onClick={handleReject}
                                     disabled={processing}
                                     className="w-full py-4 rounded-xl border border-rose-500/30 text-rose-500 text-[10px] font-black font-mono tracking-[0.3em] uppercase hover:bg-rose-500/10 transition-all active:scale-95 disabled:opacity-50"
                                 >
@@ -283,21 +249,6 @@ const RequestDetail = () => {
                     </section>
                 </div>
             </div>
-
-            <CyberModal 
-                isOpen={isRejectModalOpen}
-                onClose={() => setIsRejectModalOpen(false)}
-                onConfirm={handleReject}
-                title="ABORT_INJECTION_PROTOCOL"
-                message="Xác nhận thực hiện giao thức ABORT_INJECTION? Yêu cầu này sẽ bị hủy ngay lập tức và chủ dự án sẽ nhận được thông báo về lý do từ chối."
-                type="danger"
-                confirmText="EXECUTE_ABORT"
-                processing={processing}
-                requiresInput={true}
-                inputValue={rejectReason}
-                onInputChange={setRejectReason}
-                inputPlaceholder="Nhập lý do từ chối để hệ thống gửi thông báo cho chủ dự án..."
-            />
         </div>
     );
 };

@@ -7,9 +7,6 @@ import PostCard from '../../components/Social/PostCard';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { postsApi } from '../../api/posts.api';
-import { matchingApi } from '../../api/matching.api';
-import { userApi } from '../../api/user.api';
-import { jobsApi } from '../../api/jobs.api';
 
 /* ─── helpers ─── */
 const getInitials = (name) => {
@@ -121,8 +118,7 @@ const CyberSidebar = ({ user, navigate }) => {
     const [time, setTime] = useState(new Date());
     useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
 
-    const r = role?.toLowerCase();
-    const navItems = r === 'worker'
+    const navItems = role === 'worker'
         ? [
             { icon: '⬡', label: t('home.sidebar.dashboard'),   sub: t('home.sidebar.dashboard_sub_worker'), path: '/dashboard', color: 'text-cyan-400' },
             { icon: '◈', label: t('home.sidebar.find_work'),    sub: t('home.sidebar.find_work_sub'),  path: '/find-work', color: 'text-purple-400' },
@@ -130,14 +126,7 @@ const CyberSidebar = ({ user, navigate }) => {
             { icon: '✦', label: t('home.sidebar.wallet'),       sub: t('home.sidebar.wallet_sub'),        path: '/wallet',    color: 'text-amber-400' },
             { icon: '⊕', label: t('home.sidebar.settings'),     sub: t('home.sidebar.settings_sub'),  path: '/settings',  color: 'text-slate-400' },
           ]
-        : r === 'admin'
-        ? [
-            { icon: '⬡', label: 'CONTROL PANEL', sub: 'Main Administration',   path: '/admin/dashboard',        color: 'text-indigo-400' },
-            { icon: '◈', label: 'USER MGMT',      sub: 'Manage All Users',      path: '/admin/user-management',  color: 'text-purple-400' },
-            { icon: '⬢', label: 'SYSTEM LOGS',    sub: 'Admin Notifications',   path: '/admin/notifications',    color: 'text-emerald-400' },
-            { icon: '⊕', label: t('home.sidebar.settings'),     sub: t('home.sidebar.settings_sub'),  path: '/settings',              color: 'text-slate-400' },
-        ]
-        : r === 'manager'
+        : role === 'manager'
         ? [
             { icon: '⬡', label: 'COMMAND CENTER', sub: 'System Dashboard',   path: '/manager/request',            color: 'text-emerald-400' },
             { icon: '◈', label: 'WORK HUB',       sub: 'Active Contracts',    path: '/manager/management/jobs',    color: 'text-cyan-400' },
@@ -191,7 +180,7 @@ const CyberSidebar = ({ user, navigate }) => {
                         </div>
                         <div>
                             <p className={`font-black text-[15px] tracking-wide uppercase leading-tight ${isLight ? 'text-slate-800' : 'text-white'}`}>{displayName}</p>
-                            <p className={`text-[10px] font-bold tracking-widest uppercase ${isLight ? 'text-cyan-700' : 'text-cyan-400'}`}>{r === 'worker' ? t('home.sidebar.role_worker') : r === 'admin' ? 'ADMIN_OP' : r === 'manager' ? 'MASTER_OP' : t('home.sidebar.role_client')} · {t('home.sidebar.system')}</p>
+                            <p className={`text-[10px] font-bold tracking-widest uppercase ${isLight ? 'text-cyan-700' : 'text-cyan-400'}`}>{role === 'worker' ? t('home.sidebar.role_worker') : role === 'manager' ? 'MASTER_OP' : t('home.sidebar.role_client')} · {t('home.sidebar.system')}</p>
                             {user?.tier && (
                                 <span className={`inline-block mt-1 text-[8px] font-black tracking-widest px-2 py-0.5 rounded border uppercase ${isLight ? 'bg-cyan-100 text-cyan-800 border-cyan-200' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'}`}>
                                     {user.tier}
@@ -255,20 +244,14 @@ const CyberRightPanel = ({ user, navigate }) => {
     const { t } = useTranslation();
     const { theme } = useTheme();
     const isLight = theme === 'light';
-    const r = user?.role?.toLowerCase();
-    const links = r === 'worker'
+    const role = user?.role || 'worker';
+    const links = role === 'worker'
         ? [
             { label: t('home.right_panel.dash_worker') || '► ACCESS DASHBOARD', path: '/dashboard',  neon: 'cyan' },
             { label: t('home.right_panel.find_work') || '► SEARCH NEW CONTRACTS',    path: '/find-work',  neon: 'purple' },
             { label: t('home.right_panel.wallet') || '► OPEN WALLET',      path: '/wallet',     neon: 'amber'  },
             { label: t('home.right_panel.messages') || '► COMM LINKS',         path: '/messages',   neon: 'green'  },
           ]
-        : r === 'admin'
-        ? [
-            { label: '► CONTROL PANEL',   path: '/admin/dashboard',        neon: 'cyan'   },
-            { label: '► USER MANAGEMENT', path: '/admin/user-management',   neon: 'purple' },
-            { label: '► SYSTEM LOGS',     path: '/admin/notifications',    neon: 'green'  },
-        ]
         : [
             { label: t('home.right_panel.dash_client') || '► CLIENT DASHBOARD',   path: '/task-owner',            neon: 'cyan'   },
             { label: t('home.right_panel.post_job') || '► POST NEW JOB',       path: '/task-owner/post-job',   neon: 'purple' },
@@ -375,22 +358,15 @@ const FeedHeader = ({ user, navigate }) => {
     const { t } = useTranslation();
     const { theme } = useTheme();
     const isLight = theme === 'light';
-    const r = user?.role?.toLowerCase();
-    const shortcuts = r === 'worker'
+    const role = user?.role || 'worker';
+    const shortcuts = role === 'worker'
         ? [
             { emoji: '⬡', label: t('home.feed.find_work'),  grad: 'from-cyan-500 to-blue-600',     path: '/find-work' },
             { emoji: '📊', label: t('home.feed.dashboard'),  grad: 'from-purple-500 to-indigo-600', path: '/dashboard' },
             { emoji: '💬', label: t('home.feed.messages'),   grad: 'from-emerald-500 to-cyan-600',  path: '/messages'  },
             { emoji: '💰', label: t('home.feed.wallet'),     grad: 'from-amber-500 to-orange-600',  path: '/wallet'    },
           ]
-        : r === 'admin'
-        ? [
-            { emoji: '⚙️', label: 'CONTROL',       grad: 'from-indigo-500 to-blue-600',    path: '/admin/dashboard' },
-            { emoji: '👥', label: 'USERS',         grad: 'from-purple-500 to-indigo-600',  path: '/admin/user-management' },
-            { emoji: '🔔', label: 'LOGS',          grad: 'from-emerald-500 to-teal-600',   path: '/admin/notifications' },
-            { emoji: '💬', label: 'MESSAGES',      grad: 'from-emerald-500 to-cyan-600',   path: '/messages'   },
-        ]
-        : r === 'manager'
+        : role === 'manager'
         ? [
             { emoji: '🛡️', label: 'SHIELD_NET',      grad: 'from-emerald-500 to-teal-600',   path: '/manager/request' },
             { emoji: 'USERS', label: 'PERSONNEL',    grad: 'from-purple-500 to-indigo-600',  path: '/admin/user-management' },
@@ -430,9 +406,18 @@ const FeedHeader = ({ user, navigate }) => {
    CYBERPUNK POST WRAPPER (wraps existing PostCard)
 ══════════════════════════════════════════════════════ */
 const CyberPostWrapper = ({ children }) => {
+    const { theme } = useTheme();
+    const isLight = theme === 'light';
     return (
-        <div className="relative group animate-[modalPop_.3s_ease-out]">
-            {children}
+        <div className="relative group">
+            {/* Neon border glow on hover */}
+            <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-cyan-500/0 via-purple-500/0 to-cyan-500/0 group-hover:from-cyan-500/30 group-hover:via-purple-500/20 group-hover:to-cyan-500/30 transition-all duration-500 pointer-events-none blur-sm" />
+            {/* Override PostCard to dark-ish in dark mode, or translucent in light mode */}
+            <div className={!isLight 
+                ? `relative [&_.bg-white]:bg-slate-900/90 [&_.bg-white]:text-slate-100 [&_.border-gray-100]:border-slate-700/50 [&_.border-gray-200]:border-slate-700/50 [&_.text-gray-900]:text-slate-100 [&_.text-gray-700]:text-slate-300 [&_.text-gray-600]:text-slate-400 [&_.text-gray-500]:text-slate-500 [&_.hover\\:bg-gray-100]:hover:bg-slate-800/60 [&_.rounded-xl]:rounded-2xl`
+                : `relative [&_.bg-white]:!bg-white/50 [&_.bg-white]:!backdrop-blur-md [&_.border-gray-100]:border-slate-200/60 [&_.text-gray-900]:!text-slate-800 [&_.text-gray-500]:!text-slate-600 [&_.text-gray-600]:!text-slate-700 [&_.rounded-xl]:rounded-2xl shadow-sm hover:shadow-md transition-shadow`}>
+                {children}
+            </div>
         </div>
     );
 };
@@ -441,32 +426,16 @@ const CyberPostWrapper = ({ children }) => {
    CYBERPUNK POSTFORM WRAPPER
 ══════════════════════════════════════════════════════ */
 const CyberPostFormWrapper = ({ children }) => {
+    const { theme } = useTheme();
+    const isLight = theme === 'light';
     return (
-        <div className="relative group animate-[dropIn_.4s_ease-out]">
-            {children}
-        </div>
-    );
-};
-
-/* ══════════════════════════════════════════════════════
-   PLATFORM STATS MINI-CARDS
- ══════════════════════════════════════════════════════ */
-const PlatformStats = () => {
-    const { t } = useTranslation();
-    const stats = [
-        { label: 'NODES_ACTIVE', value: '1,284', color: 'text-cyan-400' },
-        { label: 'ESCROW_LOCKED', value: '45.2K CR', color: 'text-purple-400' },
-        { label: 'TASKS_COMPLETED', value: '8,921', color: 'text-emerald-400' },
-    ];
-    return (
-        <div className="grid grid-cols-3 gap-3 mb-2">
-            {stats.map(s => (
-                <div key={s.label} className="bg-slate-900/40 border border-slate-800/50 rounded-xl p-3 backdrop-blur-sm relative overflow-hidden group hover:border-cyan-500/30 transition-all">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-transparent via-cyan-500/20 to-transparent opacity-0 group-hover:opacity-100" />
-                    <p className="text-[8px] font-black tracking-widest text-slate-500 uppercase mb-1">{s.label}</p>
-                    <p className={`text-[12px] font-mono font-black ${s.color} tracking-tighter`}>{s.value}</p>
-                </div>
-            ))}
+        <div className="relative group">
+            <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-cyan-500/40 via-purple-500/30 to-cyan-500/40 blur-sm pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity" />
+            <div className={!isLight 
+                ? `relative [&_.bg-white\/90]:bg-slate-900/90 [&_.bg-white\/70]:bg-slate-900/90 [&_.bg-white]:bg-slate-900/90 [&_.border-white\/60]:border-slate-700/60 [&_.border-white\/70]:border-slate-700/60 [&_.border-gray-200]:border-slate-700/50 [&_.text-gray-500]:text-slate-400 [&_.text-gray-600]:text-slate-300 [&_.bg-gray-100]:bg-slate-800/60 [&_.bg-gray-200]:bg-slate-700/60 [&_.hover\\:bg-gray-100]:hover:bg-slate-800 [&_.hover\\:bg-gray-200]:hover:bg-slate-700 [&_.text-gray-900]:text-slate-100 [&_.border-gray-100]:border-slate-700/40 [&_.rounded-2xl]:rounded-2xl` 
+                : `relative [&_.bg-white]:!bg-white/50 [&_.bg-white]:!backdrop-blur-md [&_.border-gray-100]:border-slate-200/60 [&_.text-gray-900]:!text-slate-800 [&_.text-gray-500]:!text-slate-600 [&_.text-gray-600]:!text-slate-700 [&_.rounded-2xl]:rounded-2xl shadow-sm`}>
+                {children}
+            </div>
         </div>
     );
 };
@@ -482,9 +451,6 @@ const HomePage = () => {
     // Auth-specific state
     const [posts, setPosts]         = useState([]);
     const [feedLoading, setFeedLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState('ALL'); // ALL, JOBS, SYSTEM
-    const [featuredContent, setFeaturedContent] = useState([]);
-    const [featuredLoading, setFeaturedLoading] = useState(false);
 
     // Unauth-specific state
     const [isDark, setIsDark] = useState(true);
@@ -506,40 +472,7 @@ const HomePage = () => {
         try { setFeedLoading(true); const r = await postsApi.getFeed(); setPosts(r.data || []); }
         catch (e) { console.error(e); } finally { setFeedLoading(false); }
     }, []);
-
-    const fetchFeatured = useCallback(async () => {
-        if (!user) return;
-        try {
-            setFeaturedLoading(true);
-            let res;
-            if (user.role === 'worker') {
-                res = await matchingApi.getRecommendedJobs({ limit: 5 });
-            } else {
-                res = await userApi.getFeaturedWorkers();
-            }
-            setFeaturedContent(res.data || []);
-        } catch (e) {
-            console.error("Featured fetch failed:", e);
-        } finally {
-            setFeaturedLoading(false);
-        }
-    }, [user]);
-
-    useEffect(() => { 
-        if (user) {
-            fetchFeed();
-            fetchFeatured();
-        } 
-    }, [user, fetchFeed, fetchFeatured]);
-
-    const filteredPosts = posts.filter(p => {
-        if (activeTab === 'ALL') return true;
-        // Logic for SYSTEM posts: usually identified by specific content or author
-        const isSystem = p.content.includes('🚀 Mission Accomplished!') || p.content.includes('🏁 Project Finalized!') || p.author_role === 'manager';
-        if (activeTab === 'SYSTEM') return isSystem;
-        if (activeTab === 'JOBS') return false; // Jobs are shown in carousel or separate list
-        return true;
-    });
+    useEffect(() => { if (user) fetchFeed(); }, [user, fetchFeed]);
 
     /* ════════ AUTHENTICATED ════════ */
     if (user) {
@@ -548,7 +481,7 @@ const HomePage = () => {
         const displayName = user?.full_name || user?.email?.split('@')[0] || 'AGENT';
 
         return (
-            <div className="min-h-screen flex flex-col relative bg-transparent" >
+            <div className="h-screen flex flex-col overflow-hidden relative bg-transparent" >
                 {/* Layers */}
                 
                 
@@ -557,7 +490,7 @@ const HomePage = () => {
                 <div className="fixed inset-0 z-0 pointer-events-none"
                     style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,255,255,0.015) 0px, rgba(0,255,255,0.015) 1px, transparent 1px, transparent 3px)', backgroundSize: '100% 3px' }} />
 
-                <div className="relative z-10 flex-1 flex flex-col min-h-screen">
+                <div className="relative z-10 flex-1 flex flex-col min-h-0">
                     <Navbar />
 
                     {/* SYSTEM STATUS BAR */}
@@ -570,7 +503,7 @@ const HomePage = () => {
                                 </div>
                                 <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-slate-500">
                                     <span className="text-cyan-500/60">|</span>
-                                    <span>{t('home.status_bar.role_label')} <span className="text-cyan-300">{user.role?.toLowerCase() === 'worker' ? t('home.status_bar.role_worker') : user.role?.toLowerCase() === 'admin' ? 'ADMIN_OP' : user.role?.toLowerCase() === 'manager' ? 'MASTER_OP' : t('home.status_bar.role_client')}</span></span>
+                                    <span>{t('home.status_bar.role_label')} <span className="text-cyan-300">{user.role === 'worker' ? t('home.status_bar.role_worker') : user.role === 'manager' ? 'MASTER_OP' : t('home.status_bar.role_client')}</span></span>
                                     <span className="text-cyan-500/60">|</span>
                                     <span>{t('home.status_bar.status_label')} <span className="text-green-300">{t('home.status_bar.status_value')}</span></span>
                                     <span className="text-cyan-500/60">|</span>
@@ -578,17 +511,12 @@ const HomePage = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                {user.role?.toLowerCase() === 'worker' ? (
+                                {user.role === 'worker' ? (
                                     <button onClick={() => navigate('/find-work')}
                                         className="text-[10px] font-black tracking-widest uppercase font-mono border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] px-3 py-1.5 rounded transition-all">
                                         {t('home.status_bar.btn_find_work')}
                                     </button>
-                                ) : user.role?.toLowerCase() === 'admin' ? (
-                                    <button onClick={() => navigate('/admin/dashboard')}
-                                        className="text-[10px] font-black tracking-widest uppercase font-mono border border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10 hover:border-indigo-400 hover:shadow-[0_0_15px_rgba(99,102,241,0.3)] px-3 py-1.5 rounded transition-all">
-                                        CONTROL PANEL
-                                    </button>
-                                ) : user.role?.toLowerCase() === 'manager' ? (
+                                ) : user.role === 'manager' ? (
                                     <button onClick={() => navigate('/manager/request')}
                                         className="text-[10px] font-black tracking-widest uppercase font-mono border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] px-3 py-1.5 rounded transition-all">
                                         COMMAND CENTER
@@ -604,16 +532,11 @@ const HomePage = () => {
                     </div>
 
                     {/* Main layout */}
-                    <div className="max-w-[1300px] mx-auto px-4 py-4 flex gap-4 flex-1 w-full">
-                        {/* Sidebar */}
-                        <div className="hidden lg:block w-[270px] shrink-0">
-                            <div className="sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar">
-                                <CyberSidebar user={user} navigate={navigate} />
-                            </div>
-                        </div>
+                    <div className="max-w-[1300px] mx-auto px-4 py-4 flex gap-4 flex-1 w-full min-h-0">
+                        <CyberSidebar user={user} navigate={navigate} />
 
                         {/* FEED */}
-                        <main className="flex-1 max-w-[600px] mx-auto flex flex-col gap-4 min-w-0 pb-10">
+                        <main className="flex-1 max-w-[600px] mx-auto flex flex-col gap-4 min-w-0 h-full overflow-y-auto custom-scrollbar pb-10 pr-2">
                             {/* Section: Feed stream label */}
                             <div className="flex items-center gap-3">
                                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
@@ -626,73 +549,10 @@ const HomePage = () => {
 
                             <FeedHeader user={user} navigate={navigate} />
 
-                            {/* FEATURED CAROUSEL */}
-                            <section className="relative group">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="text-[10px] font-black tracking-[0.2em] text-cyan-400 uppercase font-mono flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                                        {user.role === 'worker' ? 'RECOMMENDED_CONTRACTS' : 'TOP_TALENTS_HQ'}
-                                    </h3>
-                                    <div className="flex-1 h-px bg-gradient-to-r from-cyan-500/30 to-transparent ml-4" />
-                                </div>
-                                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x">
-                                    {featuredLoading ? (
-                                        [1, 2, 3].map(i => <div key={i} className="min-w-[240px] h-32 rounded-xl bg-slate-900/60 border border-slate-800 animate-pulse" />)
-                                    ) : featuredContent.length > 0 ? (
-                                        featuredContent.map((item, idx) => (
-                                            <div key={idx} 
-                                                onClick={() => navigate(user.role === 'worker' ? `/jobs/${item.id}` : `/profile/${item.user_id}`)}
-                                                className="min-w-[240px] snap-center relative rounded-xl border border-cyan-500/20 bg-slate-900/60 backdrop-blur-md p-4 cursor-pointer hover:border-cyan-400/50 hover:shadow-[0_0_15px_rgba(6,182,212,0.1)] transition-all group/item overflow-hidden">
-                                                <div className="absolute top-0 right-0 w-8 h-8 opacity-10 group-hover/item:opacity-30 transition-opacity">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-cyan-400"><path strokeWidth={2} d="M5 12h14M12 5l7 7-7 7"/></svg>
-                                                </div>
-                                                <p className="text-[11px] font-black text-cyan-400 mb-1 truncate uppercase tracking-wider">{user.role === 'worker' ? item.title : item.full_name}</p>
-                                                <p className="text-[10px] text-slate-400 line-clamp-2 font-mono leading-relaxed">
-                                                    {user.role === 'worker' ? item.description : item.specialization || 'Strategic Specialist'}
-                                                </p>
-                                                <div className="mt-3 flex items-center justify-between">
-                                                    <span className="text-[10px] font-black text-white px-2 py-0.5 rounded bg-slate-800 border border-slate-700">
-                                                        {user.role === 'worker' ? `${item.budget || item.salary_min} CR` : `${item.rating || '5.0'}★`}
-                                                    </span>
-                                                    <span className="text-[9px] font-mono text-cyan-500 group-hover/item:translate-x-1 transition-transform tracking-widest uppercase">ACCESS_DATA</span>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="w-full text-center py-6 border border-dashed border-slate-700 rounded-xl text-slate-500 text-[10px] uppercase font-bold tracking-widest">
-                                            Scanning for compatible nodes...
-                                        </div>
-                                    )}
-                                </div>
-                            </section>
-
                             {/* Post form */}
                             <CyberPostFormWrapper>
                                 <PostForm onPostCreated={fetchFeed} />
                             </CyberPostFormWrapper>
-
-                            <PlatformStats />
-
-                            {/* FEED TABS */}
-                            <div className="flex items-center border-b border-slate-800/50 mt-2">
-                                {[
-                                    { id: 'ALL', label: 'ALL_STREAMS', icon: '📡' },
-                                    { id: 'JOBS', label: 'LIVE_JOBS', icon: '◈' },
-                                    { id: 'SYSTEM', label: 'CORE_BROADCASTS', icon: '⬡' }
-                                ].map(tab => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-black tracking-widest transition-all relative group uppercase font-mono ${activeTab === tab.id ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}
-                                    >
-                                        <span className="opacity-60 group-hover:opacity-100 transition-opacity">{tab.icon}</span>
-                                        {tab.label}
-                                        {activeTab === tab.id && (
-                                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]" />
-                                        )}
-                                    </button>
-                                ))}
-                            </div>
 
                             {/* Feed posts */}
                             {feedLoading ? (
@@ -713,7 +573,7 @@ const HomePage = () => {
                                         </div>
                                     ))}
                                 </>
-                            ) : filteredPosts.length === 0 ? (
+                            ) : posts.length === 0 ? (
                                 <div className="relative rounded-2xl border border-cyan-500/20 bg-slate-900/70 backdrop-blur-md p-14 text-center overflow-hidden">
                                     <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
                                     <div className="relative inline-block mb-6">
@@ -722,16 +582,12 @@ const HomePage = () => {
                                         </div>
                                         <div className="absolute -inset-3 rounded-2xl border border-cyan-400/30 animate-ping" />
                                     </div>
-                                    <h3 className="text-[18px] font-black text-white tracking-widest uppercase mb-2">SIGNAL_LOSS</h3>
-                                    <p className="text-slate-500 text-[12px] font-mono max-w-xs mx-auto">No data stream detected for the selected frequency. Switching to standby mode.</p>
-                                    <button 
-                                        onClick={() => setActiveTab('ALL')}
-                                        className="mt-6 px-4 py-2 border border-cyan-500/30 text-cyan-400 font-mono text-[10px] tracking-widest uppercase hover:bg-cyan-500/10 transition-all rounded">
-                                        RE-ESTABLISH_CONNECTION
-                                    </button>
+                                    <h3 className="text-[18px] font-black text-white tracking-widest uppercase mb-2">{t('home.feed.no_posts')}</h3>
+                                    <p className="text-slate-500 text-[12px] font-mono max-w-xs mx-auto">{t('home.feed.no_posts_desc')}</p>
+                                    <div className="mt-4 text-[9px] font-mono text-cyan-500/60">{t('home.feed.standby')}</div>
                                 </div>
                             ) : (
-                                filteredPosts.map(post => (
+                                posts.map(post => (
                                     <CyberPostWrapper key={post.id}>
                                         <PostCard post={post} onUpdate={fetchFeed} />
                                     </CyberPostWrapper>
@@ -739,12 +595,7 @@ const HomePage = () => {
                             )}
                         </main>
 
-                        {/* Right Panel */}
-                        <div className="hidden lg:block w-[320px] shrink-0">
-                            <div className="sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar pr-2">
-                                <CyberRightPanel user={user} navigate={navigate} />
-                            </div>
-                        </div>
+                        <CyberRightPanel user={user} navigate={navigate} />
                     </div>
                 </div>
             </div>

@@ -57,39 +57,12 @@ const managerApi = {
         return axiosClient.get(`/disputes/${id}/messages`);
     },
 
-    addDisputeMessage: (id, payload) => {
-        if (payload instanceof FormData) {
-            return axiosClient.post(`/disputes/${id}/messages`, payload);
-        }
-        return axiosClient.post(`/disputes/${id}/messages`, { message: payload });
+    addDisputeMessage: (id, message) => {
+        return axiosClient.post(`/disputes/${id}/messages`, { message });
     },
 
     resolveDispute: (id, resolution, resolution_summary) => {
         return axiosClient.post(`/disputes/${id}/resolve`, { resolution, resolution_summary });
-    },
-
-    // Manager Creation
-    createManager: (data) => {
-        return axiosClient.post("/admin/managers", data);
-    },
-
-    // Category Proposals
-    getCategoryProposals: () => {
-        return axiosClient.get("/admin/categories/proposals");
-    },
-    approveCategoryProposal: (id) => {
-        return axiosClient.put(`/admin/categories/proposals/${id}/approve`);
-    },
-    rejectCategoryProposal: (id) => {
-        return axiosClient.put(`/admin/categories/proposals/${id}/reject`);
-    },
-
-    // Notifications
-    getAdminNotifications: (page = 1, limit = 20) => {
-        return axiosClient.get("/admin/notifications", { params: { page, limit } });
-    },
-    markNotificationRead: (id) => {
-        return axiosClient.patch(`/admin/notifications/${id}/read`);
     }
 };
 

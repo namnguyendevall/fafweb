@@ -17,23 +17,16 @@ const EmployeeManagement = () => {
             setLoading(true);
             const response = await managerApi.listUsers(1, 100);
             // Map backend users to UI fields
-            const mapped = (response.data?.users || []).map(u => {
-                const rating = parseFloat(u.rating_avg) || 0;
-                const reliability = rating > 0 ? `${Math.round(rating * 20)}%` : "N/A";
-                
-                return {
-                    id: `USR_${u.id}`,
-                    fullName: u.full_name || "Khách hàng ẩn danh",
-                    email: u.email,
-                    phone: u.phone || "HIDDEN_CONTACT",
-                    department: u.role.toUpperCase(),
-                    status: (u.status || "ACTIVE").toUpperCase(),
-                    createdAt: new Date(u.created_at).toLocaleDateString(),
-                    reliability: reliability,
-                    tier: u.tier || "NEWBIE",
-                    jobsDone: u.total_jobs_done || 0
-                };
-            });
+            const mapped = (response.data?.users || []).map(u => ({
+                id: `USR_${u.id}`,
+                fullName: u.full_name || "Khách hàng ẩn danh",
+                email: u.email,
+                phone: u.phone || "HIDDEN_CONTACT",
+                department: u.role.toUpperCase(),
+                status: "ACTIVE", // For now
+                createdAt: new Date(u.created_at).toLocaleDateString(),
+                reliability: "100%" // Placeholder
+            }));
             setUsers(mapped);
         } catch (error) {
             console.error("Failed to fetch users:", error);
@@ -133,12 +126,7 @@ const EmployeeManagement = () => {
                                 </div>
                                 <div className="text-right shrink-0">
                                     <p className="text-[8px] font-mono font-black text-slate-600 tracking-widest uppercase">Reliability</p>
-                                    <p className={`text-sm font-mono font-black ${emp.reliability === 'N/A' ? 'text-slate-500' : 'text-emerald-400'}`}>{emp.reliability}</p>
-                                    {emp.tier && (
-                                        <span className="text-[7px] font-black font-mono text-cyan-500 border border-cyan-500/30 px-1 py-0.5 rounded leading-none mt-1 inline-block">
-                                            {emp.tier}
-                                        </span>
-                                    )}
+                                    <p className="text-sm font-mono font-black text-emerald-400">{emp.reliability}</p>
                                 </div>
                             </div>
 
@@ -150,10 +138,6 @@ const EmployeeManagement = () => {
                                 <div className="flex items-center justify-between text-[10px] font-mono font-black uppercase tracking-widest gap-4">
                                     <span className="text-slate-600 shrink-0">EMAIL</span>
                                     <span className="text-slate-300 truncate">{emp.email}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-[10px] font-mono font-black uppercase tracking-widest">
-                                    <span className="text-slate-600">JOBS_DONE</span>
-                                    <span className="text-slate-300">{emp.jobsDone}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-[10px] font-mono font-black uppercase tracking-widest">
                                     <span className="text-slate-600">JOINED</span>

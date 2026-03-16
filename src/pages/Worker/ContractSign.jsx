@@ -72,7 +72,7 @@ const ContractSign = () => {
             await contractsApi.signContract(id, otp);
             toast.success('Hệ thống: Ký hợp đồng thành công!');
             setShowConfirm(false);
-            navigate('/dashboard'); 
+            navigate('/my-job'); 
         } catch (error) {
             console.error('Error signing contract:', error);
             toast.error(error.response?.data?.message || 'Lỗi: Ký hợp đồng thất bại.');
@@ -105,10 +105,8 @@ const ContractSign = () => {
         ? contract.contract_content
             .replace(/\.{10,}/g, userProfile?.full_name || '[CHƯA RÕ]')
             .replace(/Họ và tên:.*?\n/g, `Họ và tên: ${userProfile?.full_name || '[CHƯA RÕ]'}\n`)
-            .replace(/Email đăng ký.*?:\s*\.{5,}/g, `Email đăng ký trên hệ thống FAF: ${userProfile?.email || '[UNKNOWN_EMAIL]'}`)
-            .replace(/ID người dùng FAF:\s*\.{5,}/g, `ID người dùng FAF: ${userProfile?.id || '[NULL_ID]'}`)
-            .replace(/Bên B - Người nhận việc \(Ký và ghi rõ họ tên\)\s*\n\s*\.{10,}/g, `Bên B - Người nhận việc (Ký và ghi rõ họ tên)\n<span class="text-emerald-400 font-black underline italic">${contract.signature_worker || userProfile?.full_name || '..............................'}</span>`)
-            .replace(/Bên A - Người giao việc \(Ký và ghi rõ họ tên\)\s*\n\s*\.{10,}/g, `Bên A - Người giao việc (Ký và ghi rõ họ tên)\n<span class="text-indigo-400 font-black underline italic">${contract.signature_client || '..............................'}</span>`)
+            .replace(/Email đăng ký.*?:\s*\.+/g, `Email đăng ký trên hệ thống FAF: ${userProfile?.email || '[UNKNOWN_EMAIL]'}`)
+            .replace(/ID người dùng FAF:\s*\.+/g, `ID người dùng FAF: ${userProfile?.id || '[NULL_ID]'}`)
         : 'KHÔNG CÓ DỮ LIỆU HỢP ĐỒNG';
 
     const bothSigned = contract.signature_worker && contract.signature_client;

@@ -6,7 +6,6 @@ import { matchingApi } from "../../api/matching.api";
 import { contractsApi } from "../../api/contracts.api";
 import { chatApi } from "../../api/chat.api";
 import ReviewModal from "../../components/Reviews/ReviewModal";
-import CyberModal from "../../components/CyberModal";
 
 const JobDetail = () => {
     const navigate = useNavigate();
@@ -21,7 +20,6 @@ const JobDetail = () => {
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('proposals');
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-    const [modalState, setModalState] = useState({ isOpen: false, type: 'info', title: '', message: '', confirmText: '', onConfirm: null });
 
     useEffect(() => {
         fetchJobData();
@@ -61,52 +59,34 @@ const JobDetail = () => {
         }
     };
 
-    const handleAcceptProposal = (proposalId) => {
-        setModalState({
-            isOpen: true,
-            type: 'warning',
-            title: 'Accept Proposal',
-            message: 'Accept this proposal? This will create a pending contract for you to review and sign.',
-            confirmText: 'ACCEPT',
-            onConfirm: async () => {
-                setModalState(s => ({ ...s, isOpen: false }));
-                try {
-                    const res = await jobsApi.acceptProposal(proposalId);
-                    toast.success("Proposal accepted! Redirecting to contract signature...");
-                    
-                    // Redirect to the contract signing page
-                    const contractId = res.data?.contract?.id;
-                    if (contractId) {
-                        navigate(`/task-owner/contracts/${contractId}/review`);
-                    } else {
-                        fetchJobData(); // Fallback if no contract ID returned
-                    }
-                } catch (err) {
-                    console.error("Error accepting proposal:", err);
-                    toast.error(err.response?.data?.message || "Failed to accept proposal");
-                }
+    const handleAcceptProposal = async (proposalId) => {
+        if (!window.confirm("Accept this proposal? This will create a pending contract for you to review and sign.")) return;
+        try {
+            const res = await jobsApi.acceptProposal(proposalId);
+            toast.success("Proposal accepted! Redirecting to contract signature...");
+            
+            // Redirect to the contract signing page
+            const contractId = res.data?.contract?.id;
+            if (contractId) {
+                navigate(`/task-owner/contracts/${contractId}/review`);
+            } else {
+                fetchJobData(); // Fallback if no contract ID returned
             }
-        });
+        } catch (err) {
+            console.error("Error accepting proposal:", err);
+            toast.error(err.response?.data?.message || "Failed to accept proposal");
+        }
     };
 
-    const handleRejectProposal = (proposalId) => {
-        setModalState({
-            isOpen: true,
-            type: 'danger',
-            title: 'Reject Proposal',
-            message: 'Reject this proposal?',
-            confirmText: 'REJECT',
-            onConfirm: async () => {
-                setModalState(s => ({ ...s, isOpen: false }));
-                try {
-                    await jobsApi.rejectProposal(proposalId);
-                    fetchJobData(); // Refresh data
-                } catch (err) {
-                    console.error("Error rejecting proposal:", err);
-                    toast.success("Proposal rejected");
-                }
-            }
-        });
+    const handleRejectProposal = async (proposalId) => {
+        if (!window.confirm("Reject this proposal?")) return;
+        try {
+            await jobsApi.rejectProposal(proposalId);
+            fetchJobData(); // Refresh data
+        } catch (err) {
+            console.error("Error rejecting proposal:", err);
+            toast.success("Proposal rejected");
+        }
     };
 
     const handleInviteWorker = (workerId) => {
@@ -162,8 +142,8 @@ const JobDetail = () => {
                                         ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400"
                                         : job.status === "IN_PROGRESS"
                                             ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400"
-                                            : job.status === "REJECTED" 
-                                            ? "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-400" 
+                                            : job.status === "CANCELLED"
+                                            ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400" 
                                             : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
                                         }`}
                                 >
@@ -195,23 +175,6 @@ const JobDetail = () => {
                                 </p>
                             </section>
 
-                            {/* Rejection Reason (If applicable) */}
-                            {job.status === 'REJECTED' && job.admin_comment && (
-                                <section className="bg-orange-50 dark:bg-orange-900/10 rounded-[2rem] border border-orange-200 dark:border-orange-900/50 p-8 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                        </svg>
-                                        <h2 className="text-lg font-semibold text-orange-900 dark:text-orange-400">
-                                            Lý do từ chối
-                                        </h2>
-                                    </div>
-                                    <p className="text-sm text-orange-800 dark:text-orange-300 leading-relaxed whitespace-pre-wrap font-medium">
-                                        {job.admin_comment}
-                                    </p>
-                                </section>
-                            )}
-
                             {/* Skills */}
                             {job.skills && job.skills.length > 0 && (
                                 <section className="bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-700 p-8 shadow-sm hover:shadow-md transition-shadow">
@@ -226,44 +189,6 @@ const JobDetail = () => {
                                             >
                                                 {skill.name}
                                             </span>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
-
-                            {/* Project Resources (NEW) */}
-                            {job.resource_urls && job.resource_urls.length > 0 && (
-                                <section className="bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-700 p-8 shadow-sm hover:shadow-md transition-shadow">
-                                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                                        Project Resources
-                                    </h2>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                        {job.resource_urls.map((url, idx) => (
-                                            <a 
-                                                key={idx} 
-                                                href={url} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="aspect-square relative rounded-xl border border-gray-100 dark:border-slate-700 overflow-hidden group hover:border-blue-500 transition-all cursor-pointer shadow-sm hover:shadow-md"
-                                                title={`Download Resource ${idx + 1}`}
-                                            >
-                                                {url.match(/\.(mp4|webm|ogg)$/i) ? (
-                                                    <div className="w-full h-full bg-slate-100 dark:bg-slate-900 flex flex-col items-center justify-center gap-2">
-                                                        <svg className="w-8 h-8 text-blue-500 opacity-50" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">VIDEO_{idx + 1}</span>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <img src={url} alt={`Resource ${idx}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <span className="text-[10px] font-bold text-white uppercase tracking-widest">IMG_{idx + 1}</span>
-                                                        </div>
-                                                    </>
-                                                )}
-                                                <div className="absolute top-2 right-2 w-6 h-6 rounded-lg bg-white/90 dark:bg-slate-800/90 shadow-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-                                                    <svg className="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                                </div>
-                                            </a>
                                         ))}
                                     </div>
                                 </section>
@@ -831,17 +756,6 @@ const JobDetail = () => {
                 }}
             />
         )}
-        
-        {/* Render CyberModal for Confirmations */}
-        <CyberModal
-            isOpen={modalState.isOpen}
-            onClose={() => setModalState(s => ({ ...s, isOpen: false }))}
-            title={modalState.title}
-            message={modalState.message}
-            type={modalState.type}
-            confirmText={modalState.confirmText}
-            onConfirm={modalState.onConfirm}
-        />
         </>
     );
 };
