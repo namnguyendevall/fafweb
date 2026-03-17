@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { walletApi } from '../../api/wallet.api'
-import { toast } from 'react-hot-toast'
+import { useToast } from '../../contexts/ToastContext'
 
 const Depositpoint = () => {
+    const { success, error } = useToast()
     const navigate = useNavigate()
     const location = useLocation()
     const initialPoints = location.state?.points || 100
@@ -48,21 +48,22 @@ const Depositpoint = () => {
                 if (res.order_url) {
                     window.location.href = res.order_url;
                 } else {
-                    throw new Error("Không nhận được link thanh toán ZaloPay");
+                    error("Không nhận được link thanh toán ZaloPay");
                 }
             } else if (paymentMethod === 'momo') {
                 res = await walletApi.depositMoMo(points);
-                if (res.payUrl) {
-                    window.location.href = res.payUrl;
+                if (res.checkout_url) {
+                    success('Redirecting to payment gateway...')
+                    window.location.href = res.checkout_url
                 } else {
-                    throw new Error("Không nhận được link thanh toán MoMo");
+                    error('Could not create payment order')
                 }
             } else {
-                toast.error("Phương thức thanh toán này chưa được hỗ trợ");
+                error("Phương thức thanh toán này chưa được hỗ trợ");
             }
-        } catch (error) {
-            console.error("Payment error:", error);
-            toast.error(error.response?.data?.message || "Lỗi khi khởi tạo thanh toán");
+        } catch (err) {
+            console.error("Payment error:", err);
+            error(err.response?.data?.message || "Lỗi khi khởi tạo thanh toán");
         } finally {
             setLoading(false)
         }

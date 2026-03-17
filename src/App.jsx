@@ -1,4 +1,3 @@
-import { Toaster } from "react-hot-toast";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { ToastProvider } from "./contexts/ToastContext";
 import PublicLayout from "./components/PublicLayout";
@@ -65,7 +64,6 @@ function App() {
 
   return (
     <ToastProvider>
-      <Toaster position="top-right" reverseOrder={false} />
       <ChatProvider>
         <DynamicBackground />
         <Routes>
