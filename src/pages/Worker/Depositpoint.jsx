@@ -53,9 +53,9 @@ const Depositpoint = () => {
                 }
             } else if (paymentMethod === 'momo') {
                 res = await walletApi.depositMoMo(points);
-                if (res.checkout_url) {
+                if (res.payUrl) {
                     success('Redirecting to payment gateway...')
-                    window.location.href = res.checkout_url
+                    window.location.href = res.payUrl
                 } else {
                     error('Could not create payment order')
                 }
