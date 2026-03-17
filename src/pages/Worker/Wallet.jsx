@@ -39,9 +39,10 @@ const Wallet = () => {
         return realTransactions.map(tx => ({
             id: tx.id,
             type: tx.type === 'DEPOSIT' || tx.type === 'INCOMING' ? 'incoming' : 'outgoing',
-            title: tx.reference_type === 'ZALOPAY_DEPOSIT' ? 'Nạp tiền ZaloPay' : 
+            title: tx.description || (
+                   tx.reference_type === 'ZALOPAY_DEPOSIT' ? 'Nạp tiền ZaloPay' : 
                    tx.reference_type === 'MOMO_DEPOSIT' ? 'Nạp tiền MoMo' : 
-                   tx.type === 'DEPOSIT' ? 'Nạp tiền vào ví' : 'Giao dịch',
+                   tx.type === 'DEPOSIT' ? 'Nạp tiền vào ví' : 'Giao dịch'),
             date: new Date(tx.created_at).toLocaleString('vi-VN', { 
                 month: 'short', day: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit'
