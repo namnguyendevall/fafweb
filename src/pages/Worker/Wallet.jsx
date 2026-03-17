@@ -94,6 +94,7 @@ const Wallet = () => {
     const walletId = user?.id ? `faf_${user.id}_wallet` : 'faf_wallet'
     const totalBalance = user?.balance_points ?? 0
     const usdBalance = (totalBalance * 0.01).toFixed(2)
+    const systemFee = 2500 // Fixed fee in CRED
 
     const transactions = useMemo(() => {
         return realTransactions.map(tx => ({
