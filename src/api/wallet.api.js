@@ -15,5 +15,11 @@ export const walletApi = {
       ? `/wallets/check-status/zalopay/${paymentId}`
       : `/wallets/check-status/momo/${paymentId}`;
     return axiosClient.get(endpoint);
+  },
+  getWallet() {
+    return axiosClient.get("/users/me");
+  },
+  requestWithdrawal(data) {
+    return axiosClient.post("/wallets/withdraw/request", data);
   }
 };

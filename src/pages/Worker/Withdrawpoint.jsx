@@ -1,243 +1,299 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { walletApi } from '../../api/wallet.api'
+import { toast } from 'react-hot-toast'
 
 const Withdrawpoint = () => {
     const navigate = useNavigate()
-    const [withdrawalAmount, setWithdrawalAmount] = useState(1000.00)
-    const [selectedDestination, setSelectedDestination] = useState('visa-4242')
-    const [showToast, setShowToast] = useState(false)
+    const [withdrawalAmount, setWithdrawalAmount] = useState('')
+    const [phoneNumber, setPhoneNumber] = useState('')
+    const [transferMethod, setTransferMethod] = useState('momo') // 'momo' or 'atm'
+    
+    // ATM specific fields
+    const [bankName, setBankName] = useState('')
+    const [accountNumber, setAccountNumber] = useState('')
+    const [accountHolder, setAccountHolder] = useState('')
 
-    const availableBalance = 1250.00
-    const systemFeePercent = 5
-    const systemFee = (withdrawalAmount * systemFeePercent) / 100
-    const netReceive = withdrawalAmount - systemFee
+    const [availableBalance, setAvailableBalance] = useState(0)
+    const [loading, setLoading] = useState(false)
+    const [fetchingBalance, setFetchingBalance] = useState(true)
 
-    const handleMaxClick = () => {
-        setWithdrawalAmount(availableBalance)
-    }
+    useEffect(() => {
+        fetchBalance()
+    }, [])
 
-    const handleAmountChange = (e) => {
-        const value = parseFloat(e.target.value) || 0
-        if (value <= availableBalance) {
-            setWithdrawalAmount(value)
+    const fetchBalance = async () => {
+        try {
+            const res = await walletApi.getWallet()
+            if (res.data) {
+                setAvailableBalance(Number(res.data.balance_points) || 0)
+            }
+        } catch (error) {
+            console.error("Fetch balance error:", error)
+            toast.error("Không thể lấy số dư ví")
+        } finally {
+            setFetchingBalance(false)
         }
     }
 
-    const handleWithdraw = () => {
-        setShowToast(true)
-        setTimeout(() => {
-            navigate('/wallet')
-        }, 2000)
+    const systemFeePercent = 0 // User image shows $2.50 flat or something, but let's stick to simple for now or follow user instructions. 
+    // Actually user image shows "Phí giao dịch $2.50 USD". But our backend might not handle fees yet.
+    // I'll leave it as 0 or 2500 CRED as a constant if desired.
+    const systemFee = 2500 
+    const amountNum = Number(withdrawalAmount) || 0
+    const netReceive = Math.max(0, amountNum - systemFee)
+
+    const handleMaxClick = () => {
+        setWithdrawalAmount(availableBalance.toString())
+    }
+
+    const handleWithdraw = async () => {
+        if (amountNum < 10000) {
+            toast.error("Số tiền rút tối thiểu là 10,000 CRED")
+            return
+        }
+        if (amountNum > availableBalance) {
+            toast.error("Số dư không đủ")
+            return
+        }
+        if (!phoneNumber) {
+            toast.error("Vui lòng nhập số điện thoại")
+            return
+        }
+
+        const bankInfo = {
+            method: transferMethod,
+            phone: phoneNumber,
+            ...(transferMethod === 'atm' && {
+                bankName,
+                accountNumber,
+                accountHolder: accountHolder.toUpperCase()
+            })
+        }
+
+        setLoading(true)
+        try {
+            await walletApi.requestWithdrawal({
+                amount: amountNum,
+                bank_info: bankInfo
+            })
+            toast.success("Yêu cầu rút tiền đã được gửi!")
+            setTimeout(() => navigate('/wallet'), 2000)
+        } catch (error) {
+            console.error("Withdraw error:", error)
+            toast.error(error.response?.data?.message || "Rút tiền thất bại")
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
-        <div className="w-full min-h-screen bg-transparent text-slate-300 relative flex flex-col font-sans">
+        <div className="w-full min-h-screen bg-[#020617] text-slate-300 flex flex-col font-sans py-12 px-4 selection:bg-rose-500/30">
+            <div className="mx-auto max-w-2xl w-full">
+                {/* Header Navigation */}
+                <button
+                    onClick={() => navigate(-1)}
+                    className="group mb-8 flex items-center gap-2 text-[10px] font-black font-mono text-cyan-500 uppercase tracking-[0.2em] transition-all hover:text-cyan-400"
+                >
+                    <svg className="w-4 h-4 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    QUAY LẠI VÍ
+                </button>
 
-            {/* Toast Notification */}
-            {showToast && (
-                <div className="fixed top-4 right-4 z-50 animate-[slideInRight_0.3s_ease-out]">
-                    <div className="bg-[#090e17] rounded-xl shadow-[0_0_30px_rgba(16,185,129,0.2)] border border-emerald-500/40 p-4 flex items-center gap-4 min-w-[320px] relative overflow-hidden">
-                        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
-                        <div className="h-10 w-10 rounded-lg bg-emerald-900/40 border border-emerald-500/50 flex flex-col items-center justify-center shrink-0">
-                            <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                        </div>
-                        <div className="flex-1">
-                            <div className="text-[11px] font-black text-emerald-400 uppercase tracking-widest font-mono">ĐANG XỬ LÝ RÚT TIỀN</div>
-                            <div className="text-[9px] font-mono text-slate-400 mt-1 uppercase tracking-widest leading-relaxed">
-                                Đã gửi yêu cầu. Xử lý dự kiến từ 1-3 ngày làm việc.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+                {/* Main Card */}
+                <div className="relative group/card">
+                    {/* Decorative Background Elements */}
+                    <div className="absolute -inset-px bg-gradient-to-br from-rose-500/20 via-transparent to-indigo-500/20 rounded-3xl blur-sm transition-opacity group-hover/card:opacity-100 opacity-50" />
+                    
+                    <div className="relative bg-[#0b1120] border border-white/5 rounded-3xl p-8 shadow-2xl overflow-hidden backdrop-blur-xl">
+                        {/* Cyber Accents */}
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 blur-[50px] -mr-8 -mt-8" />
+                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/5 blur-[60px] -ml-12 -mb-12" />
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-rose-500/50 to-transparent" />
 
-            <div className="mx-auto max-w-4xl px-4 py-12 relative z-10 w-full">
-                {/* Header */}
-                <div className="mb-8 pl-2">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="inline-flex items-center gap-2 text-[10px] font-black font-mono text-cyan-500 hover:text-cyan-400 uppercase tracking-widest mb-6 transition-colors group"
-                    >
-                        <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                        HỦY BỎ VÀ QUAY LẠI VÍ
-                    </button>
-                    <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-rose-900/50 to-indigo-900/50 border border-rose-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(225,29,72,0.2)]">
-                            <svg className="w-6 h-6 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-black text-white uppercase tracking-wider">RÚT TIỀN TỪ TÀI KHOẢN</h1>
-                            <p className="text-[11px] font-mono text-rose-400/70 uppercase tracking-widest mt-1">Chuyển số dư khả dụng ra ngân hàng ngoài</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Main Content Card */}
-                <div className="rounded-2xl border p-8 bg-[#090e17]/80 backdrop-blur-md relative overflow-hidden shadow-2xl" style={{ borderColor: 'rgba(225,29,72,0.2)' }}>
-                    {/* Cyber accents */}
-                    <div className="absolute top-0 right-10 w-32 h-px bg-rose-400/50" />
-                    <div className="absolute top-0 right-10 w-px h-8 bg-rose-400/50" />
-                    <div className="absolute bottom-0 left-10 w-32 h-px bg-rose-400/50" />
-                    <div className="absolute bottom-0 left-10 w-px h-8 bg-rose-400/50" />
-
-                    <div className="space-y-8">
-                        {/* Available Balance Section */}
-                        <div className="bg-[#02040a] rounded-xl border border-slate-800 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <div className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-2">
-                                    SỐ DƯ KHẢ DỤNG
-                                </div>
-                                <div className="text-3xl font-black text-white font-mono tracking-tighter">
-                                    ${availableBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </div>
-                            </div>
-                            <div className="h-12 w-12 rounded-xl bg-cyan-900/20 border border-cyan-500/30 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.15)] shrink-0">
-                                <svg className="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {/* Title Section */}
+                        <div className="flex items-center gap-6 mb-10">
+                            <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-rose-500 to-indigo-600 flex items-center justify-center shadow-[0_0_20px_rgba(225,29,72,0.4)] ring-1 ring-white/20">
+                                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-black text-white tracking-widest uppercase">YÊU CẦU RÚT TIỀN</h1>
+                                <p className="text-[10px] font-bold text-rose-500/70 tracking-[0.3em] uppercase mt-1">Rút tiền ra ngân hàng ngoài</p>
+                            </div>
+                        </div>
+
+                        {/* Balance Display */}
+                        <div className="mb-10 p-6 bg-black/40 border border-white/5 rounded-2xl flex items-center justify-between">
+                            <div>
+                                <span className="text-[10px] font-black text-cyan-500 tracking-widest uppercase mb-1 block">SỐ DƯ KHẢ DỤNG</span>
+                                <div className="text-3xl font-black text-white font-mono tracking-tight">
+                                    {fetchingBalance ? '---' : availableBalance.toLocaleString()} <span className="text-xs text-slate-500">CRED</span>
+                                </div>
+                            </div>
+                            <div className="h-10 w-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
                         </div>
 
-                        {/* Withdrawal Amount Section */}
-                        <div>
-                            <label className="block text-[10px] font-black text-rose-400 uppercase tracking-widest font-mono mb-4">
-                                SỐ TIỀN RÚT
-                            </label>
-                            <div className="relative group">
-                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-lg font-black text-slate-500 font-mono">$</span>
+                        {/* Form Body */}
+                        <div className="space-y-8">
+                            {/* Amount Input */}
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">SỐ TIỀN RÚT</label>
+                                <div className="relative group">
+                                    <input
+                                        type="number"
+                                        value={withdrawalAmount}
+                                        onChange={(e) => setWithdrawalAmount(e.target.value)}
+                                        placeholder="0"
+                                        className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-5 text-2xl font-black text-white focus:outline-none focus:border-rose-500/50 focus:ring-4 focus:ring-rose-500/10 transition-all placeholder-white/5"
+                                    />
+                                    <button 
+                                        onClick={handleMaxClick}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 px-4 py-2 bg-rose-500/10 text-rose-500 text-[10px] font-black rounded-lg border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all uppercase"
+                                    >
+                                        Tối đa
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Phone Input */}
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">SỐ ĐIỆN THOẠI LIÊN HỆ</label>
                                 <input
-                                    type="number"
-                                    value={withdrawalAmount > 0 ? withdrawalAmount : ''}
-                                    onChange={handleAmountChange}
-                                    step="0.01"
-                                    max={availableBalance}
-                                    placeholder="0.00"
-                                    className="w-full rounded-xl border border-slate-700 bg-[#02040a] px-5 pl-12 pr-24 py-4 text-xl font-black font-mono text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/20 transition-all placeholder-slate-700"
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                    placeholder="09xx xxx xxx"
+                                    className="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-lg font-bold text-white focus:outline-none focus:border-cyan-500/50 transition-all placeholder-white/5"
                                 />
-                                <button
-                                    onClick={handleMaxClick}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded bg-rose-900/30 border border-rose-500/50 px-3 py-1.5 text-[10px] font-black text-rose-400 hover:bg-rose-900/50 hover:text-rose-300 font-mono tracking-widest uppercase transition-colors"
-                                >
-                                    RÚT TOÀN BỘ
-                                </button>
                             </div>
-                        </div>
 
-                        {/* Select Destination Section */}
-                        <div>
-                            <label className="block text-[10px] font-black text-cyan-500 uppercase tracking-widest font-mono mb-4">
-                                NGÂN HÀNG HƯỞNG THỤ
-                            </label>
-                            <div className="space-y-4">
-                                {/* Visa Card Option */}
-                                <button
-                                    onClick={() => setSelectedDestination('visa-4242')}
-                                    className={`w-full relative rounded-xl border p-5 text-left transition-all ${selectedDestination === 'visa-4242'
-                                        ? 'border-cyan-500 bg-cyan-900/10 shadow-[0_0_15px_rgba(6,182,212,0.15)]'
-                                        : 'border-slate-800 bg-[#02040a] hover:border-slate-700'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-5">
-                                        <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${selectedDestination === 'visa-4242'
-                                            ? 'border-cyan-500 bg-cyan-500/20'
-                                            : 'border-slate-600 bg-transparent'
-                                            }`}>
-                                            {selectedDestination === 'visa-4242' && (
-                                                <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,1)]"></div>
-                                            )}
+                            {/* Method Selection */}
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">HÌNH THỨC CHUYỂN</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        onClick={() => setTransferMethod('momo')}
+                                        className={`p-4 rounded-2xl border flex items-center justify-center gap-3 transition-all ${transferMethod === 'momo' ? 'bg-rose-500/10 border-rose-500 shadow-[0_0_15px_rgba(225,29,72,0.1)]' : 'bg-black/40 border-white/5 hover:border-white/10'}`}
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-[#a50064] flex items-center justify-center p-1.5 ring-1 ring-white/10">
+                                            <svg viewBox="0 0 512 512" className="w-full h-full fill-white"><path d="M439.8 48H72.2C58.8 48 48 58.8 48 72.2v367.6C48 453.2 58.8 464 72.2 464h367.6c13.3 0 24.2-10.8 24.2-24.2V72.2C464 58.8 453.2 48 439.8 48zM315.6 348.8c-23 0-41.6-18.6-41.6-41.6 0-23 18.6-41.6 41.6-41.6s41.6 18.6 41.6 41.6c0 23-18.6 41.6-41.6 41.6zm-119.2 0c-23 0-41.6-18.6-41.6-41.6 0-23 18.6-41.6 41.6-41.6s41.6 18.6 41.6 41.6c0 23-18.6 41.6-41.6 41.6z"/></svg>
                                         </div>
-                                        <div className="flex items-center gap-4 flex-1">
-                                            <div className="h-10 w-16 rounded bg-gradient-to-r from-blue-700 to-blue-900 border border-blue-500/30 flex items-center justify-center shrink-0 shadow-inner">
-                                                <span className="text-[11px] font-black italic text-white tracking-wider">VISA</span>
-                                            </div>
-                                            <div>
-                                                <div className="text-[12px] font-bold text-slate-200 uppercase tracking-wider font-mono">THẺ VISA [4242]</div>
-                                                <div className="text-[10px] font-mono text-slate-500 mt-1 tracking-widest uppercase">HẠN SD: 12/25</div>
-                                            </div>
+                                        <span className={`text-xs font-black uppercase tracking-widest ${transferMethod === 'momo' ? 'text-rose-400' : 'text-slate-500'}`}>Momo</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setTransferMethod('atm')}
+                                        className={`p-4 rounded-2xl border flex items-center justify-center gap-3 transition-all ${transferMethod === 'atm' ? 'bg-indigo-500/10 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'bg-black/40 border-white/5 hover:border-white/10'}`}
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center ring-1 ring-white/10">
+                                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
                                         </div>
-                                    </div>
-                                </button>
+                                        <span className={`text-xs font-black uppercase tracking-widest ${transferMethod === 'atm' ? 'text-indigo-400' : 'text-slate-500'}`}>ATM / Bank</span>
+                                    </button>
+                                </div>
+                            </div>
 
-                                {/* Add New Method Option */}
-                                <button
-                                    onClick={() => setSelectedDestination('new')}
-                                    className={`w-full relative rounded-xl border p-5 text-left transition-all ${selectedDestination === 'new'
-                                        ? 'border-cyan-500 bg-cyan-900/10 shadow-[0_0_15px_rgba(6,182,212,0.15)]'
-                                        : 'border-slate-800 bg-[#02040a] hover:border-slate-700'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-5">
-                                        <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${selectedDestination === 'new'
-                                            ? 'border-cyan-500 bg-cyan-500/20'
-                                            : 'border-slate-600 bg-transparent'
-                                            }`}>
-                                            {selectedDestination === 'new' && (
-                                                <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,1)]"></div>
-                                            )}
+                            {/* ATM Conditional Fields */}
+                            {transferMethod === 'atm' && (
+                                <div className="space-y-5 animate-[fadeIn_0.3s_ease-out]">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">STK NGÂN HÀNG</label>
+                                            <input
+                                                type="text"
+                                                value={accountNumber}
+                                                onChange={(e) => setAccountNumber(e.target.value)}
+                                                placeholder="Ví dụ: 039882xxxx"
+                                                className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-indigo-500/50"
+                                            />
                                         </div>
-                                        <div className="flex items-center gap-4 flex-1">
-                                            <div className="h-10 w-10 rounded bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 text-slate-400">
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <div className="text-[12px] font-bold text-slate-300 uppercase tracking-wider font-mono">THÊM NGÂN HÀNG MỚI</div>
-                                                <div className="text-[10px] font-mono text-slate-500 mt-1 tracking-widest uppercase">Kết nối tài khoản ngân hàng</div>
-                                            </div>
+                                        <div>
+                                            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">NGÂN HÀNG</label>
+                                            <select
+                                                value={bankName}
+                                                onChange={(e) => setBankName(e.target.value)}
+                                                className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-indigo-500/50 appearance-none cursor-pointer"
+                                            >
+                                                <option value="" disabled>-- Chọn --</option>
+                                                <option value="Vietcombank">Vietcombank</option>
+                                                <option value="MBBank">MB Bank</option>
+                                                <option value="Techcombank">Techcombank</option>
+                                                <option value="TPBank">TP Bank</option>
+                                                <option value="Viettinbank">Viettinbank</option>
+                                                <option value="Agribank">Agribank</option>
+                                                <option value="VPBank">VPBank</option>
+                                                <option value="ACB">ACB</option>
+                                            </select>
                                         </div>
                                     </div>
+                                    <div>
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">TÊN CHỦ THẺ (KHÔNG DẤU)</label>
+                                        <input
+                                            type="text"
+                                            value={accountHolder}
+                                            onChange={(e) => setAccountHolder(e.target.value)}
+                                            placeholder="NGUYEN VAN A"
+                                            className="w-full bg-black/40 border border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-white focus:outline-none focus:border-indigo-500/50 uppercase"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Summary & Button */}
+                            <div className="pt-6 border-t border-white/5">
+                                <div className="flex justify-between items-center mb-6 px-1">
+                                    <span className="text-[11px] font-black text-slate-500 tracking-widest uppercase">Phí giao dịch cố định</span>
+                                    <span className="text-sm font-bold text-slate-300 font-mono">{systemFee.toLocaleString()} CRED</span>
+                                </div>
+                                
+                                <button
+                                    onClick={handleWithdraw}
+                                    disabled={loading || !withdrawalAmount || amountNum > availableBalance}
+                                    className="w-full relative group/btn h-16 rounded-2xl overflow-hidden disabled:opacity-30 disabled:pointer-events-none transition-all hover:scale-[1.01]"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-rose-600 via-rose-500 to-indigo-600 animate-gradient" />
+                                    <div className="absolute inset-px bg-black group-hover/btn:bg-transparent rounded-[15px] transition-colors" />
+                                    <div className="relative flex items-center justify-center gap-3 text-[11px] font-black text-white tracking-[0.3em] uppercase">
+                                        {loading ? (
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <>
+                                                XÁC NHẬN RÚT TIỀN <span className="text-xs">»</span>
+                                            </>
+                                        )}
+                                    </div>
                                 </button>
+                                
+                                <p className="text-center mt-6 text-[9px] font-bold text-slate-500 tracking-widest uppercase leading-relaxed">
+                                    Thời gian xử lý dự kiến: <span className="text-cyan-500">24h - 48h</span> làm việc
+                                </p>
                             </div>
-                        </div>
-
-                        {/* Withdrawal Summary Section */}
-                        <div className="bg-[#02040a] rounded-xl border border-slate-800 p-6 space-y-4 font-mono">
-                            <div className="flex items-center justify-between text-slate-400 text-[11px] uppercase tracking-widest">
-                                <span>SỐ TIỀN YÊU CẦU</span>
-                                <span className="text-white">${withdrawalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-rose-500/70 text-[11px] uppercase tracking-widest">
-                                <span>PHÍ GIAO DỊCH ({systemFeePercent}%)</span>
-                                <span className="text-rose-400">-${systemFee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                            <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-                                <span className="text-[12px] font-black text-cyan-400 tracking-widest uppercase">SỐ TIỀN NHẬN THỰC TẾ</span>
-                                <span className="text-2xl font-black text-white">${netReceive.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                        </div>
-
-
-                        {/* Request Withdrawal Button */}
-                        <button
-                            onClick={handleWithdraw}
-                            disabled={withdrawalAmount <= 0 || withdrawalAmount > availableBalance}
-                            className="w-full rounded-xl bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-600 hover:to-indigo-600 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 disabled:border-slate-700 disabled:shadow-none py-4 text-[12px] font-black tracking-widest font-mono text-white shadow-[0_0_20px_rgba(225,29,72,0.3)] border border-rose-400/50 transition-all hover:scale-[1.02] flex items-center justify-center gap-3 uppercase"
-                        >
-                            XÁC NHẬN RÚT TIỀN
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                            </svg>
-                        </button>
-
-                        {/* Processing Time Note */}
-                        <div className="flex items-start gap-3 bg-indigo-900/10 border border-indigo-500/20 p-4 rounded-lg">
-                            <svg className="w-5 h-5 mt-0.5 shrink-0 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span className="text-[10px] font-mono text-indigo-300 uppercase tracking-widest leading-relaxed">
-                                THỜI GIAN XỬ LÝ TỪ 1-3 NGÀY LÀM VIỆC. CÁC KHOẢN RÚT LỚN CÓ THỂ CẦN XÁC MINH BỔ SUNG.
-                            </span>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes gradient {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
+                .animate-gradient {
+                    background-size: 200% 200%;
+                    animation: gradient 3s infinite linear;
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}} />
         </div>
     )
 }
