@@ -133,6 +133,14 @@ const CyberSidebar = ({ user, navigate }) => {
             { icon: '⬢', label: t('home.sidebar.messages'),     sub: t('home.sidebar.messages_sub'), path: '/messages',              color: 'text-green-400' },
             { icon: '⊕', label: t('home.sidebar.settings'),     sub: t('home.sidebar.settings_sub'),  path: '/settings',              color: 'text-slate-400' },
         ]
+        : role === 'admin'
+        ? [
+            { icon: '⬡', label: 'SYS_ADMIN',      sub: 'Main Dashboard',      path: '/admin/dashboard',        color: 'text-cyan-400' },
+            { icon: '◈', label: 'USER_REGISTRY',  sub: 'Node Management',      path: '/admin/user-management',   color: 'text-purple-400' },
+            { icon: '⬢', label: 'SYS_MODERATION', sub: 'Control Center',      path: '/admin/moderation',        color: 'text-emerald-400' },
+            { icon: '✦', label: 'FIN_ESCROW',     sub: 'Ledger Audit',        path: '/admin/finance',           color: 'text-amber-400' },
+            { icon: '⊕', label: t('home.sidebar.settings'),     sub: t('home.sidebar.settings_sub'),  path: '/settings',              color: 'text-slate-400' },
+          ]
         : [
             { icon: '⬡', label: t('home.sidebar.dashboard'), sub: t('home.sidebar.dashboard_sub_client'),   path: '/task-owner',            color: 'text-cyan-400' },
             { icon: '◈', label: t('home.sidebar.post_job'),     sub: t('home.sidebar.post_job_sub'), path: '/task-owner/post-job',   color: 'text-purple-400' },
@@ -180,7 +188,7 @@ const CyberSidebar = ({ user, navigate }) => {
                         </div>
                         <div>
                             <p className={`font-black text-[15px] tracking-wide uppercase leading-tight ${isLight ? 'text-slate-800' : 'text-white'}`}>{displayName}</p>
-                            <p className={`text-[10px] font-bold tracking-widest uppercase ${isLight ? 'text-cyan-700' : 'text-cyan-400'}`}>{role === 'worker' ? t('home.sidebar.role_worker') : role === 'manager' ? 'MASTER_OP' : t('home.sidebar.role_client')} · {t('home.sidebar.system')}</p>
+                            <p className={`text-[10px] font-bold tracking-widest uppercase ${isLight ? 'text-cyan-700' : 'text-cyan-400'}`}>{role === 'worker' ? t('home.sidebar.role_worker') : role === 'manager' ? 'MASTER_OP' : role === 'admin' ? 'SYS_ADMIN' : t('home.sidebar.role_client')} · {t('home.sidebar.system')}</p>
                             {user?.tier && (
                                 <span className={`inline-block mt-1 text-[8px] font-black tracking-widest px-2 py-0.5 rounded border uppercase ${isLight ? 'bg-cyan-100 text-cyan-800 border-cyan-200' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'}`}>
                                     {user.tier}
@@ -251,6 +259,16 @@ const CyberRightPanel = ({ user, navigate }) => {
             { label: t('home.right_panel.find_work') || '► SEARCH NEW CONTRACTS',    path: '/find-work',  neon: 'purple' },
             { label: t('home.right_panel.wallet') || '► OPEN WALLET',      path: '/wallet',     neon: 'amber'  },
             { label: t('home.right_panel.messages') || '► COMM LINKS',         path: '/messages',   neon: 'green'  },
+          ]
+        : [
+            { label: t('home.right_panel.messages') || '► COMM LINKS',         path: '/messages',              neon: 'green'  },
+          ]
+        : role === 'admin'
+        ? [
+            { label: '► SYS DASHBOARD',    path: '/admin/dashboard',        neon: 'cyan'   },
+            { label: '► USER REGISTRY',    path: '/admin/user-management',   neon: 'purple' },
+            { label: '► MODERATION HUB',   path: '/admin/moderation',        neon: 'green'  },
+            { label: '► FINANCE LEDGER',   path: '/admin/finance',           neon: 'amber'  },
           ]
         : [
             { label: t('home.right_panel.dash_client') || '► CLIENT DASHBOARD',   path: '/task-owner',            neon: 'cyan'   },
@@ -366,11 +384,14 @@ const FeedHeader = ({ user, navigate }) => {
             { emoji: '💬', label: t('home.feed.messages'),   grad: 'from-emerald-500 to-cyan-600',  path: '/messages'  },
             { emoji: '💰', label: t('home.feed.wallet'),     grad: 'from-amber-500 to-orange-600',  path: '/wallet'    },
           ]
-        : role === 'manager'
-        ? [
-            { emoji: '🛡️', label: 'SHIELD_NET',      grad: 'from-emerald-500 to-teal-600',   path: '/manager/request' },
-            { emoji: 'USERS', label: 'PERSONNEL',    grad: 'from-purple-500 to-indigo-600',  path: '/admin/user-management' },
             { emoji: '💬', label: t('home.feed.messages'),   grad: 'from-emerald-500 to-cyan-600',  path: '/messages'   },
+          ]
+        : role === 'admin'
+        ? [
+            { emoji: '🛡️', label: 'ADMIN_DASH',      grad: 'from-cyan-500 to-blue-600',      path: '/admin/dashboard' },
+            { emoji: '👥', label: 'USERS',          grad: 'from-purple-500 to-indigo-600',  path: '/admin/user-management' },
+            { emoji: '⚖️', label: 'MODERATION',     grad: 'from-emerald-500 to-teal-600',    path: '/admin/moderation' },
+            { emoji: '💰', label: 'FINANCE',        grad: 'from-amber-500 to-orange-600',   path: '/admin/finance' },
           ]
         : [
             { emoji: '➕', label: t('home.feed.post_job'),   grad: 'from-cyan-500 to-blue-600',     path: '/task-owner/post-job' },
@@ -503,7 +524,7 @@ const HomePage = () => {
                                 </div>
                                 <div className="hidden sm:flex items-center gap-1.5 text-[10px] font-mono text-slate-500">
                                     <span className="text-cyan-500/60">|</span>
-                                    <span>{t('home.status_bar.role_label')} <span className="text-cyan-300">{user.role === 'worker' ? t('home.status_bar.role_worker') : user.role === 'manager' ? 'MASTER_OP' : t('home.status_bar.role_client')}</span></span>
+                                    <span>{t('home.status_bar.role_label')} <span className="text-cyan-300">{user.role === 'worker' ? t('home.status_bar.role_worker') : user.role === 'manager' ? 'MASTER_OP' : user.role === 'admin' ? 'SYS_ADMIN' : t('home.status_bar.role_client')}</span></span>
                                     <span className="text-cyan-500/60">|</span>
                                     <span>{t('home.status_bar.status_label')} <span className="text-green-300">{t('home.status_bar.status_value')}</span></span>
                                     <span className="text-cyan-500/60">|</span>
@@ -521,12 +542,17 @@ const HomePage = () => {
                                         className="text-[10px] font-black tracking-widest uppercase font-mono border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 hover:border-emerald-400 hover:shadow-[0_0_15px_rgba(16,185,129,0.3)] px-3 py-1.5 rounded transition-all">
                                         COMMAND CENTER
                                     </button>
-                                ) : (
-                                    <button onClick={() => navigate('/task-owner/post-job')}
-                                        className="text-[10px] font-black tracking-widest uppercase font-mono border border-purple-500/40 text-purple-300 hover:bg-purple-500/10 hover:border-purple-400 px-3 py-1.5 rounded transition-all">
-                                        {t('home.status_bar.btn_post_job')}
-                                    </button>
-                                )}
+                                    ) : user.role === 'admin' ? (
+                                        <button onClick={() => navigate('/admin/dashboard')}
+                                            className="text-[10px] font-black tracking-widest uppercase font-mono border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(6,182,212,0.3)] px-3 py-1.5 rounded transition-all">
+                                            ADMIN_PANEL
+                                        </button>
+                                    ) : (
+                                        <button onClick={() => navigate('/task-owner/post-job')}
+                                            className="text-[10px] font-black tracking-widest uppercase font-mono border border-purple-500/40 text-purple-300 hover:bg-purple-500/10 hover:border-purple-400 px-3 py-1.5 rounded transition-all">
+                                            {t('home.status_bar.btn_post_job')}
+                                        </button>
+                                    )}
                             </div>
                         </div>
                     </div>
