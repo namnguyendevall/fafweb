@@ -380,12 +380,12 @@ const FeedHeader = ({ user, navigate }) => {
 
     return (
         <div 
-            className={`relative rounded-xl overflow-hidden p-4 transition-all duration-300 ${isLight ? 'border border-transparent' : 'border border-slate-700/50 backdrop-blur-md'}`}
+            className={`relative rounded-xl p-4 pb-6 transition-all duration-300 ${isLight ? 'border border-transparent' : 'border border-slate-700/50 backdrop-blur-md'}`}
             style={{ background: isLight ? 'transparent' : 'rgba(15,23,42,0.7)' }}
         >
             <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent ${isLight ? 'via-cyan-500/30' : 'via-cyan-400/40'} to-transparent`} />
             <p className={`text-[9px] font-black tracking-widest uppercase mb-3 ${isLight ? 'text-slate-600' : 'text-slate-500'}`}>{t('home.feed.quick_access')}</p>
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide py-1">
                 {shortcuts.map(s => (
                     <button key={s.path} onClick={() => navigate(s.path)}
                         className="flex-shrink-0 flex flex-col items-center gap-2 group"
