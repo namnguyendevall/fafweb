@@ -260,7 +260,8 @@ const CyberRightPanel = ({ user, navigate }) => {
             { label: t('home.right_panel.wallet') || '► OPEN WALLET',      path: '/wallet',     neon: 'amber'  },
             { label: t('home.right_panel.messages') || '► COMM LINKS',         path: '/messages',   neon: 'green'  },
           ]
-        : [
+        : role === 'manager'
+        ? [
             { label: t('home.right_panel.messages') || '► COMM LINKS',         path: '/messages',              neon: 'green'  },
           ]
         : role === 'admin'
@@ -384,6 +385,10 @@ const FeedHeader = ({ user, navigate }) => {
             { emoji: '💬', label: t('home.feed.messages'),   grad: 'from-emerald-500 to-cyan-600',  path: '/messages'  },
             { emoji: '💰', label: t('home.feed.wallet'),     grad: 'from-amber-500 to-orange-600',  path: '/wallet'    },
           ]
+        : role === 'manager'
+        ? [
+            { emoji: '🛡️', label: 'SHIELD_NET',      grad: 'from-emerald-500 to-teal-600',   path: '/manager/request' },
+            { emoji: '👥', label: 'PERSONNEL',      grad: 'from-purple-500 to-indigo-600',  path: '/admin/user-management' },
             { emoji: '💬', label: t('home.feed.messages'),   grad: 'from-emerald-500 to-cyan-600',  path: '/messages'   },
           ]
         : role === 'admin'
