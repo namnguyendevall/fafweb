@@ -43,8 +43,8 @@ const Wallet = () => {
 
     const handleWithdraw = async () => {
         const amountNum = Number(withdrawAmount) || 0
-        if (amountNum < 10000) {
-            toast.error("Số tiền rút tối thiểu là 10,000 CRED")
+        if (amountNum < 10) {
+            toast.error("Số tiền rút tối thiểu là 10 CRED")
             return
         }
         if (amountNum > totalBalance) {
@@ -93,8 +93,8 @@ const Wallet = () => {
 
     const walletId = user?.id ? `faf_${user.id}_wallet` : 'faf_wallet'
     const totalBalance = user?.balance_points ?? 0
-    const usdBalance = (totalBalance * 0.01).toFixed(2)
-    const systemFee = 2500 // Fixed fee in CRED
+    const vndBalance = (totalBalance * 10000).toLocaleString()
+    const systemFee = 0 // No fee as per user request
 
     const transactions = useMemo(() => {
         return realTransactions.map(tx => ({
@@ -211,7 +211,7 @@ const Wallet = () => {
                                     <div className="text-4xl md:text-5xl font-black text-white mb-2 font-mono tracking-tighter">
                                         {totalBalance.toLocaleString()} <span className="text-xl text-cyan-500 tracking-widest">CRED</span>
                                     </div>
-                                    <div className="text-lg font-bold text-slate-400 font-mono">~ ${usdBalance} USD</div>
+                                    <div className="text-lg font-bold text-slate-400 font-mono">~ {vndBalance} VND</div>
 
                                     <div className="mt-8 flex flex-wrap items-center gap-4">
                                         <div className="bg-[#02040a] border border-slate-800 rounded px-4 py-2 flex items-center gap-3 w-max">
@@ -467,7 +467,7 @@ const Wallet = () => {
                                                 type="number"
                                                 value={withdrawAmount}
                                                 onChange={(e) => setWithdrawAmount(e.target.value)}
-                                                placeholder="TỐI THIỂU: 10,000 CRED"
+                                                placeholder="TỐI THIỂU: 10 CRED"
                                                 className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-black font-mono text-white focus:outline-none focus:border-rose-500/50 transition-all placeholder-slate-800"
                                             />
                                             <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black font-mono text-slate-600">CRED</div>
@@ -538,7 +538,7 @@ const Wallet = () => {
 
                                 <button
                                     onClick={handleWithdraw}
-                                    disabled={isWithdrawing || !withdrawAmount || Number(withdrawAmount) < 10000}
+                                    disabled={isWithdrawing || !withdrawAmount || Number(withdrawAmount) < 10}
                                     className="w-full rounded-lg bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-600 hover:to-indigo-600 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(225,29,72,0.3)] border border-rose-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2 disabled:opacity-30"
                                 >
                                     {isWithdrawing ? (
