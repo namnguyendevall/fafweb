@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { walletApi } from '../../api/wallet.api'
+import { toast } from 'react-hot-toast'
 
 const Depositpoint = () => {
     const navigate = useNavigate()
     const location = useLocation()
-    const initialPoints = location.state?.points || 500
+    const initialPoints = location.state?.points || 100
 
     const [points, setPoints] = useState(initialPoints)
-    const [usdAmount, setUsdAmount] = useState(initialPoints)
-    const [paymentMethod, setPaymentMethod] = useState('credit-card')
-    const [processingFee, setProcessingFee] = useState(15.00)
-    const [showToast, setShowToast] = useState(false)
+    const [vndAmount, setVndAmount] = useState(initialPoints * 1000)
+    const [paymentMethod, setPaymentMethod] = useState('zalopay')
+    const [processingFee, setProcessingFee] = useState(0)
+    const [loading, setLoading] = useState(false)
 
-    const exchangeRate = 1.00 // 1 Point = $1.00 USD
+    const exchangeRate = 1000 // 1 Point = 1,000 VND
 
     useEffect(() => {
-        setUsdAmount(points)
+        setVndAmount(points * exchangeRate)
     }, [points])
 
     const handlePointsChange = (e) => {
@@ -23,44 +25,51 @@ const Depositpoint = () => {
         setPoints(value)
     }
 
-    const handleUsdChange = (e) => {
-        const value = parseFloat(e.target.value) || 0
-        setUsdAmount(value)
-        setPoints(Math.round(value / exchangeRate))
+    const handleVndChange = (e) => {
+        const value = parseInt(e.target.value) || 0
+        setVndAmount(value)
+        setPoints(Math.floor(value / exchangeRate))
     }
 
     const subtotal = points * exchangeRate
     const totalDue = subtotal + processingFee
 
-    const handlePayment = () => {
-        setShowToast(true)
-        setTimeout(() => {
-            navigate('/wallet')
-        }, 2000)
+    const handlePayment = async () => {
+        if (points < 1) {
+            toast.error("Vui lòng nạp tối thiểu 1 CRED")
+            return
+        }
+
+        setLoading(true)
+        try {
+            let res;
+            if (paymentMethod === 'zalopay') {
+                res = await walletApi.depositZaloPay(points);
+                if (res.order_url) {
+                    window.location.href = res.order_url;
+                } else {
+                    throw new Error("Không nhận được link thanh toán ZaloPay");
+                }
+            } else if (paymentMethod === 'momo') {
+                res = await walletApi.depositMoMo(points);
+                if (res.payUrl) {
+                    window.location.href = res.payUrl;
+                } else {
+                    throw new Error("Không nhận được link thanh toán MoMo");
+                }
+            } else {
+                toast.error("Phương thức thanh toán này chưa được hỗ trợ");
+            }
+        } catch (error) {
+            console.error("Payment error:", error);
+            toast.error(error.response?.data?.message || "Lỗi khi khởi tạo thanh toán");
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
         <div className="w-full min-h-screen bg-transparent text-slate-300 relative flex flex-col font-sans">
-
-            {/* Toast Notification */}
-            {showToast && (
-                <div className="fixed top-4 right-4 z-50 animate-[slideInRight_0.3s_ease-out]">
-                    <div className="bg-[#090e17] rounded-xl shadow-[0_0_30px_rgba(16,185,129,0.2)] border border-emerald-500/40 p-4 flex items-center gap-4 min-w-[320px] relative overflow-hidden">
-                        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
-                        <div className="h-10 w-10 rounded-lg bg-emerald-900/40 border border-emerald-500/50 flex flex-col items-center justify-center shrink-0">
-                            <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                        </div>
-                        <div className="flex-1">
-                            <div className="text-[11px] font-black text-emerald-400 uppercase tracking-widest font-mono">GIAO DỊCH THÀNH CÔNG</div>
-                            <div className="text-[10px] font-mono text-slate-400 mt-1 uppercase tracking-widest">
-                                Đã cộng {points} CRED vào ví
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <div className="mx-auto max-w-4xl px-4 py-12 relative z-10">
                 {/* Header */}
@@ -118,17 +127,17 @@ const Depositpoint = () => {
                                 </div>
                                 
                                 <div className="flex-1 w-full relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-emerald-500 font-mono tracking-widest bg-emerald-900/30 px-2 py-1 rounded">USD</span>
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-emerald-500 font-mono tracking-widest bg-emerald-900/30 px-2 py-1 rounded">VND</span>
                                     <input
                                         type="number"
-                                        value={usdAmount.toFixed(2)}
-                                        onChange={handleUsdChange}
+                                        value={vndAmount}
+                                        onChange={handleVndChange}
                                         className="w-full rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 pl-[4.5rem] text-lg font-black font-mono text-emerald-300 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all text-right"
                                     />
                                 </div>
                             </div>
                             <p className="mt-3 text-[10px] font-mono font-black text-slate-500 tracking-widest uppercase">
-                                TỈ LỆ: 1 CRED = ${exchangeRate.toFixed(2)} USD
+                                TỈ LỆ: 1 CRED = {exchangeRate.toLocaleString()} VND
                             </p>
                         </div>
 
@@ -136,15 +145,15 @@ const Depositpoint = () => {
                         <div>
                             <label className="block text-[10px] font-black text-cyan-500 uppercase tracking-widest font-mono mb-4">PHƯƠNG THỨC THANH TOÁN</label>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {/* Credit Card Option */}
+                                {/* ZaloPay Option */}
                                 <button
-                                    onClick={() => setPaymentMethod('credit-card')}
-                                    className={`relative rounded-xl border p-4 text-left transition-all ${paymentMethod === 'credit-card'
+                                    onClick={() => setPaymentMethod('zalopay')}
+                                    className={`relative rounded-xl border p-4 text-left transition-all ${paymentMethod === 'zalopay'
                                         ? 'border-cyan-500 bg-cyan-900/10 shadow-[0_0_15px_rgba(6,182,212,0.15)]'
                                         : 'border-slate-800 bg-[#02040a] hover:border-slate-700'
                                         }`}
                                 >
-                                    {paymentMethod === 'credit-card' && (
+                                    {paymentMethod === 'zalopay' && (
                                         <div className="absolute top-3 right-3">
                                             <div className="h-4 w-4 rounded-full bg-cyan-500 flex items-center justify-center">
                                                 <svg className="w-2.5 h-2.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,29 +163,27 @@ const Depositpoint = () => {
                                         </div>
                                     )}
                                     <div className="flex items-center gap-4">
-                                        <div className={`h-10 w-10 rounded border flex items-center justify-center transition-colors ${paymentMethod === 'credit-card' ? 'bg-cyan-500/10 border-cyan-500/50' : 'bg-slate-900 border-slate-700'}`}>
-                                            <svg className={`w-5 h-5 ${paymentMethod === 'credit-card' ? 'text-cyan-400' : 'text-slate-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                            </svg>
+                                        <div className={`h-10 w-10 rounded border flex items-center justify-center transition-colors ${paymentMethod === 'zalopay' ? 'bg-cyan-500/10 border-cyan-500/50' : 'bg-slate-900 border-slate-700'}`}>
+                                            <img src="https://images.careerbuilder.vn/employer_folders/lot1/231161/410x410/121016zalopay-logo-ngan.png" alt="ZaloPay" className="w-8 h-8 rounded" />
                                         </div>
                                         <div>
                                             <div className="text-[11px] font-black tracking-widest uppercase font-mono text-slate-200">
-                                                THẺ TÍN DỤNG
+                                                ZALOPAY
                                             </div>
-                                            <div className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">XỬ LÝ TỨC THÌ</div>
+                                            <div className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">THANH TOÁN QR / VÍ</div>
                                         </div>
                                     </div>
                                 </button>
 
-                                {/* PayPal Option */}
+                                {/* MoMo Option */}
                                 <button
-                                    onClick={() => setPaymentMethod('paypal')}
-                                    className={`relative rounded-xl border p-4 text-left transition-all ${paymentMethod === 'paypal'
+                                    onClick={() => setPaymentMethod('momo')}
+                                    className={`relative rounded-xl border p-4 text-left transition-all ${paymentMethod === 'momo'
                                         ? 'border-cyan-500 bg-cyan-900/10 shadow-[0_0_15px_rgba(6,182,212,0.15)]'
                                         : 'border-slate-800 bg-[#02040a] hover:border-slate-700'
                                         }`}
                                 >
-                                    {paymentMethod === 'paypal' && (
+                                    {paymentMethod === 'momo' && (
                                         <div className="absolute top-3 right-3">
                                             <div className="h-4 w-4 rounded-full bg-cyan-500 flex items-center justify-center">
                                                 <svg className="w-2.5 h-2.5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,16 +193,14 @@ const Depositpoint = () => {
                                         </div>
                                     )}
                                     <div className="flex items-center gap-4">
-                                        <div className={`h-10 w-10 rounded border flex items-center justify-center transition-colors ${paymentMethod === 'paypal' ? 'bg-blue-600/20 border-blue-500/50' : 'bg-slate-900 border-slate-700'}`}>
-                                            <svg className={`w-5 h-5 ${paymentMethod === 'paypal' ? 'text-blue-400' : 'text-slate-500'}`} fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a.805.805 0 0 0-.606-.274h-3.01c-.524 0-.968.382-1.05.9l-1.12 7.106c-.082.518.109.74.633.74h1.47c.524 0 .968-.382 1.05-.9l1.12-7.106a.805.805 0 0 0 .023-.166z" />
-                                            </svg>
+                                        <div className={`h-10 w-10 rounded border flex items-center justify-center transition-colors ${paymentMethod === 'momo' ? 'bg-pink-600/20 border-pink-500/50' : 'bg-slate-900 border-slate-700'}`}>
+                                            <img src="https://upload.wikimedia.org/wikipedia/vi/f/fe/MoMo_Logo.png" alt="MoMo" className="w-8 h-8" />
                                         </div>
                                         <div>
                                             <div className="text-[11px] font-black tracking-widest uppercase font-mono text-slate-200">
-                                                CHUYỂN KHOẢN PAYPAL
+                                                VÍ MOMO
                                             </div>
-                                            <div className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">KẾT NỐI PAYPAL</div>
+                                            <div className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">QUÉT MÃ MOMO</div>
                                         </div>
                                     </div>
                                 </button>
@@ -206,29 +211,37 @@ const Depositpoint = () => {
                         <div className="bg-[#02040a] rounded-xl border border-slate-800 p-6 space-y-4 font-mono">
                             <div className="flex items-center justify-between text-slate-400 text-[11px] uppercase tracking-widest">
                                 <span>TẠM TÍNH ({points} CRED)</span>
-                                <span className="text-white">${subtotal.toFixed(2)}</span>
+                                <span className="text-white">{subtotal.toLocaleString()} VND</span>
                             </div>
                             <div className="flex items-center justify-between text-slate-400 text-[11px] uppercase tracking-widest">
                                 <span>PHÍ GIAO DỊCH</span>
-                                <span className="text-white">${processingFee.toFixed(2)}</span>
+                                <span className="text-white">{processingFee.toLocaleString()} VND</span>
                             </div>
                             <div className="flex items-center justify-between pt-4 border-t border-slate-800">
                                 <div>
                                     <div className="text-[12px] font-black text-cyan-400 tracking-widest uppercase">TỔNG CỘNG</div>
                                 </div>
-                                <span className="text-2xl font-black text-white">${totalDue.toFixed(2)}</span>
+                                <span className="text-2xl font-black text-white">{totalDue.toLocaleString()} VND</span>
                             </div>
                         </div>
 
                         {/* Pay Button */}
                         <button
                             onClick={handlePayment}
-                            className="w-full rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 py-4 text-[12px] font-black tracking-widest font-mono text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] border border-cyan-400/50 transition-all hover:scale-[1.02] flex items-center justify-center gap-3 uppercase"
+                            disabled={loading}
+                            className={`w-full rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 py-4 text-[12px] font-black tracking-widest font-mono text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] border border-cyan-400/50 transition-all hover:scale-[1.02] flex items-center justify-center gap-3 uppercase ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                            </svg>
-                            XÁC NHẬN THANH TOÁN [ ${totalDue.toFixed(2)} ]
+                            {loading ? (
+                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            ) : (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                            )}
+                            {loading ? 'ĐANG KHỞI TẠO...' : `XÁC NHẬN THANH TOÁN [ ${totalDue.toLocaleString()} VND ]`}
                         </button>
 
                         {/* Security Message */}
@@ -236,7 +249,7 @@ const Depositpoint = () => {
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
-                            <span>CỔNG THANH TOÁN BẢO MẬT STRIPE</span>
+                            <span>GIAO DỊCH BẢO MẬT QUA ZALOPAY / MOMO</span>
                         </div>
                     </div>
                 </div>
