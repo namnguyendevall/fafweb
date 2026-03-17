@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { walletApi } from '../../api/wallet.api'
+import { useToast } from '../../contexts/ToastContext'
 
 const Wallet = () => {
     const navigate = useNavigate()
@@ -13,6 +14,15 @@ const Wallet = () => {
     const [copied, setCopied] = useState(false)
     const [realTransactions, setRealTransactions] = useState([])
     const [loading, setLoading] = useState(false)
+    
+    // Integrated Withdrawal State
+    const [phoneNumber, setPhoneNumber] = useState('')
+    const [transferMethod, setTransferMethod] = useState('momo')
+    const [bankName, setBankName] = useState('')
+    const [accountNumber, setAccountNumber] = useState('')
+    const [accountHolder, setAccountHolder] = useState('')
+    const [isWithdrawing, setIsWithdrawing] = useState(false)
+    const toast = useToast()
 
     useEffect(() => {
         fetchMe();
@@ -30,6 +40,56 @@ const Wallet = () => {
             setLoading(false);
         }
     };
+
+    const handleWithdraw = async () => {
+        const amountNum = Number(withdrawAmount) || 0
+        if (amountNum < 10000) {
+            toast.error("Số tiền rút tối thiểu là 10,000 CRED")
+            return
+        }
+        if (amountNum > totalBalance) {
+            toast.error("Số dư không đủ")
+            return
+        }
+        if (!phoneNumber) {
+            toast.error("Vui lòng nhập số điện thoại liên hệ")
+            return
+        }
+
+        if (transferMethod === 'atm') {
+            if (!bankName || !accountNumber || !accountHolder) {
+                toast.error("Vui lòng nhập đầy đủ thông tin ngân hàng")
+                return
+            }
+        }
+
+        const bankInfo = {
+            method: transferMethod,
+            phone: phoneNumber,
+            ...(transferMethod === 'atm' && {
+                bankName,
+                accountNumber,
+                accountHolder: accountHolder.toUpperCase()
+            })
+        }
+
+        setIsWithdrawing(true)
+        try {
+            await walletApi.requestWithdrawal({
+                amount: amountNum,
+                bank_info: bankInfo
+            })
+            toast.success("Yêu cầu rút tiền đã được gửi!")
+            setWithdrawAmount('')
+            loadTransactions()
+            fetchMe()
+        } catch (error) {
+            console.error("Withdraw error:", error)
+            toast.error(error.response?.data?.message || "Rút tiền thất bại")
+        } finally {
+            setIsWithdrawing(false)
+        }
+    }
 
     const walletId = user?.id ? `faf_${user.id}_wallet` : 'faf_wallet'
     const totalBalance = user?.balance_points ?? 0
@@ -359,7 +419,7 @@ const Wallet = () => {
                             </div>
                         </div>
 
-                        {/* Withdraw Funds Card */}
+                        {/* Integrated Withdrawal Form Card */}
                         <div id="withdraw-section" className="rounded-2xl bg-[#090e17] border border-slate-800 shadow-xl relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/5 rounded-full blur-[40px] pointer-events-none" />
                             
@@ -372,48 +432,127 @@ const Wallet = () => {
                                     </div>
                                     <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest">YÊU CẦU RÚT TIỀN</h2>
                                 </div>
-                                <p className="mt-2 text-[10px] text-slate-500 font-mono tracking-widest uppercase">Rút tiền ra ngân hàng ngoài</p>
+                                <p className="mt-2 text-[10px] text-slate-500 font-mono tracking-widest uppercase">Rút tiền qua MoMo hoặc ATM</p>
                             </div>
                             
                             <div className="px-6 py-5 space-y-5">
-                                <div>
-                                    <div className="text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">SỐ DƯ KHẢ DỤNG</div>
-                                    <div className="rounded border border-slate-800 bg-[#02040a] px-4 py-3 flex items-center justify-between">
-                                        <div className="text-xl font-black text-rose-400 font-mono">{totalBalance.toLocaleString()}</div>
-                                        <div className="text-[10px] text-slate-500 font-mono">CRED</div>
+                                {/* Method Selection */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => setTransferMethod('momo')}
+                                        className={`p-3 rounded-lg border flex flex-col items-center gap-2 transition-all ${transferMethod === 'momo' ? 'bg-rose-500/10 border-rose-500 shadow-[0_0_15px_rgba(225,29,72,0.1)]' : 'bg-[#02040a] border-slate-800 hover:border-slate-700'}`}
+                                    >
+                                        <div className="w-6 h-6 rounded bg-[#a50064] flex items-center justify-center p-1 ring-1 ring-white/10">
+                                            <svg viewBox="0 0 512 512" className="w-full h-full fill-white"><path d="M439.8 48H72.2C58.8 48 48 58.8 48 72.2v367.6C48 453.2 58.8 464 72.2 464h367.6c13.3 0 24.2-10.8 24.2-24.2V72.2C464 58.8 453.2 48 439.8 48zM315.6 348.8c-23 0-41.6-18.6-41.6-41.6 0-23 18.6-41.6 41.6-41.6s41.6 18.6 41.6 41.6c0 23-18.6 41.6-41.6 41.6zm-119.2 0c-23 0-41.6-18.6-41.6-41.6 0-23 18.6-41.6 41.6-41.6s41.6 18.6 41.6 41.6c0 23-18.6 41.6-41.6 41.6z"/></svg>
+                                        </div>
+                                        <span className={`text-[8px] font-black uppercase tracking-widest ${transferMethod === 'momo' ? 'text-rose-400' : 'text-slate-500'}`}>Momo</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setTransferMethod('atm')}
+                                        className={`p-3 rounded-lg border flex flex-col items-center gap-2 transition-all ${transferMethod === 'atm' ? 'bg-indigo-500/10 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.1)]' : 'bg-[#02040a] border-slate-800 hover:border-slate-700'}`}
+                                    >
+                                        <div className="w-6 h-6 rounded bg-indigo-600 flex items-center justify-center ring-1 ring-white/10">
+                                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                                        </div>
+                                        <span className={`text-[8px] font-black uppercase tracking-widest ${transferMethod === 'atm' ? 'text-indigo-400' : 'text-slate-500'}`}>ATM / Bank</span>
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">SỐ TIỀN RÚT</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                value={withdrawAmount}
+                                                onChange={(e) => setWithdrawAmount(e.target.value)}
+                                                placeholder="TỐI THIỂU: 10,000 CRED"
+                                                className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-black font-mono text-white focus:outline-none focus:border-rose-500/50 transition-all placeholder-slate-800"
+                                            />
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black font-mono text-slate-600">CRED</div>
+                                        </div>
                                     </div>
-                                </div>
+                                    
+                                    <div>
+                                        <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">SĐT {transferMethod === 'momo' ? 'MOMO' : 'LIÊN HỆ'}</label>
+                                        <input
+                                            type="tel"
+                                            value={phoneNumber}
+                                            onChange={(e) => setPhoneNumber(e.target.value)}
+                                            placeholder="09xx xxx xxx"
+                                            className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-rose-500/50 transition-all placeholder-slate-800"
+                                        />
+                                    </div>
 
-                                <div>
-                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">SỐ TIỀN RÚT</label>
-                                    <input
-                                        type="number"
-                                        value={withdrawAmount}
-                                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                                        placeholder="TỐI THIỂU: 100 CRED"
-                                        className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-black font-mono text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase placeholder-slate-700"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-[9px] font-black text-slate-500 mb-2 font-mono uppercase tracking-widest">CHỌN NGÂN HÀNG</label>
-                                    <select className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-[11px] font-black font-mono text-slate-300 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500/50 transition-colors uppercase appearance-none">
-                                        <option>NGÂN HÀNG [ **** 8821 ]</option>
-                                    </select>
+                                    {transferMethod === 'atm' && (
+                                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">STK NGÂN HÀNG</label>
+                                                    <input
+                                                        type="text"
+                                                        value={accountNumber}
+                                                        onChange={(e) => setAccountNumber(e.target.value)}
+                                                        placeholder="Số tài khoản"
+                                                        className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-[11px] font-bold text-white focus:outline-none focus:border-indigo-500/50"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">NGÂN HÀNG</label>
+                                                    <select
+                                                        value={bankName}
+                                                        onChange={(e) => setBankName(e.target.value)}
+                                                        className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-[10px] font-black font-mono text-slate-300 focus:outline-none focus:border-rose-500 appearance-none cursor-pointer"
+                                                    >
+                                                        <option value="" disabled>-- CHỌN --</option>
+                                                        <option value="Vietcombank">VIETCOMBANK</option>
+                                                        <option value="MBBank">MB BANK</option>
+                                                        <option value="Techcombank">TECHCOMBANK</option>
+                                                        <option value="TPBank">TP BANK</option>
+                                                        <option value="Viettinbank">VIETTINBANK</option>
+                                                        <option value="Agribank">AGRIBANK</option>
+                                                        <option value="VPBank">VPBANK</option>
+                                                        <option value="ACB">ACB</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1.5 ml-1">TÊN CHỦ THẺ (KHÔNG DẤU)</label>
+                                                <input
+                                                    type="text"
+                                                    value={accountHolder}
+                                                    onChange={(e) => setAccountHolder(e.target.value)}
+                                                    placeholder="NGUYEN VAN A"
+                                                    className="w-full rounded-lg border border-slate-700 bg-[#02040a] px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-indigo-500/50 uppercase placeholder-slate-800"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center justify-between rounded bg-[#02040a] border border-slate-800 px-4 py-3 font-mono">
-                                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">PHÍ GIAO DỊCH</span>
-                                    <span className="text-[11px] font-black text-white">$2.50 USD</span>
+                                    <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">PHÍ GIAO DỊCH CỐ ĐỊNH</span>
+                                    <span className="text-[10px] font-black text-white">{systemFee.toLocaleString()} CRED</span>
                                 </div>
 
                                 <button
-                                    onClick={() => navigate('/withdraw-points')}
-                                    className="w-full rounded-lg bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-600 hover:to-indigo-600 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(225,29,72,0.3)] border border-rose-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2"
+                                    onClick={handleWithdraw}
+                                    disabled={isWithdrawing || !withdrawAmount || Number(withdrawAmount) < 10000}
+                                    className="w-full rounded-lg bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-600 hover:to-indigo-600 px-4 py-4 text-[11px] font-black text-white transition-colors shadow-[0_0_20px_rgba(225,29,72,0.3)] border border-rose-400/50 uppercase tracking-widest font-mono flex items-center justify-center gap-2 disabled:opacity-30"
                                 >
-                                    XÁC NHẬN RÚT TIỀN
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                                    {isWithdrawing ? (
+                                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        <>
+                                            XÁC NHẬN RÚT TIỀN
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                                        </>
+                                    )}
                                 </button>
+                                
+                                <p className="text-[8px] text-center text-slate-600 font-mono tracking-widest uppercase">
+                                    THỜI GIAN XỬ LÝ: 24H - 48H LÀM VIỆC
+                                </p>
                             </div>
                         </div>
 
