@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axiosClient from '../../api/axiosClient';
+import { walletApi } from '../../api/wallet.api';
 
 const DepositResult = () => {
     const location = useLocation();
@@ -12,48 +12,44 @@ const DepositResult = () => {
     useEffect(() => {
         const queryParams = new URLSearchParams(location.search);
         
-        const returnCode = queryParams.get('returncode');
-        const statusParam = queryParams.get('status');
-        const zptransid = queryParams.get('zptransid') || queryParams.get('zaptransid') || queryParams.get('apptransid');
-        const amountVnd = queryParams.get('amount');
+        // ZaloPay params
+        const appTransId = queryParams.get('apptransid');
         
-        // MoMo redirect params: resultCode=0 means success
-        const momoResultCode = queryParams.get('resultCode');
-        
-        const zalopayMessage = queryParams.get('returnmessage');
-        const momoMessage = queryParams.get('message');
+        // MoMo params
+        const orderId = queryParams.get('orderId');
+        const resultCode = queryParams.get('resultCode');
 
         console.log('Payment Redirect Params:', Object.fromEntries(queryParams.entries()));
         
-        const isZaloPaySuccess = returnCode === '1' || statusParam === '1';
-        const isMoMoSuccess = momoResultCode === '0';
-        
-        if (isZaloPaySuccess || isMoMoSuccess) {
-            setStatus('success');
-            setMessage(zalopayMessage || momoMessage || 'Giao dịch nạp điểm thành công!');
-            
-            // For ZaloPay: call credit-redirect endpoint to add points
-            if (isZaloPaySuccess && zptransid && !credited) {
-                const amount = parseInt(amountVnd, 10) || 0;
-                console.log(`Attempting to credit points: amount=${amount}, transId=${zptransid}`);
-                
-                if (amount > 0) {
-                    setCredited(true);
-                    axiosClient.post('/wallets/deposit/zalopay/credit-redirect', {
-                        amount: amount,
-                        zptransid: zptransid
-                    }).then(res => {
-                        console.log('Credit result success:', res.data);
-                    }).catch(err => {
-                        console.error('Credit after redirect error:', err?.response?.data || err.message);
-                    });
+        const verifyPayment = async (id, method) => {
+            try {
+                const res = await walletApi.checkStatus(id, method);
+                if (res.status === 'done' || res.data?.status === 'done') {
+                    setStatus('success');
+                    setMessage('Giao dịch nạp điểm thành công! Số dư của bạn đã được cập nhật.');
                 } else {
-                    console.warn('Cannot credit: amount is 0 or invalid', amountVnd);
+                    setStatus('error');
+                    setMessage('Giao dịch chưa được ghi nhận thành công trên hệ thống.');
                 }
+            } catch (err) {
+                console.error('Verify payment error:', err);
+                setStatus('error');
+                setMessage('Không thể xác thực giao dịch. Vui lòng liên hệ hỗ trợ.');
+            }
+        };
+
+        if (appTransId) {
+            verifyPayment(appTransId, 'zalopay');
+        } else if (orderId) {
+            if (resultCode === '0') {
+                verifyPayment(orderId, 'momo');
+            } else {
+                setStatus('error');
+                setMessage('Giao dịch MoMo bị từ chối hoặc đã hủy.');
             }
         } else {
             setStatus('error');
-            setMessage(zalopayMessage || momoMessage || 'Giao dịch nạp điểm thất bại hoặc đã bị hủy từ hệ thống ngân hàng.');
+            setMessage('Thông tin thanh toán không hợp lệ.');
         }
     }, [location]);
 

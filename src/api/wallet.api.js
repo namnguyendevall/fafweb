@@ -9,5 +9,11 @@ export const walletApi = {
   },
   getMyTransactions() {
     return axiosClient.get("/wallets/transactions/my");
+  },
+  checkStatus(paymentId, method) {
+    const endpoint = method === 'zalopay' 
+      ? `/wallets/check-status/zalopay/${paymentId}`
+      : `/wallets/check-status/momo/${paymentId}`;
+    return axiosClient.get(endpoint);
   }
 };

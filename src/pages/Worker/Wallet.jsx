@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
+import { walletApi } from '../../api/wallet.api'
 
 const Wallet = () => {
     const navigate = useNavigate()
@@ -10,57 +11,49 @@ const Wallet = () => {
     const [customAmount, setCustomAmount] = useState('')
     const [withdrawAmount, setWithdrawAmount] = useState('')
     const [copied, setCopied] = useState(false)
+    const [realTransactions, setRealTransactions] = useState([])
+    const [loading, setLoading] = useState(false)
 
     useEffect(() => {
         fetchMe();
+        loadTransactions();
     }, []);
+
+    const loadTransactions = async () => {
+        setLoading(true);
+        try {
+            const res = await walletApi.getMyTransactions();
+            setRealTransactions(res.data || []);
+        } catch (err) {
+            console.error("Error loading transactions:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const walletId = user?.id ? `faf_${user.id}_wallet` : 'faf_wallet'
     const totalBalance = user?.balance_points ?? 0
     const usdBalance = (totalBalance * 0.01).toFixed(2)
 
-    const transactions = [
-        {
-            id: 1,
-            type: 'incoming',
-            title: 'Project: Website Redesign',
-            date: 'Oct 24, 2023 • 2:30 PM',
-            amount: '+ 500 CRED',
-            status: 'COMPLETED',
-            statusColor: 'text-emerald-400',
-            icon: 'down'
-        },
-        {
-            id: 2,
-            type: 'outgoing',
-            title: 'Withdrawal to PayPal',
-            date: 'Oct 23, 2023 • 9:15 AM',
-            amount: '- 200 CRED',
-            status: 'PENDING',
-            statusColor: 'text-amber-400',
-            icon: 'up'
-        },
-        {
-            id: 3,
-            type: 'outgoing',
-            title: 'Platform Fee',
-            date: 'Oct 23, 2023 • 9:15 AM',
-            amount: '- 5 CRED',
-            status: 'PROCESSED',
-            statusColor: 'text-slate-500',
-            icon: 'document'
-        },
-        {
-            id: 4,
-            type: 'incoming',
-            title: 'Deposit from Visa •••• 4242',
-            date: 'Oct 20, 2023 • 11:00 AM',
-            amount: '+ 1,000 CRED',
-            status: 'COMPLETED',
-            statusColor: 'text-emerald-400',
-            icon: 'plus'
-        }
-    ]
+    const transactions = useMemo(() => {
+        return realTransactions.map(tx => ({
+            id: tx.id,
+            type: tx.type === 'DEPOSIT' || tx.type === 'INCOMING' ? 'incoming' : 'outgoing',
+            title: tx.reference_type === 'ZALOPAY_DEPOSIT' ? 'Nạp tiền ZaloPay' : 
+                   tx.reference_type === 'MOMO_DEPOSIT' ? 'Nạp tiền MoMo' : 
+                   tx.type === 'DEPOSIT' ? 'Nạp tiền vào ví' : 'Giao dịch',
+            date: new Date(tx.created_at).toLocaleString('vi-VN', { 
+                month: 'short', day: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            }).replace(',', ' •'),
+            amount: `${tx.type === 'DEPOSIT' || tx.type === 'INCOMING' ? '+' : '-'} ${Math.abs(tx.amount).toLocaleString()} CRED`,
+            status: tx.status,
+            statusColor: tx.status === 'SUCCESS' || tx.status === 'COMPLETED' ? 'text-emerald-400' : 
+                         tx.status === 'PENDING' ? 'text-amber-400' : 'text-slate-500',
+            icon: tx.type === 'DEPOSIT' || tx.type === 'INCOMING' ? 'plus' : 'up',
+            raw: tx
+        }));
+    }, [realTransactions]);
 
     const filteredTransactions = useMemo(() => {
         if (selectedTab === 'All') return transactions
@@ -264,7 +257,10 @@ const Wallet = () => {
                                                         {transaction.amount}
                                                     </div>
                                                     <div className={`mt-0.5 text-[9px] font-black font-mono uppercase tracking-widest ${transaction.statusColor}`}>
-                                                        [{transaction.status === 'COMPLETED' ? 'THÀNH CÔNG' : transaction.status === 'PENDING' ? 'ĐANG XỬ LÝ' : transaction.status === 'PROCESSED' ? 'ĐÃ XỬ LÝ' : transaction.status}]
+                                                        [{transaction.status === 'SUCCESS' || transaction.status === 'COMPLETED' ? 'THÀNH CÔNG' : 
+                                                          transaction.status === 'PENDING' ? 'ĐANG XỬ LÝ' : 
+                                                          transaction.status === 'FAILED' ? 'THẤT BẠI' : 
+                                                          transaction.status === 'PROCESSED' ? 'ĐÃ XỬ LÝ' : transaction.status}]
                                                     </div>
                                                 </div>
                                             </div>
