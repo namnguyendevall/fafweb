@@ -198,29 +198,7 @@ const Signin = () => {
                         </button>
                     </form>
 
-                    <div className="mt-6 flex flex-col gap-4 text-center">
-                        <div className="flex items-center gap-3 opacity-50">
-                            <span className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-white"></span>
-                            <span className="font-mono text-[10px] uppercase tracking-widest text-white">{t('auth.or_login_with')}</span>
-                            <span className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-white"></span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                            <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-2.5 transition-all text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
-                                <span className="text-white group-hover/btn2:scale-110 transition-transform">G</span> GOOGLE
-                            </button>
-                            <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-2.5 transition-all text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
-                                <span className="text-blue-500 group-hover/btn2:scale-110 transition-transform">in</span> LINKEDIN
-                            </button>
-                        </div>
 
-                        <div className="flex justify-center mt-6">
-                            <span className="text-slate-500 text-xs font-mono">
-                                {t('auth.waiting')}
-                                <span className="animate-pulse">_</span>
-                            </span>
-                        </div>
-                    </div>
                 </div>
                 
                 <div className="mt-8 text-center text-slate-500 font-mono text-xs">

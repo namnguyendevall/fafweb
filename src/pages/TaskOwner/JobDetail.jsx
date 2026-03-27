@@ -6,6 +6,7 @@ import { matchingApi } from "../../api/matching.api";
 import { contractsApi } from "../../api/contracts.api";
 import { chatApi } from "../../api/chat.api";
 import ReviewModal from "../../components/Reviews/ReviewModal";
+import CyberModal from "../../components/CyberModal";
 
 const JobDetail = () => {
     const navigate = useNavigate();
@@ -20,6 +21,18 @@ const JobDetail = () => {
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('proposals');
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    
+    // Modal state
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+        onConfirm: () => {},
+        confirmText: 'CONFIRM'
+    });
+
+    const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
     useEffect(() => {
         fetchJobData();
@@ -60,33 +73,53 @@ const JobDetail = () => {
     };
 
     const handleAcceptProposal = async (proposalId) => {
-        if (!window.confirm("Accept this proposal? This will create a pending contract for you to review and sign.")) return;
-        try {
-            const res = await jobsApi.acceptProposal(proposalId);
-            toast.success("Proposal accepted! Redirecting to contract signature...");
-            
-            // Redirect to the contract signing page
-            const contractId = res.data?.contract?.id;
-            if (contractId) {
-                navigate(`/task-owner/contracts/${contractId}/review`);
-            } else {
-                fetchJobData(); // Fallback if no contract ID returned
+        setConfirmModal({
+            isOpen: true,
+            title: "ACCEPT_PROPOSAL",
+            message: "Accept this proposal? This will create a pending contract for you to review and sign.",
+            type: "info",
+            confirmText: "ACCEPT",
+            onConfirm: async () => {
+                try {
+                    const res = await jobsApi.acceptProposal(proposalId);
+                    toast.success("Proposal accepted! Redirecting to contract signature...");
+                    closeConfirmModal();
+                    
+                    const contractId = res.data?.contract?.id;
+                    if (contractId) {
+                        navigate(`/task-owner/contracts/${contractId}/review`);
+                    } else {
+                        fetchJobData();
+                    }
+                } catch (err) {
+                    console.error("Error accepting proposal:", err);
+                    toast.error(err.response?.data?.message || "Failed to accept proposal");
+                    closeConfirmModal();
+                }
             }
-        } catch (err) {
-            console.error("Error accepting proposal:", err);
-            toast.error(err.response?.data?.message || "Failed to accept proposal");
-        }
+        });
     };
 
     const handleRejectProposal = async (proposalId) => {
-        if (!window.confirm("Reject this proposal?")) return;
-        try {
-            await jobsApi.rejectProposal(proposalId);
-            fetchJobData(); // Refresh data
-        } catch (err) {
-            console.error("Error rejecting proposal:", err);
-            toast.success("Proposal rejected");
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "REJECT_PROPOSAL",
+            message: "Are you sure you want to reject this proposal? This action cannot be undone.",
+            type: "warning",
+            confirmText: "REJECT",
+            onConfirm: async () => {
+                try {
+                    await jobsApi.rejectProposal(proposalId);
+                    toast.success("Proposal rejected");
+                    closeConfirmModal();
+                    fetchJobData();
+                } catch (err) {
+                    console.error("Error rejecting proposal:", err);
+                    toast.error(err.response?.data?.message || "Failed to reject proposal");
+                    closeConfirmModal();
+                }
+            }
+        });
     };
 
     const handleInviteWorker = (workerId) => {
@@ -477,7 +510,7 @@ const JobDetail = () => {
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-4">
                                                             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Contract Document</h3>
-                                                            {job?.status === 'COMPLETED' && contractDetail && (
+                                                            {(job?.status === 'COMPLETED' || contractDetail?.status === 'TERMINATED') && contractDetail && (
                                                                 <button
                                                                     onClick={() => setIsReviewModalOpen(true)}
                                                                     className="px-4 py-1.5 text-xs font-bold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg shadow-sm hover:opacity-90 transition-opacity"
@@ -756,6 +789,16 @@ const JobDetail = () => {
                 }}
             />
         )}
+
+        <CyberModal
+            isOpen={confirmModal.isOpen}
+            onClose={closeConfirmModal}
+            onConfirm={confirmModal.onConfirm}
+            title={confirmModal.title}
+            message={confirmModal.message}
+            type={confirmModal.type}
+            confirmText={confirmModal.confirmText}
+        />
         </>
     );
 };

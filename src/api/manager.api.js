@@ -63,6 +63,21 @@ const managerApi = {
 
     resolveDispute: (id, resolution, resolution_summary) => {
         return axiosClient.post(`/disputes/${id}/resolve`, { resolution, resolution_summary });
+    },
+
+    // Withdrawal Management
+    getWithdrawals: () => {
+        return axiosClient.get("/wallets/withdraw/list");
+    },
+
+    processWithdrawal: (id, { status, admin_note, proof_image_url }) => {
+        return axiosClient.patch(`/wallets/withdraw/${id}/process`, { status, admin_note, proof_image_url });
+    },
+
+    uploadFile: (file) => {
+        const formData = new FormData();
+        formData.append("file", file);
+        return axiosClient.post("/uploads/submission", formData);
     }
 };
 

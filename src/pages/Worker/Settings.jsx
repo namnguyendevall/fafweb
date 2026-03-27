@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { userApi } from '../../api/user.api';
 import axiosClient from '../../api/axiosClient';
+import { authApi } from '../../api/auth.api';
 import { useTranslation } from 'react-i18next';
 
 /* ── League of Legends–style Mastery Tier system ── */
@@ -98,6 +99,13 @@ const Settings = () => {
         portfolio_items: [],
         languages: t('settings.languages_default') 
     });
+
+    const [passwordData, setPasswordData] = useState({
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+    });
+    const [changingPassword, setChangingPassword] = useState(false);
 
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -210,6 +218,37 @@ const Settings = () => {
             toast.error(error.response?.data?.message || t('settings.error_update'));
         } finally {
             setSaving(false);
+        }
+    };
+
+    const onChangePasswordSubmit = async (e) => {
+        e.preventDefault();
+        if (!passwordData.oldPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+            toast.error(t('settings.fill_all_fields') || 'Vui lòng nhập đầy đủ thông tin');
+            return;
+        }
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            toast.error(t('auth.password_mismatch') || 'Mật khẩu xác nhận không khớp');
+            return;
+        }
+        if (passwordData.newPassword.length < 6) {
+            toast.error(t('auth.password_min_length') || 'Mật khẩu phải có ít nhất 6 ký tự');
+            return;
+        }
+
+        try {
+            setChangingPassword(true);
+            await authApi.changePassword({
+                oldPassword: passwordData.oldPassword,
+                newPassword: passwordData.newPassword
+            });
+            toast.success(t('auth.change_password_success') || 'Đổi mật khẩu thành công!');
+            setPasswordData({ oldPassword: '', newPassword: '', confirmPassword: '' });
+        } catch (error) {
+            console.error('Change password error:', error);
+            toast.error(error.response?.data?.error || 'Đổi mật khẩu thất bại. Kiểm tra lại mật khẩu cũ.');
+        } finally {
+            setChangingPassword(false);
         }
     };
 
@@ -556,6 +595,56 @@ const Settings = () => {
                                     </>
                                 )}
                              </div>
+                        </Card>
+
+                        <Card title={t('settings.security_title') || "BẢO MẬT TÀI KHOẢN"} glowColor="emerald">
+                            <form onSubmit={onChangePasswordSubmit} className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] uppercase font-mono tracking-widest text-slate-500">
+                                            {t('settings.old_password') || "Mật khẩu hiện tại"}
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={passwordData.oldPassword}
+                                            onChange={(e) => setPasswordData({...passwordData, oldPassword: e.target.value})}
+                                            className="w-full bg-[#02040a] border border-slate-700/50 rounded px-4 py-2 text-sm font-mono text-white focus:border-emerald-500/50 focus:outline-none transition-all"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] uppercase font-mono tracking-widest text-slate-500">
+                                            {t('settings.new_password') || "Mật khẩu mới"}
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={passwordData.newPassword}
+                                            onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                                            className="w-full bg-[#02040a] border border-slate-700/50 rounded px-4 py-2 text-sm font-mono text-white focus:border-emerald-500/50 focus:outline-none transition-all"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
+                                        <label className="text-[10px] uppercase font-mono tracking-widest text-slate-500">
+                                            {t('settings.confirm_password') || "Xác nhận mật khẩu mới"}
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={passwordData.confirmPassword}
+                                            onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                                            className="w-full bg-[#02040a] border border-slate-700/50 rounded px-4 py-2 text-sm font-mono text-white focus:border-emerald-500/50 focus:outline-none transition-all"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={changingPassword}
+                                    className="w-full py-3 bg-emerald-900/30 border border-emerald-500/50 text-emerald-400 rounded font-black font-mono text-[10px] uppercase tracking-widest hover:bg-emerald-900/50 transition-all shadow-[0_0_15px_rgba(16,185,129,0.1)] disabled:opacity-50"
+                                >
+                                    {changingPassword ? t('settings.updating') || "Đang cập nhật..." : t('settings.update_password') || "CẬP NHẬT MẬT KHẨU"}
+                                </button>
+                            </form>
                         </Card>
                     </div>
 

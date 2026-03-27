@@ -18,6 +18,9 @@ export const authApi = {
   },
   resetPassword(data) {
     return axiosClient.post("/auth/reset-password", data);
+  },
+  changePassword(data) {
+    return axiosClient.post("/auth/change-password", data);
   }
 //   me() {
 //     return axiosClient.get("/auth/me");

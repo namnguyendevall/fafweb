@@ -484,12 +484,13 @@ const Navbar = () => {
     };
 
     const isManager = user?.role === 'manager';
-    const accentColor = isManager ? 'emerald' : 'cyan';
+    const isAdmin   = user?.role === 'admin';
+    const accentColor = isAdmin ? 'purple' : isManager ? 'emerald' : 'cyan';
 
     return (
-        <nav className="sticky top-0 z-50 w-full border-b" style={{ background: 'rgba(2,6,23,0.95)', borderColor: isManager ? 'rgba(16,185,129,0.15)' : 'rgba(6,182,212,0.15)', backdropFilter: 'blur(12px)' }} ref={panelRef}>
+        <nav className="sticky top-0 z-50 w-full border-b" style={{ background: 'rgba(2,6,23,0.95)', borderColor: isAdmin ? 'rgba(168,85,247,0.15)' : isManager ? 'rgba(16,185,129,0.15)' : 'rgba(6,182,212,0.15)', backdropFilter: 'blur(12px)' }} ref={panelRef}>
             {/* Top scanning line for extra cyberpunk feel */}
-            <div className={`absolute top-0 left-0 right-0 h-[2px] ${isManager ? 'bg-gradient-to-r from-emerald-500/0 via-emerald-400/50 to-emerald-500/0' : 'bg-gradient-to-r from-cyan-500/0 via-cyan-400/50 to-cyan-500/0'} opacity-50`} />
+            <div className={`absolute top-0 left-0 right-0 h-[2px] ${isAdmin ? 'bg-gradient-to-r from-purple-500/0 via-purple-400/50 to-purple-500/0' : isManager ? 'bg-gradient-to-r from-emerald-500/0 via-emerald-400/50 to-emerald-500/0' : 'bg-gradient-to-r from-cyan-500/0 via-cyan-400/50 to-cyan-500/0'} opacity-50`} />
             
             <div className="max-w-[1300px] mx-auto px-4 h-[56px] flex items-center justify-between gap-4">
 
@@ -528,7 +529,17 @@ const Navbar = () => {
                             { to: '/', label: t('navbar.home'), exact: true,
                               icon: <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                             },
-                            ...(isManager ? [
+                            ...(isAdmin ? [
+                                { to: '/admin/dashboard', label: 'ADMIN_DASH',
+                                  icon: <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                                },
+                                { to: '/admin/user-management', label: 'USERS',
+                                  icon: <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                },
+                                { to: '/admin/moderation', label: 'MODERATION',
+                                  icon: <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                },
+                            ] : isManager ? [
                                 { to: '/manager/management/jobs', label: 'DASHBOARD',
                                   icon: <svg className="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                                 },
@@ -554,9 +565,11 @@ const Navbar = () => {
                                     to={to}
                                     className={`hidden sm:flex flex-col items-center justify-center px-4 h-full border-b-2 transition-all font-mono ${
                                         active
-                                            ? isManager 
-                                                ? 'border-emerald-400 text-emerald-400 bg-emerald-900/10 shadow-[inset_0_-10px_20px_-15px_rgba(16,185,129,0.3)]'
-                                                : 'border-cyan-400 text-cyan-400 bg-cyan-900/10 shadow-[inset_0_-10px_20px_-15px_rgba(6,182,212,0.3)]'
+                                            ? isAdmin
+                                                ? 'border-purple-400 text-purple-400 bg-purple-900/10 shadow-[inset_0_-10px_20px_-15px_rgba(168,85,247,0.3)]'
+                                                : isManager 
+                                                    ? 'border-emerald-400 text-emerald-400 bg-emerald-900/10 shadow-[inset_0_-10px_20px_-15px_rgba(16,185,129,0.3)]'
+                                                    : 'border-cyan-400 text-cyan-400 bg-cyan-900/10 shadow-[inset_0_-10px_20px_-15px_rgba(6,182,212,0.3)]'
                                             : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'
                                     }`}
                                 >
@@ -634,15 +647,19 @@ const Navbar = () => {
                                      {/* Tech Frame Background */}
                                     <div className={`absolute inset-0 rounded border transition-all duration-300 ${
                                         openPanel === 'profile' 
-                                            ? isManager
-                                                ? 'border-emerald-400 bg-emerald-950/20 shadow-[0_0_15px_rgba(16,185,129,0.5)] scale-110'
-                                                : 'border-cyan-400 bg-cyan-950/20 shadow-[0_0_15px_rgba(6,182,212,0.5)] scale-110' 
-                                            : isManager
-                                                ? 'border-slate-700 bg-[#02040a] group-hover/navavt:border-emerald-500/50'
-                                                : 'border-slate-700 bg-[#02040a] group-hover/navavt:border-cyan-500/50'
+                                            ? isAdmin
+                                                ? 'border-purple-400 bg-purple-950/20 shadow-[0_0_15px_rgba(168,85,247,0.5)] scale-110'
+                                                : isManager
+                                                    ? 'border-emerald-400 bg-emerald-950/20 shadow-[0_0_15px_rgba(16,185,129,0.5)] scale-110'
+                                                    : 'border-cyan-400 bg-cyan-950/20 shadow-[0_0_15px_rgba(6,182,212,0.5)] scale-110' 
+                                            : isAdmin
+                                                ? 'border-slate-700 bg-[#02040a] group-hover/navavt:border-purple-500/50'
+                                                : isManager
+                                                    ? 'border-slate-700 bg-[#02040a] group-hover/navavt:border-emerald-500/50'
+                                                    : 'border-slate-700 bg-[#02040a] group-hover/navavt:border-cyan-500/50'
                                     }`}></div>
 
-                                    <div className={`relative w-7 h-7 rounded overflow-hidden flex items-center justify-center ${isManager ? 'text-emerald-400' : 'text-cyan-400'} font-black font-mono text-[10px] transition-all ${
+                                    <div className={`relative w-7 h-7 rounded overflow-hidden flex items-center justify-center ${isAdmin ? 'text-purple-400' : isManager ? 'text-emerald-400' : 'text-cyan-400'} font-black font-mono text-[10px] transition-all ${
                                         openPanel === 'profile' ? 'scale-110' : ''
                                     }`}>
                                         {user?.avatar_url
@@ -655,22 +672,22 @@ const Navbar = () => {
                                 </button>
 
                                  {openPanel === 'profile' && (
-                                    <div className={`absolute right-0 top-full mt-2 w-[240px] rounded bg-[#090e17]/95 backdrop-blur-xl shadow-[0_0_30px_${isManager ? 'rgba(16,185,129,0.1)' : 'rgba(6,182,212,0.1)'}] z-50 overflow-hidden animate-[dropIn_.18s_ease-out] border ${isManager ? 'border-emerald-500/30' : 'border-cyan-500/30'}`}>
+                                    <div className={`absolute right-0 top-full mt-2 w-[240px] rounded bg-[#090e17]/95 backdrop-blur-xl shadow-[0_0_30px_${isAdmin ? 'rgba(168,85,247,0.1)' : isManager ? 'rgba(16,185,129,0.1)' : 'rgba(6,182,212,0.1)'}] z-50 overflow-hidden animate-[dropIn_.18s_ease-out] border ${isAdmin ? 'border-purple-500/30' : isManager ? 'border-emerald-500/30' : 'border-cyan-500/30'}`}>
                                         {/* Top neon line */}
-                                        <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent ${isManager ? 'via-emerald-400' : 'via-cyan-400'} to-transparent`} />
+                                        <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent ${isAdmin ? 'via-purple-400' : isManager ? 'via-emerald-400' : 'via-cyan-400'} to-transparent`} />
                                         
                                         {/* Profile header */}
                                          <div className="px-4 pt-5 pb-3 border-b border-slate-800/80 bg-slate-900/30">
                                             <div className="flex flex-col mb-3">
-                                                <p className={`font-black text-white text-sm uppercase tracking-widest font-mono ${isManager ? 'text-shadow-glow-emerald' : 'text-shadow-glow-cyan'} leading-tight`}>{user?.full_name || 'UNKNOWN_NODE'}</p>
+                                                <p className={`font-black text-white text-sm uppercase tracking-widest font-mono ${isAdmin ? 'text-shadow-glow-purple' : isManager ? 'text-shadow-glow-emerald' : 'text-shadow-glow-cyan'} leading-tight`}>{user?.full_name || 'UNKNOWN_NODE'}</p>
                                                 <p className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 mt-1">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${user?.role === 'employer' ? 'bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.8)]' : isManager ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]' : 'bg-cyan-500 shadow-[0_0_5px_rgba(34,211,238,0.8)]'}`}></span>
-                                                    {user?.role === 'employer' ? 'CLIENT_OP' : isManager ? 'MASTER_OP' : 'WORKER_OP'}
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${isAdmin ? 'bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.8)]' : user?.role === 'employer' ? 'bg-purple-500 shadow-[0_0_5px_rgba(168,85,247,0.8)]' : isManager ? 'bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.8)]' : 'bg-cyan-500 shadow-[0_0_5px_rgba(34,211,238,0.8)]'}`}></span>
+                                                    {isAdmin ? 'SYS_ADMIN' : user?.role === 'employer' ? 'CLIENT_OP' : isManager ? 'MASTER_OP' : 'WORKER_OP'}
                                                 </p>
                                             </div>
                                             <button
-                                                onClick={() => { close(); navigate(user?.role === 'employer' ? '/task-owner/profiles' : isManager ? '/manager/request' : '/dashboard'); }}
-                                                className={`w-full py-1.5 rounded font-black text-[9px] tracking-widest uppercase font-mono transition-all bg-[#02040a] ${isManager ? 'hover:bg-emerald-950 text-emerald-500 hover:text-emerald-300 hover:border-emerald-500/50' : 'hover:bg-cyan-950 text-cyan-500 hover:text-cyan-300 hover:border-cyan-500/50'} border border-slate-700`}
+                                                onClick={() => { close(); navigate(isAdmin ? '/admin/dashboard' : user?.role === 'employer' ? '/task-owner/profiles' : isManager ? '/manager/request' : '/dashboard'); }}
+                                                className={`w-full py-1.5 rounded font-black text-[9px] tracking-widest uppercase font-mono transition-all bg-[#02040a] ${isAdmin ? 'hover:bg-purple-950 text-purple-500 hover:text-purple-300 hover:border-purple-500/50' : isManager ? 'hover:bg-emerald-950 text-emerald-500 hover:text-emerald-300 hover:border-emerald-500/50' : 'hover:bg-cyan-950 text-cyan-500 hover:text-cyan-300 hover:border-cyan-500/50'} border border-slate-700`}
                                             >
                                                 VIEW_DETAILS
                                             </button>
@@ -684,7 +701,7 @@ const Navbar = () => {
                                                 <button
                                                     key={item.path}
                                                     onClick={() => { close(); navigate(item.path); }}
-                                                    className={`w-full flex items-center gap-2.5 px-4 py-2 text-[10px] font-black font-mono tracking-widest uppercase text-slate-400 ${isManager ? 'hover:text-emerald-400 hover:bg-emerald-950/20 hover:border-emerald-400' : 'hover:text-cyan-400 hover:bg-cyan-950/20 hover:border-cyan-400'} transition-colors border-l-2 border-transparent`}
+                                                    className={`w-full flex items-center gap-2.5 px-4 py-2 text-[10px] font-black font-mono tracking-widest uppercase text-slate-400 ${isAdmin ? 'hover:text-purple-400 hover:bg-purple-950/20 hover:border-purple-400' : isManager ? 'hover:text-emerald-400 hover:bg-emerald-950/20 hover:border-emerald-400' : 'hover:text-cyan-400 hover:bg-cyan-950/20 hover:border-cyan-400'} transition-colors border-l-2 border-transparent`}
                                                 >
                                                     <span className="text-slate-500">{item.icon}</span>
                                                     {item.label}
@@ -729,11 +746,11 @@ const Navbar = () => {
                     background: transparent;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: ${isManager ? 'rgba(16, 185, 129, 0.2)' : 'rgba(6, 182, 212, 0.2)'};
+                    background: ${isAdmin ? 'rgba(168, 85, 247, 0.2)' : isManager ? 'rgba(16, 185, 129, 0.2)' : 'rgba(6, 182, 212, 0.2)'};
                     border-radius: 4px;
                 }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: ${isManager ? 'rgba(16, 185, 129, 0.5)' : 'rgba(6, 182, 212, 0.5)'};
+                    background: ${isAdmin ? 'rgba(168, 85, 247, 0.5)' : isManager ? 'rgba(16, 185, 129, 0.5)' : 'rgba(6, 182, 212, 0.5)'};
                 }
             `}</style>
         </nav>

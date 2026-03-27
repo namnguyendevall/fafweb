@@ -159,14 +159,7 @@ const ForgotPassword = () => {
                 </>
               )}
             </button>
-            <div className="grid grid-cols-2 gap-3">
-                <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-3 transition-all text-xs font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
-                    <span className="text-white group-hover/btn2:scale-110 transition-transform">G</span> GOOGLE_ID
-                </button>
-                <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-3 transition-all text-xs font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
-                    <span className="text-blue-500 group-hover/btn2:scale-110 transition-transform">in</span> LINKED_IN
-                </button>
-            </div>
+
           </form>
 
           <div className="mt-8 pt-6 border-t border-white/10 text-center">

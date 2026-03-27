@@ -4,6 +4,7 @@ import { jobsApi } from '../../api/jobs.api';
 import { contractsApi } from '../../api/contracts.api';
 import { useToast } from '../../contexts/ToastContext';
 import { useChatContext } from '../../contexts/ChatContext';
+import { proposalsApi } from '../../api/proposals.api';
 
 const SectionLabel = ({ children }) => (
     <p className="text-[9px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-3 flex items-center gap-1.5">
@@ -22,6 +23,8 @@ const WorkDetail = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [hasActiveContract, setHasActiveContract] = useState(false);
+    const [hasApplied, setHasApplied] = useState(false);
+    const [myProposal, setMyProposal] = useState(null);
 
     useEffect(() => {
         const fetchJobDetails = async () => {
@@ -46,10 +49,10 @@ const WorkDetail = () => {
         };
         fetchJobDetails();
 
-        // Check if worker already has an active contract
+        // Check if worker already has an active or pending contract
         contractsApi.getMyActiveContract()
             .then(res => {
-                if (res.data && (res.data.status === 'ACTIVE' || res.data.status === 'IN_PROGRESS')) {
+                if (res.data && ['ACTIVE', 'IN_PROGRESS', 'PENDING'].includes(res.data.status)) {
                     setHasActiveContract(true);
                 }
             })
@@ -57,6 +60,17 @@ const WorkDetail = () => {
                 // No active contract or error — allow apply
                 setHasActiveContract(false);
             });
+
+        // Check if already applied
+        proposalsApi.getMyProposals()
+            .then(res => {
+                const existing = (res.data || []).find(p => p.job_id === Number(id));
+                if (existing) {
+                    setHasApplied(true);
+                    setMyProposal(existing);
+                }
+            })
+            .catch(err => console.error("Error checking proposal status:", err));
     }, [id]);
 
     const handleContactEmployer = async () => {
@@ -322,6 +336,15 @@ const WorkDetail = () => {
                                 <div className="w-full py-4 rounded-xl font-black text-[12px] tracking-widest uppercase font-mono bg-red-900/20 text-red-400 border border-red-500/30 text-center cursor-not-allowed flex flex-col items-center gap-1">
                                     <span>🚫 Đang Có Việc Làm</span>
                                     <span className="text-[9px] font-mono text-red-500/60 tracking-widest normal-case">Hoàn thành hoặc thoát hợp đồng hiện tại để ứng tuyển.</span>
+                                </div>
+                            ) : hasApplied ? (
+                                <div className="w-full py-4 rounded-xl font-black text-[12px] tracking-widest uppercase font-mono bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 text-center flex flex-col items-center gap-1">
+                                    <span className="flex items-center gap-2">
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                        Đã Ứng Tuyển
+                                    </span>
+                                    <span className="text-[9px] font-mono text-emerald-500/60 tracking-widest uppercase">Trạng thái: {myProposal?.status}</span>
+                                    <button onClick={() => navigate('/dashboard')} className="mt-2 text-[9px] text-cyan-400 hover:text-cyan-300 underline underline-offset-2">XEM TRONG BẢNG ĐIỀU KHIỂN</button>
                                 </div>
                             ) : (
                                 <button onClick={() => navigate(`/apply/${id}`)}

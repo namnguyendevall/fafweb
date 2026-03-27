@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { contractsApi } from '../../api/contracts.api';
 import { chatApi } from '../../api/chat.api';
+import disputeApi from '../../api/dispute.api';
+import CyberModal from '../../components/CyberModal';
+import ReviewModal from "../../components/Reviews/ReviewModal";
 
 const CheckpointReview = () => {
     const { contractId } = useParams();
@@ -14,10 +17,23 @@ const CheckpointReview = () => {
     const [selectedCheckpoint, setSelectedCheckpoint] = useState(null);
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewNotes, setReviewNotes] = useState('');
     const [rejectReason, setRejectReason] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    // Modal state
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+        onConfirm: () => {},
+        confirmText: 'CONFIRM'
+    });
+
+    const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
     console.log('CheckpointReview mounted, contractId:', contractId);
 
@@ -57,6 +73,29 @@ const CheckpointReview = () => {
             toast.error(error.response?.data?.message || 'Failed to approve checkpoint');
         } finally {
             setReviewing(false);
+        }
+    };
+
+    const handleEmployerResolve = async (action) => {
+        try {
+            setActionLoading(true);
+            const res = await disputeApi.getByContractId(contract.id);
+            const disputes = res.data;
+            const openDispute = Array.isArray(disputes) ? disputes.find(d => d.status === 'OPEN') : (disputes?.status === 'OPEN' ? disputes : null);
+
+            if (!openDispute) {
+                toast.error("Không tìm thấy khiếu nại đang mở.");
+                return;
+            }
+
+            await disputeApi.employerResolve(openDispute.id, action);
+            toast.success(action === 'CONCEDE' ? "Bạn đã chấp nhận khiếu nại. Giai đoạn đã được duyệt!" : "Đã gửi yêu cầu Manager phân xử.");
+            fetchContract();
+        } catch (error) {
+            console.error('Error resolving dispute:', error);
+            toast.error(error.response?.data?.message || 'Lỗi khi xử lý khiếu nại');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -139,19 +178,28 @@ const CheckpointReview = () => {
 
 
     const handleFinalizeSettlement = async () => {
-        if (!window.confirm("This will close the contract, cancel pending checkpoints, and refund the remaining budget to your wallet. Continue?")) return;
-
-        try {
-            setActionLoading(true);
-            await contractsApi.finalizeSettlement(contract.id);
-            toast.success("Settlement finalized. Remaining budget refunded.");
-            fetchContract();
-        } catch (error) {
-            console.error('Error finalizing settlement:', error);
-            toast.error(error.response?.data?.message || 'Failed to finalize settlement');
-        } finally {
-            setActionLoading(false);
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "FINALIZE_SETTLEMENT",
+            message: "This will close the contract, cancel pending checkpoints, and refund the remaining budget to your wallet. Continue?",
+            type: "warning",
+            confirmText: "SETTLE",
+            onConfirm: async () => {
+                try {
+                    setActionLoading(true);
+                    await contractsApi.finalizeSettlement(contract.id);
+                    toast.success("Settlement finalized. Remaining budget refunded.");
+                    closeConfirmModal();
+                    fetchContract();
+                } catch (error) {
+                    console.error('Error finalizing settlement:', error);
+                    toast.error(error.response?.data?.message || 'Failed to finalize settlement');
+                    closeConfirmModal();
+                } finally {
+                    setActionLoading(false);
+                }
+            }
+        });
     };
 
     const handleStartChat = async () => {
@@ -165,19 +213,28 @@ const CheckpointReview = () => {
     };
 
     const handleTerminateContract = async () => {
-        if (!window.confirm("WARNING: Are you sure you want to terminate this contract? All pending milestone funds will be refunded to your wallet, and the job will be re-opened for other workers.")) return;
-        
-        try {
-            setActionLoading(true);
-            await contractsApi.terminateContract(contract.id);
-            toast.success("Contract terminated and funds refunded.");
-            navigate('/task-owner');
-        } catch (error) {
-            console.error('Error terminating contract:', error);
-            toast.error(error.response?.data?.message || 'Failed to terminate contract');
-        } finally {
-            setActionLoading(false);
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "TERMINATE_CONTRACT",
+            message: "WARNING: Are you sure you want to terminate this contract? All pending milestone funds will be refunded to your wallet, and the job will be re-opened for other workers.",
+            type: "danger",
+            confirmText: "TERMINATE",
+            onConfirm: async () => {
+                try {
+                    setActionLoading(true);
+                    await contractsApi.terminateContract(contract.id);
+                    toast.success("Contract terminated and funds refunded.");
+                    closeConfirmModal();
+                    navigate('/task-owner');
+                } catch (error) {
+                    console.error('Error terminating contract:', error);
+                    toast.error(error.response?.data?.message || 'Failed to terminate contract');
+                    closeConfirmModal();
+                } finally {
+                    setActionLoading(false);
+                }
+            }
+        });
     };
 
     return (
@@ -185,32 +242,100 @@ const CheckpointReview = () => {
             
             <div className="flex-1 overflow-auto">
                 <div className="max-w-6xl mx-auto px-6 py-8">
-                    {/* Dispute Warning */}
-                    {contract.status === 'DISPUTED' && (
-                        <div className="bg-rose-50 dark:bg-rose-900/30 border-2 border-rose-300 dark:border-rose-800/50 rounded-xl p-6 mb-6">
-                            <div className="flex items-start gap-4">
-                                <div className="flex-shrink-0 p-3 bg-rose-100 dark:bg-rose-900/40 rounded-xl">
-                                    <svg className="w-6 h-6 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                                    </svg>
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="text-lg font-bold text-rose-900 dark:text-rose-100 mb-2">Contract in Dispute</h3>
-                                    <p className="text-rose-800 dark:text-rose-200 mb-3 text-sm">
-                                        This contract is currently under dispute. A Manager is overseeing the resolution process. 
-                                        Please participate in the 3-party chat to provide your evidence or feedback.
-                                    </p>
-                                    <button
-                                        onClick={() => navigate(`/disputes/search?contractId=${contract.id}`)}
-                                        className="px-6 py-2.5 bg-rose-600 text-white font-semibold rounded-lg hover:bg-rose-700 transition-colors flex items-center gap-2"
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                    {/* Termination Warning */}
+                    {contract.status === 'TERMINATED' && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-800/50 rounded-xl p-8 mb-6 shadow-lg relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                                <svg className="w-24 h-24 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M13.477 3.03a.75.75 0 01.327.198l4.999 5a.75.75 0 010 1.06l-5 5a.75.75 0 01-1.06-1.06l3.72-3.72H3.75a.75.75 0 010-1.5h12.72l-3.72-3.72a.75.75 0 01.447-1.278z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className="w-12 h-12 bg-amber-100 dark:bg-amber-800 rounded-full flex items-center justify-center">
+                                        <svg className="w-7 h-7 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                         </svg>
-                                        Go to Dispute Chat
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-extrabold text-amber-900 dark:text-amber-100 uppercase tracking-tighter">Hợp đồng đã chấm dứt (Rework Limit)</h3>
+                                        <p className="text-amber-800 dark:text-amber-200 text-sm">Worker đã bị gỡ khỏi dự án do vượt quá giới hạn 3 lần làm lại sau tranh chấp.</p>
+                                    </div>
+                                </div>
+                                <p className="text-amber-700 dark:text-amber-300/80 mb-6 text-sm italic">
+                                    Hệ thống đã tự động hoàn trả ngân sách còn lại vào ví của bạn (Protocol Refund). Dự án của bạn đã được mở lại (RE-OPENED) để những worker khác có thể ứng tuyển.
+                                </p>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setIsReviewModalOpen(true)}
+                                        className="px-8 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl shadow-[0_4px_15px_rgba(245,158,11,0.3)] hover:scale-105 active:scale-95 transition-all"
+                                    >
+                                        ★ Đánh Giá Worker
+                                    </button>
+                                    <button
+                                        onClick={() => navigate(`/job/${contract.job_id}`)}
+                                        className="px-6 py-3 border-2 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-amber-100 dark:hover:bg-amber-800/30 transition-all"
+                                    >
+                                        Xem lại dự án
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Dispute Warning */}
+                    {contract.status === 'DISPUTED' && (
+                        <div className="bg-rose-50 dark:bg-rose-900/30 border-2 border-rose-300 dark:border-rose-800/50 rounded-xl p-6 mb-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 bg-rose-100 dark:bg-rose-800 rounded-full flex items-center justify-center">
+                                    <svg className="w-6 h-6 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-rose-900 dark:text-rose-100 uppercase tracking-tight">Hợp đồng đang tranh chấp</h3>
+                                    <p className="text-sm text-rose-700 dark:text-rose-300">Worker đã mở khiếu nại cho bài nộp bị từ chối.</p>
+                                </div>
+                            </div>
+                            
+                            {/* Employer Resolution Box */}
+                            <div className="mt-6 pt-6 border-t border-rose-200 dark:border-rose-800/50">
+                                <h4 className="text-sm font-bold text-rose-900 dark:text-rose-100 mb-4 uppercase tracking-wider">Tùy chọn giải quyết nhanh (Employer):</h4>
+                                <div className="flex flex-wrap gap-3">
+                                    <button
+                                        onClick={() => handleEmployerResolve('CONCEDE')}
+                                        disabled={actionLoading}
+                                        className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                                    >
+                                        Duyệt luôn (Worker thắng)
+                                    </button>
+                                    <button
+                                        onClick={() => handleEmployerResolve('ESCALATE')}
+                                        disabled={actionLoading}
+                                        className="px-4 py-2 bg-rose-200 dark:bg-rose-800 text-rose-800 dark:text-rose-100 text-xs font-bold rounded-lg hover:bg-rose-300 dark:hover:bg-rose-700 transition-colors flex items-center gap-2 border border-rose-300 dark:border-rose-700 shadow-sm"
+                                    >
+                                        Giữ nguyên ý kiến (Chờ Manager)
+                                    </button>
+                                </div>
+                                <p className="mt-3 text-[10px] text-rose-600 dark:text-rose-400 italic">
+                                    * Nếu không giải quyết trong vòng 24h kể từ khi khiếu nại được mở, hệ thống sẽ tự động xử thắng cho Worker. 
+                                    Sau khi bạn chọn "Giữ nguyên ý kiến", Manager sẽ vào cuộc để phân xử cuối cùng.
+                                </p>
+                            </div>
+                            <p className="text-rose-800 dark:text-rose-200 mb-3 text-sm">
+                                Thiết lập hợp đồng đang trong giai đoạn tranh chấp. Quản trị viên đang theo dõi quá trình giải quyết.
+                                Vui lòng tham gia chat 3 bên để cung cấp bằng chứng hoặc phản hồi.
+                            </p>
+                            <button
+                                onClick={() => navigate(`/dispute/${contract.dispute_id}`)}
+                                className="px-6 py-2.5 bg-rose-600 text-white font-semibold rounded-lg hover:bg-rose-700 transition-colors flex items-center gap-2"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                                </svg>
+                                Đi tới mục Tranh chấp
+                            </button>
                         </div>
                     )}
 
@@ -262,8 +387,24 @@ const CheckpointReview = () => {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div>
-                                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Checkpoint Review</h1>
-                                    <p className="text-gray-600 dark:text-gray-400">{contract.job_title}</p>
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white uppercase tracking-tight">Checkpoint Review</h1>
+                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase border ${
+                                            contract.status === 'ACTIVE' ? 'bg-cyan-900/30 text-cyan-400 border-cyan-500/50' :
+                                            contract.status === 'COMPLETED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/50' :
+                                            contract.status === 'CANCELLED' || contract.status === 'TERMINATED' ? 'bg-rose-900/30 text-rose-400 border-rose-500/50' :
+                                            'bg-slate-800 text-slate-400 border-slate-700'
+                                        }`}>
+                                            <div className={`w-1 h-1 rounded-full mr-1.5 inline-block ${
+                                                contract.status === 'ACTIVE' ? 'bg-cyan-400' :
+                                                contract.status === 'COMPLETED' ? 'bg-emerald-400' :
+                                                contract.status === 'CANCELLED' || contract.status === 'TERMINATED' ? 'bg-rose-400' :
+                                                'bg-slate-500'
+                                            }`}></div>
+                                            {contract.status === 'DISPUTED' ? 'TRANH CHẤP' : contract.status}
+                                        </span>
+                                    </div>
+                                    <p className="text-gray-600 dark:text-gray-400 font-mono text-xs uppercase tracking-wider">{contract.job_title}</p>
                                 </div>
                                 {contract.status === 'ACTIVE' && (
                                     <button
@@ -408,7 +549,7 @@ const CheckpointReview = () => {
                                                         <button 
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                navigate(`/disputes/search?contractId=${contract.id}`);
+                                                                navigate(`/dispute/${contract.dispute_id}`);
                                                             }}
                                                             className="block mt-3 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] rounded shadow-sm transition-colors ml-auto flex items-center gap-1.5"
                                                         >
@@ -482,7 +623,7 @@ const CheckpointReview = () => {
                                             )}
 
                                             {/* Action Buttons */}
-                                            {isSubmitted && (
+                                            {(isSubmitted || (checkpoint.status === 'REJECTED' && checkpoint.rework_count >= 3)) && (
                                                 <div className="flex gap-3 mt-4">
                                                     <button
                                                         onClick={() => openApproveModal(checkpoint)}
@@ -493,15 +634,33 @@ const CheckpointReview = () => {
                                                         </svg>
                                                         Approve & Release Payment
                                                     </button>
-                                                    <button
-                                                        onClick={() => openRejectModal(checkpoint)}
-                                                        className="flex-1 py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
-                                                    >
-                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                        </svg>
-                                                        Request Changes
-                                                    </button>
+                                                    {checkpoint.rework_count < 3 ? (
+                                                        <button
+                                                            onClick={() => openRejectModal(checkpoint)}
+                                                            className="flex-1 py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                                                        >
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                            Request Changes
+                                                        </button>
+                                                    ) : (
+                                                        <div className="flex flex-col flex-1 gap-2">
+                                                            <div className="py-2 bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 font-semibold rounded-lg flex flex-col items-center justify-center border border-gray-200 dark:border-slate-600 opacity-80">
+                                                                <span className="text-[10px] uppercase tracking-tighter">Rework Limit Reached</span>
+                                                                <span className="text-[9px] font-normal lowercase">(3/3 attempts used)</span>
+                                                            </div>
+                                                            <button
+                                                                onClick={handleTerminateContract}
+                                                                className="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm uppercase tracking-wider"
+                                                            >
+                                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                </svg>
+                                                                Loại bỏ Worker & Tìm người mới
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -657,6 +816,24 @@ const CheckpointReview = () => {
                     </div>
                 </div>
             )}
+
+            <CyberModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                type={confirmModal.type}
+                confirmText={confirmModal.confirmText}
+            />
+
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                contractId={contract.id}
+                jobId={contract.job_id}
+                onSuccess={() => fetchContract()}
+            />
         </div>
     );
 };

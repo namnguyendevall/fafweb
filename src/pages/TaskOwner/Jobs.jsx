@@ -4,6 +4,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { useAuth } from "../../auth/AuthContext";
 import { jobsApi } from "../../api/jobs.api";
 import { useTranslation } from "react-i18next";
+import CyberModal from "../../components/CyberModal";
 
 const Jobs = () => {
     const { t } = useTranslation();
@@ -14,6 +15,18 @@ const Jobs = () => {
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const PAGE_SIZE = 8;
+
+    // Modal state
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        type: 'info',
+        onConfirm: () => {},
+        confirmText: 'CONFIRM'
+    });
+
+    const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
     useEffect(() => {
         if (user) {
@@ -37,16 +50,25 @@ const Jobs = () => {
     const paginatedJobs = jobs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     const handleDeleteJob = async (id) => {
-        if (window.confirm(t('task_owner.confirm_delete_job', 'Are you sure you want to delete this job?'))) {
-            try {
-                await jobsApi.deleteJob(id);
-                fetchMyJobs(); 
-                toast.success(t('task_owner.job_deleted_success', 'Job deleted successfully'));
-            } catch (error) {
-                console.error("Error deleting job:", error);
-                toast.error(t('task_owner.job_deleted_error', 'Failed to delete job'));
+        setConfirmModal({
+            isOpen: true,
+            title: "DESTRUCT_JOB",
+            message: t('task_owner.confirm_delete_job', 'Are you sure you want to delete this job? This action is permanent and will remove all associated data.'),
+            type: "danger",
+            confirmText: "DESTRUCT",
+            onConfirm: async () => {
+                try {
+                    await jobsApi.deleteJob(id);
+                    fetchMyJobs(); 
+                    toast.success(t('task_owner.job_deleted_success', 'Job deleted successfully'));
+                    closeConfirmModal();
+                } catch (error) {
+                    console.error("Error deleting job:", error);
+                    toast.error(t('task_owner.job_deleted_error', 'Failed to delete job'));
+                    closeConfirmModal();
+                }
             }
-        }
+        });
     };
 
     return (
@@ -222,6 +244,16 @@ const Jobs = () => {
                     </div>
                 </main>
             </div>
+            
+            <CyberModal
+                isOpen={confirmModal.isOpen}
+                onClose={closeConfirmModal}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                type={confirmModal.type}
+                confirmText={confirmModal.confirmText}
+            />
         </div>
     );
 };

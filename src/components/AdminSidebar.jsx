@@ -1,16 +1,16 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import FAFLogo from '../assets/FAF-Logo.png';
 
 const AdminSidebar = () => {
     const navigate = useNavigate();
+    const { user, logout } = useAuth();
 
     const handleLogout = () => {
-        localStorage.removeItem('user');
+        logout();
         navigate('/');
     };
-
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     return (
         <aside className="w-64 min-h-screen bg-[#02040a] border-r border-[#1e293b] flex flex-col font-mono relative z-20">
@@ -90,8 +90,8 @@ const AdminSidebar = () => {
                         to="/admin/moderation"
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
-                                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)] bg-grid-pattern'
-                                : 'text-slate-400 hover:text-cyan-300 hover:bg-white/5 border border-transparent'
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.15)] bg-grid-pattern'
+                                : 'text-slate-400 hover:text-amber-300 hover:bg-white/5 border border-transparent'
                             }`
                         }
                     >
@@ -104,8 +104,8 @@ const AdminSidebar = () => {
                         to="/admin/finance"
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
-                                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)] bg-grid-pattern'
-                                : 'text-slate-400 hover:text-cyan-300 hover:bg-white/5 border border-transparent'
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.15)] bg-grid-pattern'
+                                : 'text-slate-400 hover:text-emerald-300 hover:bg-white/5 border border-transparent'
                             }`
                         }
                     >
@@ -115,11 +115,25 @@ const AdminSidebar = () => {
                         <span className="font-semibold text-sm">Escrow & Finance</span>
                     </NavLink>
                     <NavLink
+                        to="/admin/withdrawals"
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
+                                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)] bg-grid-pattern'
+                                : 'text-slate-400 hover:text-indigo-300 hover:bg-white/5 border border-transparent'
+                            }`
+                        }
+                    >
+                        <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span className="font-semibold text-sm">Withdrawal Mgmt</span>
+                    </NavLink>
+                    <NavLink
                         to="/admin/managers"
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
-                                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)] bg-grid-pattern'
-                                : 'text-slate-400 hover:text-cyan-300 hover:bg-white/5 border border-transparent'
+                                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.15)] bg-grid-pattern'
+                                : 'text-slate-400 hover:text-indigo-300 hover:bg-white/5 border border-transparent'
                             }`
                         }
                     >
@@ -132,8 +146,8 @@ const AdminSidebar = () => {
                         to="/admin/skills"
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
-                                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)] bg-grid-pattern'
-                                : 'text-slate-400 hover:text-cyan-300 hover:bg-white/5 border border-transparent'
+                                ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.15)] bg-grid-pattern'
+                                : 'text-slate-400 hover:text-rose-300 hover:bg-white/5 border border-transparent'
                             }`
                         }
                     >

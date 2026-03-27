@@ -4,6 +4,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { proposalsApi } from '../../api/proposals.api';
 import { useAuth } from '../../auth/AuthContext';
 import { jobsApi } from '../../api/jobs.api';
+import { contractsApi } from '../../api/contracts.api';
 
 const SectionLabel = ({ children }) => (
     <p className="text-[9px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-3 flex items-center gap-1.5 border-b border-cyan-500/20 pb-2">
@@ -40,8 +41,21 @@ const ApplyToJob = () => {
                 setLoading(false);
             }
         };
+        const checkBusyStatus = async () => {
+            try {
+                const res = await contractsApi.getMyActiveContract();
+                if (res.data && ['ACTIVE', 'IN_PROGRESS', 'PENDING'].includes(res.data.status)) {
+                    toast.warning('Bạn đã có một công việc đang thực hiện hoặc đang chờ ký. Bạn không thể ứng tuyển thêm.');
+                    navigate(`/work/${id}`);
+                }
+            } catch (err) {
+                console.error("Busy status check failed:", err);
+            }
+        };
+
         fetchJobDetails();
-    }, [id]);
+        checkBusyStatus();
+    }, [id, navigate, toast]);
 
     const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 

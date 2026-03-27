@@ -72,7 +72,7 @@ const ContractSign = () => {
             await contractsApi.signContract(id, otp);
             toast.success('Hệ thống: Ký hợp đồng thành công!');
             setShowConfirm(false);
-            navigate('/my-job'); 
+            navigate('/dashboard'); 
         } catch (error) {
             console.error('Error signing contract:', error);
             toast.error(error.response?.data?.message || 'Lỗi: Ký hợp đồng thất bại.');

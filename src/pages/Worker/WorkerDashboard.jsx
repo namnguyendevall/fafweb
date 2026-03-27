@@ -240,6 +240,7 @@ const WorkerDashboard = () => {
                                 {[
                                     { id: 'overview', label: t('dashboard.overview') },
                                     { id: 'jobs', label: t('dashboard.active_jobs') },
+                                    { id: 'applications', label: 'ỨNG TUYỂN CỦA TÔI' },
                                     { id: 'reviews', label: t('dashboard.performance_reviews') }
                                 ].map((tabDef) => (
                                     <button key={tabDef.id} onClick={() => setActiveTab(tabDef.id)}
@@ -327,7 +328,7 @@ const WorkerDashboard = () => {
                                         <div className="rounded-2xl border p-6" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
                                             <div className="flex items-center justify-between mb-4">
                                                 <SectionLabel>{t('dashboard.pending_applications')}</SectionLabel>
-                                                <button onClick={() => setActiveTab('jobs')} className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest font-mono hover:text-cyan-300">{t('dashboard.view_all')}</button>
+                                                <button onClick={() => setActiveTab('applications')} className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest font-mono hover:text-cyan-300">{t('dashboard.view_all')}</button>
                                             </div>
                                             {proposalsLoading ? (
                                                 <div className="text-center py-6 text-[10px] font-mono tracking-widest text-cyan-500 uppercase animate-pulse">{t('dashboard.fetching_data')}</div>
@@ -388,6 +389,44 @@ const WorkerDashboard = () => {
                                                 <JobTable contracts={allContracts} />
                                             )}
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'applications' && (
+                                <div className="space-y-6 animate-[fadeIn_.3s_ease-out]">
+                                    <div className="rounded-2xl border p-6" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
+                                        <SectionLabel>TẤT CẢ ĐƠN ỨNG TUYỂN</SectionLabel>
+                                        {proposalsLoading ? (
+                                            <div className="text-center py-10 text-[10px] font-mono tracking-widest text-cyan-500 uppercase animate-pulse">Đang tải...</div>
+                                        ) : myProposals.length > 0 ? (
+                                            <div className="space-y-3 mt-4">
+                                                {myProposals.map(p => (
+                                                    <div key={p.id} className="flex justify-between items-center p-4 rounded-xl border border-slate-700/50 hover:border-cyan-500/30 bg-slate-800/30 transition-all cursor-pointer" onClick={() => navigate(`/work/${p.job_id}`)}>
+                                                        <div className="min-w-0 flex-1 pr-4">
+                                                            <div className="flex items-center gap-3 mb-1">
+                                                                <h4 className="text-[13px] font-bold text-white uppercase tracking-wider truncate">{p.job_title}</h4>
+                                                                <span className="text-[10px] font-mono text-slate-500">#{p.id}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-4 text-[10px] text-slate-400 font-mono tracking-widest uppercase">
+                                                                <span>{t('dashboard.proposed_price')}: <span className="text-cyan-400">${p.proposed_price?.toLocaleString()}</span></span>
+                                                                <span>•</span>
+                                                                <span>{new Date(p.created_at).toLocaleDateString()}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="shrink-0 text-right">
+                                                            <span className={`inline-block px-3 py-1 rounded text-[9px] font-black font-mono tracking-widest uppercase border ${
+                                                                p.status === 'PENDING' ? 'bg-amber-900/30 text-amber-400 border-amber-500/30' : 
+                                                                p.status === 'ACCEPTED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' : 
+                                                                'bg-red-900/30 text-red-400 border-red-500/30'
+                                                            }`}>{p.status}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-center py-10 text-[11px] text-slate-500 italic font-mono uppercase tracking-widest">Bạn chưa có đơn ứng tuyển nào.</p>
+                                        )}
                                     </div>
                                 </div>
                             )}

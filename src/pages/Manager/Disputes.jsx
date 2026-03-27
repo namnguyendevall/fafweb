@@ -76,7 +76,7 @@ const Disputes = () => {
                     filteredDisputes.map((d) => (
                         <div 
                             key={d.id}
-                            onClick={() => navigate(`/manager/disputes/${d.id}`)}
+                            onClick={() => navigate(`/dispute/${d.id}`)}
                             className="group relative bg-transparent/40 border border-rose-500/10 rounded-2xl p-6 hover:border-rose-500/40 hover:bg-rose-500/[0.03] transition-all duration-300 cursor-pointer overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6"
                         >
                             <div className="flex items-center gap-6">

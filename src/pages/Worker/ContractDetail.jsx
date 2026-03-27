@@ -85,7 +85,7 @@ const ContractDetail = () => {
                 return (
                     <div className={baseClasses}>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 00-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                     </div>
                 );
@@ -206,7 +206,7 @@ const ContractDetail = () => {
                                         <p className="text-slate-300 text-xs">Hợp đồng này đang trong quá trình khiếu nại. Manager đang xem xét bằng chứng từ 2 bên.</p>
                                     </div>
                                     <button 
-                                        onClick={() => navigate(`/disputes/search?contractId=${contract.id}`)}
+                                        onClick={() => navigate(`/dispute/${contract.dispute_id}`)}
                                         className="shrink-0 px-6 py-2.5 bg-rose-500 hover:bg-rose-400 text-white font-black text-xs font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all"
                                     >
                                         Vào Phòng Chat Khiếu Nại
@@ -376,16 +376,52 @@ const ContractDetail = () => {
                                                 <span className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded text-[9px] font-black font-mono tracking-widest uppercase border ${getStatusColor(checkpoint.status)}`}>
                                                     {checkpoint.status}
                                                 </span>
+                                                {checkpoint.rework_count > 0 && (
+                                                    <span className="block mt-1 text-[8px] text-slate-500 font-mono tracking-tighter uppercase opacity-60">
+                                                        REWORK_COUNT: {checkpoint.rework_count}/3
+                                                    </span>
+                                                )}
+
                                                 {checkpoint.status === 'DISPUTED' && (
                                                     <button 
-                                                        onClick={() => navigate(`/disputes/search?contractId=${contract.id}`)}
+                                                        onClick={() => navigate(`/dispute/${contract.dispute_id}`)}
                                                         className="block mt-3 px-3 py-1 bg-rose-500 hover:bg-rose-400 text-white font-black text-[9px] font-mono tracking-widest uppercase rounded shadow-[0_0_10px_rgba(244,63,94,0.3)] transition-all ml-auto"
                                                     >
                                                         Giải quyết tranh chấp
                                                     </button>
                                                 )}
-                                            </div>
 
+                                                {checkpoint.status === 'REJECTED' && contract.status !== 'DISPUTED' && (
+                                                    <div className="flex flex-col gap-2 mt-4">
+                                                        {!checkpoint.existing_dispute_id ? (
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); setDisputeModal({ open: true, checkpointId: checkpoint.id }); }}
+                                                                className="block px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-black text-[10px] font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all border border-rose-400/30"
+                                                            >
+                                                                Khiếu nại (Dispute)
+                                                            </button>
+                                                        ) : (
+                                                            <div className="px-3 py-2 bg-slate-800 text-slate-500 font-black text-[9px] font-mono tracking-widest uppercase rounded border border-slate-700/50 flex flex-col items-center gap-1 opacity-70">
+                                                                <span>Hạn ngạch khiếu nại hết</span>
+                                                                <span className="text-[7px] tracking-normal font-normal text-slate-600 lowercase">(1 lần/checkpoint)</span>
+                                                            </div>
+                                                        )}
+                                                        {checkpoint.rework_count < 3 ? (
+                                                            <button 
+                                                                onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)}
+                                                                className="block px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/50 font-black text-[10px] font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all"
+                                                            >
+                                                                Làm lại (Rework)
+                                                            </button>
+                                                        ) : (
+                                                            <div className="px-3 py-2 bg-rose-900/20 text-rose-500 font-black text-[9px] font-mono tracking-widest uppercase rounded border border-rose-500/30 flex flex-col items-center gap-1 opacity-80">
+                                                                <span>Giới hạn làm lại đã hết</span>
+                                                                <span className="text-[7px] tracking-normal font-normal text-rose-400 lowercase">(3/3 lần đã sử dụng)</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {checkpoint.due_date && (
@@ -504,6 +540,70 @@ const ContractDetail = () => {
                     </div>
                 )}
             </div>
+
+            {/* Dispute Modal */}
+            {disputeModal.open && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div 
+                        className="absolute inset-0 bg-slate-900/80 backdrop-blur-md"
+                        onClick={() => setDisputeModal({ open: false, checkpointId: null })}
+                    />
+                    <div className="relative w-full max-w-lg bg-[#090e17] border border-rose-500/30 rounded-2xl shadow-[0_0_50px_rgba(244,63,94,0.2)] overflow-hidden animate-in fade-in zoom-in duration-300">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 via-transparent to-rose-500" />
+                        
+                        <div className="p-6">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="p-2.5 bg-rose-900/20 border border-rose-500/30 rounded">
+                                    <svg className="w-5 h-5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <h2 className="text-xl font-black text-white font-mono tracking-widest uppercase">GỬI KHIẾU NẠI_</h2>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[10px] font-black text-rose-500 font-mono uppercase tracking-[0.2em] mb-2">LÝ DO KHIẾU NẠI:</label>
+                                    <textarea
+                                        value={disputeReason}
+                                        onChange={(e) => setDisputeReason(e.target.value)}
+                                        rows="5"
+                                        placeholder="Mô tả chi tiết vấn đề bạn đang gặp phải. Tại sao bạn cảm thấy cần phải khiếu nại checkpoint này?..."
+                                        className="w-full bg-[#02040a] border border-slate-800 rounded-xl p-4 text-sm text-slate-300 focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/20 transition-all outline-none resize-none placeholder:text-slate-700"
+                                    />
+                                </div>
+                                
+                                <div className="bg-rose-900/10 border border-rose-500/20 rounded-lg p-3">
+                                    <p className="text-[10px] text-rose-400/80 font-mono leading-relaxed uppercase tracking-wider">
+                                        <span className="font-black text-rose-500 mr-2">[ CẢNH BÁO ]</span> 
+                                        KHIẾU NẠI SẼ ĐƯỢC CHUYỂN ĐẾN MANAGER ĐỂ GIẢI QUYẾT. TRANH CHẤP CÓ THỂ MẤT 1-3 NGÀY ĐỂ XỬ LÝ.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-8">
+                                <button
+                                    onClick={() => setDisputeModal({ open: false, checkpointId: null })}
+                                    className="flex-1 py-3 border border-slate-800 text-slate-500 font-black font-mono text-xs tracking-widest uppercase rounded-xl hover:bg-slate-800 transition-all"
+                                >
+                                    HỦY BỎ
+                                </button>
+                                <button
+                                    onClick={handleSubmitDispute}
+                                    disabled={submittingDispute || !disputeReason.trim()}
+                                    className="flex-1 py-3 bg-rose-600 text-white font-black font-mono text-xs tracking-widest uppercase rounded-xl hover:bg-rose-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(244,63,94,0.3)] disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                    {submittingDispute ? (
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    ) : (
+                                        'GỬI KHIẾU NẠI'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

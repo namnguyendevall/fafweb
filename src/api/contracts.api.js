@@ -72,6 +72,6 @@ export const contractsApi = {
 
   // Terminate contract (Employer or Worker)
   terminateContract: (contractId) => {
-    return axiosClient.post(`/contracts/${contractId}/terminate`);
+    return axiosClient.put(`/contracts/${contractId}/terminate`);
   },
 };

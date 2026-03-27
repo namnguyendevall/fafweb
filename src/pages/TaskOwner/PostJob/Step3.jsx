@@ -61,8 +61,8 @@ const Step3BudgetMilestones = ({
                     type="number"
                     value={totalBudget}
                     onChange={(e) => {
-                      const value = Number(e.target.value);
-                      if (!isNaN(value) && value >= 0 && value <= wallet) {
+                      const value = e.target.value === "" ? "" : Number(e.target.value);
+                      if (value === "" || (!isNaN(value) && value >= 0 && value <= wallet)) {
                         setTotalBudget(value);
                       }
                     }}
@@ -138,10 +138,11 @@ const Step3BudgetMilestones = ({
                           type="number"
                           value={checkpoint.points}
                           onChange={(e) => {
-                            const value = Number(e.target.value) || 0;
+                            const value = e.target.value === "" ? "" : Number(e.target.value);
                             const otherPoints = checkpoints.reduce((sum, cp) => cp.id === checkpoint.id ? sum : sum + (Number(cp.points) || 0), 0);
-                            if (otherPoints + value > totalBudgetNum) return;
-                            onUpdateCheckpoint(checkpoint.id, "points", value);
+                            if (value === "" || (!isNaN(value) && value >= 0 && otherPoints + value <= totalBudgetNum)) {
+                              onUpdateCheckpoint(checkpoint.id, "points", value);
+                            }
                           }}
                           className="w-full px-4 py-2.5 pr-12 bg-black/40 border border-white/5 rounded-lg text-fuchsia-400 font-mono text-sm outline-none focus:border-fuchsia-500/40 transition-all"
                         />
@@ -305,6 +306,7 @@ const Step3BudgetMilestones = ({
                           const errors = [];
                           checkpoints.forEach((cp, idx) => { if (!cp.duration_days || cp.duration_days < 1) errors.push(`Milestone ${idx+1} requires valid duration mapping in days`); });
                           if (!isBudgetAllocated) errors.push(t('postjob.err_budget_mismatch', { used: usedPoints, total: totalBudgetNum }));
+                          if (totalBudgetNum > wallet) errors.push(`Insufficient balance. You need ${totalBudgetNum.toLocaleString()} PTS but only have ${wallet.toLocaleString()} PTS.`);
                           if (errors.length > 0) { setValidationErrors(errors); return; }
                           setValidationErrors([]);
                           onContinue();

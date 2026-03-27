@@ -32,13 +32,8 @@ const Step3 = ({ onBack, job, proposalData }) => {
 
             await proposalsApi.submitProposal(payload);
             
-            // Navigate to success page
-            navigate('/apply/success', { 
-                state: { 
-                    jobTitle: job.title,
-                    proposedPrice: proposalData.proposedPrice 
-                } 
-            });
+            toast.success('Gửi hồ sơ ứng tuyển thành công!');
+            navigate('/dashboard');
         } catch (err) {
             console.error('Failed to submit proposal:', err);
             const errorMsg = err.response?.data?.message || 'Failed to submit proposal';

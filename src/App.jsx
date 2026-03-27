@@ -35,6 +35,11 @@ import Dashboard from "./pages/Admin/Dashboard";
 import UserManage from "./pages/Admin/UserManage";
 import Moderation from "./pages/Admin/Moderation";
 import Finance from "./pages/Admin/Finance";
+import ManagerManage from "./pages/Admin/ManagerManage";
+import SkillManage from "./pages/Admin/SkillManage";
+import CategoryManage from "./pages/Admin/CategoryManage";
+import AdminNotifications from "./pages/Admin/AdminNotifications";
+import WithdrawalManage from "./pages/Admin/WithdrawalManage";
 import Forbidden from "./components/Forbidden";
 import PublicProfile from "./pages/PublicProfile";
 import ToastDemo from "./pages/ToastDemo";
@@ -242,6 +247,46 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admin/withdrawals"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <WithdrawalManage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/managers"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <ManagerManage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/skills"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <SkillManage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/categories"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <CategoryManage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/notifications"
+        element={
+          <ProtectedRoute roles={["admin"]}>
+            <AdminNotifications />
+          </ProtectedRoute>
+        }
+      />
 
       {/* ========== OTHER ROUTES ========== */}
       <Route path="/job-list" element={<JobListPage />} />
@@ -250,6 +295,14 @@ function App() {
         element={
           <ProtectedRoute roles={["worker", "employer", "admin", "manager"]}>
             <PublicLayout><PublicProfile /></PublicLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dispute/:id"
+        element={
+          <ProtectedRoute roles={["worker", "employer", "admin", "manager"]}>
+            <DisputeDetail />
           </ProtectedRoute>
         }
       />
@@ -269,7 +322,6 @@ function App() {
         <Route path="employees" element={<EmployeeManagement />} />
         <Route path="finances" element={<Finances />} />
         <Route path="disputes" element={<Disputes />} />
-        <Route path="disputes/:id" element={<DisputeDetail />} />
       </Route>
 
       {/* ========== FALLBACK (Must be last) ========== */}

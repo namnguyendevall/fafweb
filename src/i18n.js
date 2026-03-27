@@ -174,8 +174,9 @@ const resources = {
         "password_mismatch": "Mật khẩu xác nhận không khớp",
         "reset_success": "Đặt lại mật khẩu thành công!",
         "reset_fail": "Đặt lại mật khẩu thất bại. Vui lòng thử lại.",
-        "new_otp_sent": "Mã OTP mới đã được gửi đến email của bạn!",
-        "resend_otp_fail": "Gửi lại OTP thất bại. Vui lòng thử lại."
+         "new_otp_sent": "Mã OTP mới đã được gửi đến email của bạn!",
+         "resend_otp_fail": "Gửi lại OTP thất bại. Vui lòng thử lại.",
+         "change_password_success": "Đổi mật khẩu thành công!"
       },
       "find_work": {
         "match_percent": "% PHÙ HỢP",
@@ -312,7 +313,14 @@ const resources = {
           "additional_info": "THÔNG TIN BỔ SUNG",
           "permanent_address": "ĐỊA CHỈ THƯỜNG TRÚ",
           "not_updated": "CHƯA CẬP NHẬT",
-          "education_level": "TRÌNH ĐỘ HỌC VẤN"
+          "education_level": "TRÌNH ĐỘ HỌC VẤN",
+          "security_title": "BẢO MẬT TÀI KHOẢN",
+          "old_password": "Mật khẩu hiện tại",
+          "new_password": "Mật khẩu mới",
+          "confirm_password": "Xác nhận mật khẩu mới",
+          "updating": "Đang cập nhật...",
+          "update_password": "CẬP NHẬT MẬT KHẨU",
+          "fill_all_fields": "Vui lòng nhập đầy đủ thông tin"
         },
         "public_profile": {
           "error_load": "Không thể tải hồ sơ.",
@@ -664,8 +672,9 @@ const resources = {
         "password_mismatch": "Code verification failed",
         "reset_success": "Access code reset complete!",
         "reset_fail": "Reset failure. Sequence aborted.",
-        "new_otp_sent": "New token has been transmitted!",
-        "resend_otp_fail": "Re-transmission failure. Try again."
+         "new_otp_sent": "New token has been transmitted!",
+         "resend_otp_fail": "Re-transmission failure. Try again.",
+         "change_password_success": "Password changed successfully!"
       },
       "find_work": {
         "match_percent": "% MATCH",
@@ -802,7 +811,14 @@ const resources = {
           "additional_info": "SUPPLEMENTAL DATA",
           "permanent_address": "REGISTERED SECTOR",
           "not_updated": "UNINITIALIZED",
-          "education_level": "COG-LEVEL TRAINING"
+          "education_level": "COG-LEVEL TRAINING",
+          "security_title": "ACCOUNT SECURITY",
+          "old_password": "Current Password",
+          "new_password": "New Password",
+          "confirm_password": "Confirm New Password",
+          "updating": "UPDATING...",
+          "update_password": "UPDATE PASSWORD",
+          "fill_all_fields": "Please fill all fields"
         },
         "public_profile": {
           "error_load": "Could not load profile data.",

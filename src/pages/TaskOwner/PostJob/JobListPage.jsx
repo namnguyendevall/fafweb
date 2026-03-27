@@ -12,7 +12,7 @@ export default function JobListPage() {
     useEffect(() => {
         async function fetchJobs() {
             try {
-                const response = await jobsApi.getAllJobs();
+                const response = await jobsApi.getMyJobs();
                 setJobs(response.data || []);
             } catch (err) {
                 toast.error("Không thể tải danh sách công việc");

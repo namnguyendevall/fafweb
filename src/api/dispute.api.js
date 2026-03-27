@@ -20,6 +20,10 @@ const disputeApi = {
         }
         return axiosClient.post(`/disputes/${id}/messages`, { message: payload });
     },
+    
+    // Employer resolves the dispute (Concede or Escalate)
+    employerResolve: (id, action) =>
+        axiosClient.post(`/disputes/${id}/employer-resolve`, { action }),
 };
 
 export default disputeApi;

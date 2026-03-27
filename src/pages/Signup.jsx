@@ -4,6 +4,7 @@ import { useToast } from "../contexts/ToastContext";
 import FAFLogo from "../assets/FAF-Logo.png";
 import { authApi } from "../api/auth.api";
 import { useTranslation } from "react-i18next";
+import TermsOfServiceModal from "../components/TermsOfServiceModal";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -19,6 +20,8 @@ const Signup = () => {
     tos: false,
   });
   const [loading, setLoading] = useState(false);
+  const [showTosModal, setShowTosModal] = useState(false);
+  const [hasReadTos, setHasReadTos] = useState(false);
   const { t } = useTranslation();
 
   const togglePassword = () => setShowPassword((prev) => !prev);
@@ -266,17 +269,36 @@ const Signup = () => {
               </div>
             </div>
 
-            <div className="flex items-start gap-3 text-xs font-mono text-slate-400 mt-2">
+            <div className={`flex items-start gap-3 text-xs font-mono mt-2 transition-opacity ${!hasReadTos ? 'opacity-50' : ''}`}>
               <input
                 type="checkbox"
                 id="tos"
                 name="tos"
                 checked={formData.tos}
                 onChange={handleChange}
-                className="mt-1 flex-shrink-0 cursor-crosshair rounded border-white/20 bg-slate-900/50 text-purple-500 focus:ring-purple-500/50"
+                disabled={!hasReadTos}
+                className={`mt-1 flex-shrink-0 rounded border-white/20 bg-slate-900/50 text-purple-500 focus:ring-purple-500/50 ${hasReadTos ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
               />
-              <label htmlFor="tos" className="cursor-crosshair leading-relaxed">
-                {t('auth.tos_text_1')} <span className="text-purple-400">{t('auth.tos_text_2')}</span> {t('auth.tos_text_3')} <span className="text-purple-400">{t('auth.tos_text_4')}</span>.
+              <label 
+                htmlFor={hasReadTos ? "tos" : "disabled-tos"} 
+                className={`leading-relaxed ${hasReadTos ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
+              >
+                {t('auth.tos_text_1')}{" "}
+                <button 
+                    type="button" 
+                    onClick={() => setShowTosModal(true)} 
+                    className="text-purple-400 hover:text-purple-300 hover:underline transition-colors font-bold"
+                >
+                    {t('auth.tos_text_2')}
+                </button>{" "}
+                {t('auth.tos_text_3')}{" "}
+                <button 
+                    type="button" 
+                    onClick={() => setShowTosModal(true)} 
+                    className="text-purple-400 hover:text-purple-300 hover:underline transition-colors font-bold"
+                >
+                    {t('auth.tos_text_4')}
+                </button>.
               </label>
             </div>
 
@@ -303,25 +325,20 @@ const Signup = () => {
             </button>
           </form>
 
-          <div className="mt-8 flex flex-col gap-4 text-center">
-              <div className="flex items-center gap-3 opacity-50">
-                  <span className="flex-1 h-[1px] bg-gradient-to-r from-transparent to-white"></span>
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-white">{t('auth.or_signup_with')}</span>
-                  <span className="flex-1 h-[1px] bg-gradient-to-l from-transparent to-white"></span>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                  <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-3 transition-all text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
-                      <span className="text-white group-hover/btn2:scale-110 transition-transform">G</span> GOOGLE
-                  </button>
-                  <button type="button" className="flex items-center justify-center gap-2 bg-slate-900 border border-white/10 hover:border-white/30 rounded-lg py-3 transition-all text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-crosshair group/btn2">
-                      <span className="text-blue-500 group-hover/btn2:scale-110 transition-transform">in</span> LINKEDIN
-                  </button>
-              </div>
-          </div>
+
 
         </div>
       </main>
+
+      <TermsOfServiceModal 
+        isOpen={showTosModal}
+        onClose={() => setShowTosModal(false)}
+        onReadComplete={() => {
+            setHasReadTos(true);
+            setFormData(prev => ({ ...prev, tos: true }));
+            toast.success("Cảm ơn bạn đã đọc các điều khoản!");
+        }}
+      />
     </div>
   );
 };
