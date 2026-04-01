@@ -93,7 +93,7 @@ const Wallet = () => {
 
     const walletId = user?.id ? `faf_${user.id}_wallet` : 'faf_wallet'
     const totalBalance = user?.balance_points ?? 0
-    const vndBalance = (totalBalance * 10000).toLocaleString()
+    const vndBalance = (totalBalance * 1000).toLocaleString()
     const systemFee = 0 // No fee as per user request
 
     const transactions = useMemo(() => {
