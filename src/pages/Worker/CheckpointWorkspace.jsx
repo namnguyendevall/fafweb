@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { contractsApi } from '../../api/contracts.api';
 import { workSessionsApi } from '../../api/workSessions.api';
+import { uploadApi } from '../../api/upload.api';
 import { useToast } from '../../contexts/ToastContext';
 import VideoEditor from './VideoEditor';
 
@@ -282,14 +283,8 @@ const CheckpointWorkspace = () => {
         try {
             let finalUrl = submissionUrl.trim();
             if (submitFile) {
-                const formData = new FormData();
-                formData.append('file', submitFile, submitFile.name);
-                const uploadRes = await fetch('http://localhost:5000/api/uploads/submission', {
-                    method: 'POST', credentials: 'include', body: formData,
-                });
-                if (!uploadRes.ok) throw new Error('Upload failed');
-                const { url } = await uploadRes.json();
-                finalUrl = url;
+                const res = await uploadApi.uploadSubmission(submitFile, submitFile.name);
+                finalUrl = res.url || res.data?.url;
                 setSubmitProgress(60);
             }
 

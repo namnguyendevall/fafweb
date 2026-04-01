@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { useToast } from '../../contexts/ToastContext';
+import { uploadApi } from '../../api/upload.api';
 
 /* ─── Helpers ─── */
 const fmt = (s) => {
@@ -401,17 +402,10 @@ const VideoEditor = ({ onSubmissionReady }) => {
         if (!outputUrl || uploading) return;
         setUploading(true);
         try {
-            const res = await fetch(outputUrl);
-            const blob = await res.blob();
-            const formData = new FormData();
-            formData.append('file', blob, videoFile?.name || 'video.mp4');
-            const uploadRes = await fetch('http://localhost:5000/api/uploads/submission', {
-                method: 'POST',
-                credentials: 'include',
-                body: formData,
-            });
-            if (!uploadRes.ok) throw new Error('Upload thất bại');
-            const { url } = await uploadRes.json();
+            const blobRes = await fetch(outputUrl);
+            const blob = await blobRes.blob();
+            const res = await uploadApi.uploadSubmission(blob, videoFile?.name || 'video.mp4');
+            const url = res.url || res.data?.url;
             setUploadedUrl(url);
             if (onSubmissionReady) onSubmissionReady(url);
         } catch (err) {

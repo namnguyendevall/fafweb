@@ -160,7 +160,7 @@ const PostCard = ({ post: initialPost, onLikeToggle, onDeleted }) => {
     const getImageUrl = (url) => {
         if (!url) return null;
         if (url.startsWith('http')) return url;
-        const backendRoot = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace('/api', '');
+        const backendRoot = (import.meta.env.VITE_API_BASE_URL || window.location.origin + '/api').replace('/api', '');
         return `${backendRoot}${url}`;
     };
 

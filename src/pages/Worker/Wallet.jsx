@@ -97,24 +97,27 @@ const Wallet = () => {
     const systemFee = 0 // No fee as per user request
 
     const transactions = useMemo(() => {
-        return realTransactions.map(tx => ({
-            id: tx.id,
-            type: tx.type === 'DEPOSIT' || tx.type === 'INCOMING' ? 'incoming' : 'outgoing',
-            title: tx.description || (
-                   tx.reference_type === 'ZALOPAY_DEPOSIT' ? 'Nạp tiền ZaloPay' : 
-                   tx.reference_type === 'MOMO_DEPOSIT' ? 'Nạp tiền MoMo' : 
-                   tx.type === 'DEPOSIT' ? 'Nạp tiền vào ví' : 'Giao dịch'),
-            date: new Date(tx.created_at).toLocaleString('vi-VN', { 
-                month: 'short', day: '2-digit', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-            }).replace(',', ' •'),
-            amount: `${tx.type === 'DEPOSIT' || tx.type === 'INCOMING' ? '+' : '-'} ${Math.abs(tx.amount).toLocaleString()} CRED`,
-            status: tx.status,
-            statusColor: tx.status === 'SUCCESS' || tx.status === 'COMPLETED' ? 'text-emerald-400' : 
-                         tx.status === 'PENDING' ? 'text-amber-400' : 'text-slate-500',
-            icon: tx.type === 'DEPOSIT' || tx.type === 'INCOMING' ? 'plus' : 'up',
-            raw: tx
-        }));
+        return realTransactions.map(tx => {
+            const isIncoming = ['DEPOSIT', 'INCOMING', 'REFUND', 'RELEASE'].includes(tx.type);
+            return {
+                id: tx.id,
+                type: isIncoming ? 'incoming' : 'outgoing',
+                title: tx.description || (
+                       tx.reference_type === 'ZALOPAY_DEPOSIT' ? 'Nạp tiền ZaloPay' : 
+                       tx.reference_type === 'MOMO_DEPOSIT' ? 'Nạp tiền MoMo' : 
+                       tx.type === 'DEPOSIT' ? 'Nạp tiền vào ví' : 'Giao dịch'),
+                date: new Date(tx.created_at).toLocaleString('vi-VN', { 
+                    month: 'short', day: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                }).replace(',', ' •'),
+                amount: `${isIncoming ? '+' : '-'} ${Math.abs(tx.amount).toLocaleString()} CRED`,
+                status: tx.status,
+                statusColor: tx.status === 'SUCCESS' || tx.status === 'COMPLETED' ? 'text-emerald-400' : 
+                             tx.status === 'PENDING' ? 'text-amber-400' : 'text-slate-500',
+                icon: isIncoming ? 'plus' : 'up',
+                raw: tx
+            };
+        });
     }, [realTransactions]);
 
     const filteredTransactions = useMemo(() => {
