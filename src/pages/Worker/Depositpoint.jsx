@@ -45,7 +45,8 @@ const Depositpoint = () => {
         try {
             let res;
             if (paymentMethod === 'zalopay') {
-                res = await walletApi.depositZaloPay(points);
+                const redirecturl = `${window.location.origin}/wallet/deposit/result`;
+                res = await walletApi.depositZaloPay(points, redirecturl);
                 if (res.order_url) {
                     window.location.href = res.order_url;
                 } else {

@@ -1,8 +1,8 @@
 import axiosClient from "./axiosClient";
 
 export const walletApi = {
-  depositZaloPay(amount) {
-    return axiosClient.post("/wallets/deposit/zalopay", { amount });
+  depositZaloPay(amount, redirecturl) {
+    return axiosClient.post("/wallets/deposit/zalopay", { amount, redirecturl });
   },
   depositMoMo(amount) {
     return axiosClient.post("/wallets/deposit/momo", { amount });

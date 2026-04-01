@@ -15,6 +15,7 @@ import ContractDetail from "./pages/Worker/ContractDetail";
 import Settings from "./pages/Worker/Settings";
 import Wallet from "./pages/Worker/Wallet";
 import Depositpoint from "./pages/Worker/Depositpoint";
+import DepositResult from "./pages/Worker/DepositResult";
 import TaskOwnerPage from "./pages/TaskOwner/TaskOwnerPage";
 import ProfilesPage from "./pages/TaskOwner/ProfilesPage";
 import Contracts from "./pages/TaskOwner/Contracts";
@@ -171,6 +172,14 @@ function App() {
         element={
           <ProtectedRoute roles={["worker", "admin"]}>
             <PublicLayout><Depositpoint /></PublicLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/wallet/deposit/result"
+        element={
+          <ProtectedRoute roles={["worker", "admin", "manager", "employer"]}>
+            <PublicLayout><DepositResult /></PublicLayout>
           </ProtectedRoute>
         }
       />
