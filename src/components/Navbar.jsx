@@ -460,6 +460,10 @@ const Navbar = () => {
             emerald: {
                 active: 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]',
                 badge: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
+            },
+            purple: {
+                active: 'bg-purple-900/30 text-purple-400 border border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]',
+                badge: 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]'
             }
         };
 
