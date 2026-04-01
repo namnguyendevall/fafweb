@@ -275,14 +275,14 @@ const NotificationsDropdown = ({ onClose, navigate, onMarkAllRead, user }) => {
     const NotifItem = ({ n }) => (
         <button
             onClick={() => handleClick(n)}
-            className={`w-full flex items-start gap-3 px-3 py-2.5 hover:bg-${accentPrefix}-900/10 transition-colors rounded border-l-2 mb-1 group text-left ${
-                !n.is_read ? `border-${accentPrefix}-400 bg-${accentPrefix}-950/20` : 'border-transparent hover:border-slate-700'
+            className={`w-full flex items-start gap-3 px-3 py-2.5 ${isManager ? 'hover:bg-emerald-900/10' : 'hover:bg-indigo-900/10'} transition-colors rounded border-l-2 mb-1 group text-left ${
+                !n.is_read ? (isManager ? 'border-emerald-400 bg-emerald-950/20' : 'border-indigo-400 bg-indigo-950/20') : 'border-transparent hover:border-slate-700'
             }`}
         >
             {/* Icon / Avatar */}
             <div className="relative flex-shrink-0 mt-0.5">
                 <div className={`w-8 h-8 rounded border flex items-center justify-center text-sm overflow-hidden ${
-                    !n.is_read ? `bg-${accentPrefix}-950 border-${accentPrefix}-500 shadow-[0_0_10px_${accentShadow}] text-${accentPrefix}-300` : 'bg-[#02040a] border-slate-700 text-slate-500'
+                    !n.is_read ? (isManager ? `bg-emerald-950 border-emerald-500 shadow-[0_0_10px_${accentShadow}] text-emerald-300` : `bg-indigo-950 border-indigo-500 shadow-[0_0_10px_${accentShadow}] text-indigo-300`) : 'bg-[#02040a] border-slate-700 text-slate-500'
                 }`}>
                     {n.icon || '(!)'}
                 </div>
@@ -290,10 +290,10 @@ const NotificationsDropdown = ({ onClose, navigate, onMarkAllRead, user }) => {
 
             {/* Text */}
             <div className="flex-1 min-w-0">
-                <p className={`text-[11px] font-mono leading-tight uppercase tracking-wide ${!n.is_read ? `text-${accentPrefix}-100 font-bold` : 'text-slate-400'}`}>
+                <p className={`text-[11px] font-mono leading-tight uppercase tracking-wide ${!n.is_read ? 'text-white font-black' : 'text-slate-400'}`}>
                     {n.message || n.title || 'SYS.LOGS_RECEIVED'}
                 </p>
-                <p className={`text-[9px] mt-1 font-mono tracking-widest ${!n.is_read ? `text-${accentPrefix}-400 font-bold` : 'text-slate-600'}`}>
+                <p className={`text-[9px] mt-1 font-mono tracking-widest ${!n.is_read ? (isManager ? 'text-emerald-400 font-bold' : 'text-indigo-400 font-bold') : 'text-slate-600'}`}>
                     T-{timeAgo(n.created_at)}
                 </p>
             </div>
@@ -301,7 +301,7 @@ const NotificationsDropdown = ({ onClose, navigate, onMarkAllRead, user }) => {
             {/* Unread dot */}
             {!n.is_read && (
                 <div className="flex-shrink-0 mt-1">
-                    <div className={`w-1.5 h-1.5 rounded-full bg-${accentPrefix}-400 shadow-[0_0_8px_${dotShadow}] animate-pulse`} />
+                    <div className={`w-1.5 h-1.5 rounded-full ${isManager ? 'bg-emerald-400' : 'bg-indigo-400'} shadow-[0_0_8px_${dotShadow}] animate-pulse`} />
                 </div>
             )}
         </button>
