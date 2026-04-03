@@ -205,6 +205,58 @@ const ContractDetail = () => {
         window.open(getAttachmentUrl(url), '_blank');
     };
 
+    const handleDownloadAll = async () => {
+        if (!contract.job_resource_urls && !contract.resource_urls) return;
+        
+        let resources = contract.job_resource_urls || contract.resource_urls;
+        if (typeof resources === 'string') {
+            try { resources = JSON.parse(resources); } catch (e) { resources = []; }
+        }
+        
+        if (!Array.isArray(resources) || resources.length === 0) return;
+
+        try {
+            setIsZipping(true);
+            toast.info("Đang nén tài liệu, vui lòng đợi...");
+            
+            const zip = new JSZip();
+            const folder = zip.folder(`FAF_Project_Resources_${id}`);
+
+            const downloadPromises = resources.map(async (res, index) => {
+                const url = typeof res === 'object' ? res.url : res;
+                const name = typeof res === 'object' ? res.name : (url.split('/').pop().split('?')[0]);
+                const ext = url.split('.').pop().split('?')[0] || 'file';
+                const fileName = name.includes('.') ? name : `${name || `file_${index+1}`}.${ext}`;
+
+                try {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    folder.file(fileName, blob);
+                } catch (err) {
+                    console.error(`Failed to download ${url}`, err);
+                }
+            });
+
+            await Promise.all(downloadPromises);
+            
+            const content = await zip.generateAsync({ type: "blob" });
+            const zipUrl = URL.createObjectURL(content);
+            const link = document.createElement('a');
+            link.href = zipUrl;
+            link.download = `FAF_Resources_Contract_${id}.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            toast.success("Đã tải về toàn bộ tài nguyên!");
+        } catch (error) {
+            console.error("Zipping error:", error);
+            toast.error("Lỗi khi nén dữ liệu. Vui lòng thử tải từng file.");
+        } finally {
+            setIsZipping(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-transparent text-slate-300 relative font-sans select-none" style={{ userSelect: 'none' }}>
             {/* Watermark Overlay */}
@@ -400,6 +452,27 @@ const ContractDetail = () => {
 
                     return (
                         <div className="space-y-6 mb-6">
+                            <div className="flex justify-between items-center bg-[#090e17]/40 p-3 rounded-xl border border-cyan-500/10">
+                                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">TRÌNH QUẢN LÝ TÀI NGUYÊN HỢP ĐỒNG</span>
+                                <button 
+                                    onClick={handleDownloadAll}
+                                    disabled={isZipping}
+                                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-black text-[10px] tracking-widest uppercase font-mono transition-all ${isZipping ? 'bg-slate-800 text-slate-500 cursor-wait' : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]'}`}
+                                >
+                                    {isZipping ? (
+                                        <>
+                                            <div className="w-3 h-3 border border-cyan-500/50 border-t-transparent rounded-full animate-spin" />
+                                            ĐANG NÉN...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                            TẢI TOÀN BỘ (.ZIP)
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
                             {/* IMAGE GALLERY */}
                             {resources.some(r => {
                                 const url = typeof r === 'object' ? r.url : r;
