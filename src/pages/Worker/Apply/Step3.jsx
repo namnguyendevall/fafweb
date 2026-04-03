@@ -115,19 +115,32 @@ const Step3 = ({ onBack, job, proposalData }) => {
                                     </span>
                                 </div>
                                 <div className="space-y-3">
-                                    {job.checkpoints.map((checkpoint, index) => (
-                                        <div key={checkpoint.id || index} className="flex items-center justify-between py-3 border-b border-slate-200 dark:border-slate-700 last:border-0">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-sm font-extrabold text-slate-900 dark:text-white">{index + 1}.</span>
-                                                <span className="text-sm text-slate-700 dark:text-slate-300">{checkpoint.name || `Checkpoint ${index + 1}`}</span>
+                                    {job.checkpoints.map((checkpoint, index) => {
+                                        const milestoneNet = (parseFloat(checkpoint.amount) * 0.95).toFixed(2);
+                                        return (
+                                            <div key={checkpoint.id || index} className="flex items-center justify-between py-3 border-b border-slate-200 dark:border-slate-700 last:border-0">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-sm font-extrabold text-slate-900 dark:text-white">{index + 1}.</span>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm text-slate-700 dark:text-slate-300 font-bold">{checkpoint.title || checkpoint.name || `Checkpoint ${index + 1}`}</span>
+                                                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">
+                                                            {checkpoint.description || 'No description'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {checkpoint.amount && (
+                                                    <div className="text-right">
+                                                        <div className="text-sm font-extrabold text-slate-900 dark:text-white">
+                                                            ${Number(checkpoint.amount).toLocaleString()}
+                                                        </div>
+                                                        <div className="text-[11px] font-bold text-cyan-500">
+                                                            Thực nhận: ${Number(milestoneNet).toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
-                                            {checkpoint.amount && (
-                                                <span className="text-sm font-extrabold text-slate-900 dark:text-white">
-                                                    ${Number(checkpoint.amount).toLocaleString()}
-                                                </span>
-                                            )}
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
