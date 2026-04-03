@@ -67,7 +67,9 @@ const Step4Contract = ({
     
     if (selectedType === "short-term") {
       const milestoneLines = checkpoints.map((cp, idx) => {
-        return `   + Giai đoạn ${idx + 1}: ${cp.title || cp.name} - ${cp.points.toLocaleString()} CRED - Thời hạn: ${cp.duration_days || 7} ngày.`;
+        const gross = Number(cp.points || 0);
+        const net = Math.floor(gross * 0.95);
+        return `   + Giai đoạn ${idx + 1}: ${cp.title || cp.name} - ${gross.toLocaleString()} CRED (Sau phí 5%: ${net.toLocaleString()} CRED) - Thời hạn: ${cp.duration_days || 7} ngày.`;
       });
 
       return [
@@ -98,7 +100,7 @@ const Step4Contract = ({
         jobDescription || "Theo mô tả chi tiết trên hệ thống FAF.",
         "",
         "Điều 3. Tiến độ và Thanh toán (Checkpoints)",
-        `Tổng điểm thưởng: ${totalBudgetNum.toLocaleString()} CRED`,
+        `Tổng điểm thưởng: ${totalBudgetNum.toLocaleString()} CRED (Worker thực nhận: ${(totalBudgetNum * 0.95).toLocaleString()} CRED sau phí 5%)`,
         `Thời gian thực hiện dự kiến: ${startDate || '...'} đến ${endDate || '...'}`,
         "Chi tiết từng giai đoạn:",
         ...milestoneLines,

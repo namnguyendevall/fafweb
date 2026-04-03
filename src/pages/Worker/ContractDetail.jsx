@@ -5,6 +5,7 @@ import { contractsApi } from '../../api/contracts.api';
 import { reviewsApi } from '../../api/reviews.api';
 import ReviewsList from './components/ReviewsList';
 import axiosClient from '../../api/axiosClient';
+import JSZip from 'jszip';
 
 
 const ContractDetail = () => {
@@ -17,10 +18,43 @@ const ContractDetail = () => {
     const [disputeModal, setDisputeModal] = useState({ open: false, checkpointId: null });
     const [disputeReason, setDisputeReason] = useState('');
     const [submittingDispute, setSubmittingDispute] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [isZipping, setIsZipping] = useState(false);
 
 
     useEffect(() => {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                setCurrentUser(JSON.parse(userStr));
+            } catch (e) {
+                console.error("User parsing failed");
+            }
+        }
+
+        // Block Right Click
+        const handleContextMenu = (e) => e.preventDefault();
+        // Block Keyboard Shortcuts
+        const handleKeyDown = (e) => {
+            if (e.key === 'F12' || e.key === 'PrintScreen') {
+                e.preventDefault();
+                toast.info("Security Profile: Print/Inspect disabled.");
+            }
+            if (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || (e.shiftKey && e.key === 'I'))) {
+                e.preventDefault();
+                toast.info("Security Profile: Action restricted.");
+            }
+        };
+
+        window.addEventListener('contextmenu', handleContextMenu);
+        window.addEventListener('keydown', handleKeyDown);
+
         fetchContractDetails();
+
+        return () => {
+            window.removeEventListener('contextmenu', handleContextMenu);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
     }, [id]);
 
     const fetchContractDetails = async () => {
@@ -158,8 +192,31 @@ const ContractDetail = () => {
     };
 
 
+    const getAttachmentUrl = (url) => {
+        if (!url || typeof url !== 'string') return url;
+        if (url.includes('cloudinary.com') && !url.includes('fl_attachment')) {
+            return url.replace('/upload/', '/upload/fl_attachment/');
+        }
+        return url;
+    };
+
+    const handleIndividualDownload = (resource) => {
+        const url = typeof resource === 'string' ? resource : resource.url;
+        window.open(getAttachmentUrl(url), '_blank');
+    };
+
     return (
-        <div className="min-h-screen bg-transparent text-slate-300 relative font-sans">
+        <div className="min-h-screen bg-transparent text-slate-300 relative font-sans select-none" style={{ userSelect: 'none' }}>
+            {/* Watermark Overlay */}
+            {currentUser && (
+                <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] overflow-hidden flex flex-wrap gap-20 p-20 content-start">
+                    {Array.from({ length: 20 }).map((_, i) => (
+                        <div key={i} className="text-xl font-black font-mono rotate-[-30deg] whitespace-nowrap uppercase tracking-[0.5em]">
+                            {currentUser.full_name || currentUser.email} // ID_{currentUser.id} // SECURED_VIEW
+                        </div>
+                    ))}
+                </div>
+            )}
 
             <div className="max-w-6xl mx-auto px-4 py-8 relative z-10 w-full">
                 {/* Header Section */}
@@ -255,7 +312,12 @@ const ContractDetail = () => {
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">TỔNG GIÁ TRỊ</p>
-                                            <p className="text-[18px] font-black font-mono text-emerald-400 mt-1">${Number(contract.total_amount || 0).toLocaleString()}</p>
+                                            <div className="flex flex-col">
+                                                <p className="text-[18px] font-black font-mono text-emerald-400 mt-1">{Number(contract.total_amount || 0).toLocaleString()} CRED</p>
+                                                <p className="text-[10px] font-mono text-cyan-500 font-bold uppercase tracking-wider italic">
+                                                    Thực nhận: {Number((contract.total_amount || 0) * 0.95).toLocaleString()} CRED (-5% phí)
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -326,6 +388,118 @@ const ContractDetail = () => {
                     </p>
                 </div>
 
+                {/* Project Resources Gallery - Enhanced Robustness */}
+                {(() => {
+                    // Try to get from either job_resource_urls (new alias) or resource_urls (fallback)
+                    let resources = contract.job_resource_urls || contract.resource_urls;
+                    
+                    if (typeof resources === 'string') {
+                        try { resources = JSON.parse(resources); } catch (e) { resources = []; }
+                    }
+                    if (!Array.isArray(resources) || resources.length === 0) return null;
+
+                    return (
+                        <div className="space-y-6 mb-6">
+                            {/* IMAGE GALLERY */}
+                            {resources.some(r => {
+                                const url = typeof r === 'object' ? r.url : r;
+                                return /\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
+                            }) && (
+                                <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl border p-6 shadow-xl relative overflow-hidden" style={{ borderColor: 'rgba(6,182,212,0.15)' }}>
+                                    <div className="absolute top-0 right-10 w-20 h-px bg-cyan-500/30"></div>
+                                    <p className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-4 flex items-center gap-2">
+                                        <span className="text-cyan-400">//</span> TÀI NGUYÊN HÌNH ẢNH
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {resources.filter(r => {
+                                            const url = typeof r === 'object' ? r.url : r;
+                                            return /\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
+                                        }).map((resource, idx) => {
+                                            const url = typeof resource === 'object' ? resource.url : resource;
+                                            return (
+                                                <div key={`img-${idx}`} className="group relative aspect-video rounded-xl border border-white/5 overflow-hidden bg-black/40 shadow-inner">
+                                                    <img 
+                                                        src={url.replace('/upload/', '/upload/w_1000,c_limit,q_auto:best/')} 
+                                                        alt="Project Preview"
+                                                        className="w-full h-full object-contain pointer-events-none"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                                                        <span className="text-[9px] font-black font-mono text-cyan-400 uppercase tracking-widest bg-[#090e17]/80 px-2.5 py-1 rounded border border-cyan-500/30">
+                                                            BẢN GỐC (SECURED)
+                                                        </span>
+                                                    </div>
+                                                    <div className="absolute inset-0 pointer-events-none opacity-5 flex items-center justify-center">
+                                                        <span className="text-xl font-black font-mono rotate-[-20deg] uppercase tracking-widest text-white">{currentUser?.full_name || 'SECURITY_VIEW'}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* OTHER DOCUMENTS */}
+                            {resources.some(r => {
+                                const url = typeof r === 'object' ? r.url : r;
+                                return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
+                            }) && (
+                                <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl border p-6 shadow-xl relative overflow-hidden" style={{ borderColor: 'rgba(6,182,212,0.15)' }}>
+                                    <div className="absolute top-0 right-10 w-20 h-px bg-cyan-500/30"></div>
+                                    <p className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-4 flex items-center gap-2">
+                                        <span className="text-cyan-400">//</span> TẬP TIN DỰ ÁN
+                                    </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {resources.filter(r => {
+                                            const url = typeof r === 'object' ? r.url : r;
+                                            return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
+                                        }).map((resource, idx) => {
+                                            const isObj = typeof resource === 'object' && resource !== null;
+                                            const url = isObj ? resource.url : resource;
+                                            const name = isObj ? resource.name : (url?.split('/').pop().split('?')[0] || `File ${idx + 1}`);
+                                            
+                                            const lowName = name?.toLowerCase() || "";
+                                            const isZip = lowName.endsWith('.zip') || lowName.endsWith('.rar');
+                                            const isPdf = lowName.endsWith('.pdf');
+                                            const isVid = /\.(mp4|webm|ogg)$/i.test(lowName);
+
+                                            return (
+                                                <div 
+                                                    key={`file-${idx}`} 
+                                                    className="group relative flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-xl p-4 hover:border-cyan-500/30 hover:bg-white/[0.05] transition-all"
+                                                >
+                                                    <div className="flex items-center gap-4 overflow-hidden">
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border border-white/5 ${isZip ? 'bg-amber-500/10 text-amber-500' : isPdf ? 'bg-rose-500/10 text-rose-500' : isVid ? 'bg-indigo-500/10 text-indigo-500' : 'bg-cyan-500/10 text-cyan-500'}`}>
+                                                            {isZip ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                                            : isPdf ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                                            : isVid ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                                            : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+                                                        </div>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <button 
+                                                                onClick={() => handleIndividualDownload(resource)}
+                                                                className="text-[12px] font-black text-white uppercase tracking-wider truncate hover:text-cyan-400 transition-colors text-left"
+                                                            >
+                                                                {name}
+                                                            </button>
+                                                            <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">{isZip ? 'Archive' : isPdf ? 'PDF_Document' : isVid ? 'MP4_Video' : 'Project_Asset'}</span>
+                                                        </div>
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => handleIndividualDownload(resource)}
+                                                        className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                    </button>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
+
                 {/* Checkpoints List (Read Only) */}
                 <div className="bg-[#090e17]/60 rounded-xl border border-slate-800 p-6 shadow-xl">
                     <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
@@ -371,9 +545,10 @@ const ContractDetail = () => {
                                                 </div>
                                             </div>
                                             
-                                            <div className="text-left sm:text-right shrink-0 pl-14 sm:pl-0">
-                                                <p className="font-black text-emerald-400 font-mono text-xl">${Number(checkpoint.amount).toLocaleString()}</p>
-                                                <span className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded text-[9px] font-black font-mono tracking-widest uppercase border ${getStatusColor(checkpoint.status)}`}>
+                                            <div className="text-left sm:text-right shrink-0 pl-14 sm:pl-0 flex flex-col items-end">
+                                                <p className="font-black text-emerald-400 font-mono text-xl">{Number(checkpoint.amount).toLocaleString()} CRED</p>
+                                                <p className="text-[9px] font-mono text-cyan-500/80 font-bold mb-2">Thực nhận: {Number(checkpoint.amount * 0.95).toLocaleString()} CRED</p>
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-black font-mono tracking-widest uppercase border ${getStatusColor(checkpoint.status)}`}>
                                                     {checkpoint.status}
                                                 </span>
                                                 {checkpoint.rework_count > 0 && (

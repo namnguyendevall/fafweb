@@ -107,6 +107,16 @@ const EmployerContractSign = () => {
         );
     }
 
+    const processNetAmounts = (content) => {
+        if (!content) return content;
+        return content.replace(/([\d,.]+)\s*CRED/g, (match, amountStr) => {
+            const amount = parseFloat(amountStr.replace(/,/g, ''));
+            if (isNaN(amount)) return match;
+            const net = Math.floor(amount * 0.95);
+            return `${amount.toLocaleString()} CRED (Worker thực nhận: ${net.toLocaleString()} CRED sau phí 5%)`;
+        });
+    };
+
     const workerSigned = !!contract.signature_worker;
     const employerSigned = !!contract.signature_client;
     const canSign = workerSigned && !employerSigned;
@@ -155,7 +165,12 @@ const EmployerContractSign = () => {
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm font-medium text-gray-500">Total Amount</p>
-                                <p className="font-bold text-green-600 text-2xl">${Number(contract.total_amount || 0).toLocaleString()}</p>
+                                <div className="flex flex-col">
+                                    <p className="font-bold text-gray-900 text-2xl">${Number(contract.total_amount || 0).toLocaleString()}</p>
+                                    <p className="text-xs text-blue-600 font-bold italic">
+                                        Worker nhận: ${Number((contract.total_amount || 0) * 0.95).toLocaleString()} (sau phí 5%)
+                                    </p>
+                                </div>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-sm font-medium text-gray-500">Status</p>
@@ -264,8 +279,9 @@ const EmployerContractSign = () => {
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="text-right">
+                                        <div className="text-right flex flex-col items-end">
                                             <p className="font-bold text-gray-900 text-lg">${Number(checkpoint.amount).toLocaleString()}</p>
+                                            <p className="text-[10px] text-blue-600 font-bold italic">Net: ${Number(checkpoint.amount * 0.95).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -316,8 +332,10 @@ const EmployerContractSign = () => {
                                     </div>
                                     <div>
                                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Agreement Value</div>
-                                        <div className="text-3xl font-bold text-green-600">${Number(contract.total_amount || 0).toLocaleString()}</div>
-                                        <div className="text-xs text-gray-500 mt-1">Total compensation amount</div>
+                                        <div className="text-3xl font-bold text-gray-900">${Number(contract.total_amount || 0).toLocaleString()}</div>
+                                        <div className="text-xs text-blue-600 font-bold mt-1 italic">
+                                            Worker thực nhận: ${Number((contract.total_amount || 0) * 0.95).toLocaleString()} (Trừ 5% phí FAF)
+                                        </div>
                                     </div>
                                 </div>
 
@@ -342,7 +360,7 @@ const EmployerContractSign = () => {
                                                 fontFamily: 'system-ui, -apple-system, sans-serif'
                                             }}
                                             dangerouslySetInnerHTML={{ 
-                                                __html: contract.contract_content || 'No contract content available.' 
+                                                __html: processNetAmounts(contract.contract_content) || 'No contract content available.' 
                                             }}
                                         />
                                     </div>

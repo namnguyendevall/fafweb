@@ -240,9 +240,13 @@ const JobDetail = () => {
                                                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
                                             }`}
                                         >
-                                            {tab === 'proposals' ? `Proposals (${proposals.length})` : 
-                                             tab === 'recommended' ? 'Candidates' : 
-                                             tab}
+                                            {(() => {
+                                                const hiredProposal = proposals.find(p => p.status === 'ACCEPTED');
+                                                const count = hiredProposal ? 1 : proposals.filter(p => p.status === 'PENDING').length;
+                                                return tab === 'proposals' ? `Proposals (${count})` : 
+                                                       tab === 'recommended' ? 'Candidates' : 
+                                                       tab;
+                                            })()}
                                         </button>
                                     ))}
                                 </div>
@@ -250,10 +254,23 @@ const JobDetail = () => {
                                 <div className="p-8">
                                     {activeTab === 'proposals' && (
                                         <div className="space-y-4">
-                                            {proposals.length === 0 ? (
-                                                <p className="text-gray-500 dark:text-gray-400 text-sm italic">No proposals yet.</p>
-                                            ) : (
-                                                proposals.map((proposal) => (
+                                            {(() => {
+                                                const hiredProposal = proposals.find(p => p.status === 'ACCEPTED');
+                                                const displayedProposals = hiredProposal 
+                                                    ? [hiredProposal] 
+                                                    : proposals.filter(p => p.status === 'PENDING');
+
+                                                if (displayedProposals.length === 0) {
+                                                    return (
+                                                        <div className="text-center py-10 bg-gray-50/50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700">
+                                                            <p className="text-gray-500 dark:text-gray-400 text-sm italic">
+                                                                {hiredProposal ? "You have already hired a worker for this job." : "No pending proposals at the moment."}
+                                                            </p>
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return displayedProposals.map((proposal) => (
                                                     <div key={proposal.id} className="border border-gray-100 dark:border-slate-700 rounded-2xl p-5 bg-white dark:bg-slate-800 hover:shadow-md transition-all group">
                                                         <div className="flex gap-4 mb-3">
                                                             {/* Worker Avatar */}
@@ -357,8 +374,8 @@ const JobDetail = () => {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                ))
-                                            )}
+                                                ));
+                                            })()}
                                         </div>
                                     )}
 

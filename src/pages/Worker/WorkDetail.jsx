@@ -245,75 +245,119 @@ const WorkDetail = () => {
 
                         {/* Project Resources */}
                         {job.resource_urls && job.resource_urls.length > 0 && (
-                            <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
-                                <SectionLabel>PROJECT RESOURCES</SectionLabel>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                                    {(job.resource_urls || []).map((resource, idx) => {
-                                        const isObj = typeof resource === 'object' && resource !== null;
-                                        const url = isObj ? resource.url : resource;
-                                        const name = isObj ? resource.name : (url?.split('/').pop().split('?')[0] || `Resource ${idx + 1}`);
-                                        const size = isObj && resource.size ? (resource.size / 1024).toFixed(1) + ' KB' : null;
-                                        
-                                        const lowName = name?.toLowerCase() || "";
-                                        const isZip = lowName.endsWith('.zip') || lowName.endsWith('.rar');
-                                        const isPdf = lowName.endsWith('.pdf');
-                                        const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(lowName);
-                                        const isVid = /\.(mp4|webm|ogg)$/i.test(lowName);
-
-                                        return (
-                                            <div 
-                                                key={idx} 
-                                                className="group relative flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-2xl p-4 hover:border-cyan-500/40 hover:bg-white/[0.05] transition-all"
-                                            >
-                                                <div className="flex items-center gap-4 overflow-hidden">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isZip ? 'bg-amber-500/10 text-amber-500' : isPdf ? 'bg-rose-500/10 text-rose-500' : isImg ? 'bg-emerald-500/10 text-emerald-500' : isVid ? 'bg-indigo-500/10 text-indigo-500' : 'bg-cyan-500/10 text-cyan-500'}`}>
-                                                        {isZip ? (
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-                                                        ) : isPdf ? (
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                                                        ) : isImg ? (
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                                        ) : isVid ? (
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                                        ) : (
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex flex-col overflow-hidden">
-                                                        <button 
-                                                            onClick={() => handleIndividualDownload(resource, idx)}
-                                                            className="text-[13px] font-black text-white uppercase tracking-wider truncate hover:text-cyan-400 transition-colors text-left"
-                                                        >
-                                                            {name}
-                                                        </button>
-                                                        <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500 uppercase tracking-widest">
-                                                            <span>{isZip ? 'Archive' : isPdf ? 'Document' : isImg ? 'Image' : isVid ? 'Video' : 'Asset'}</span>
-                                                            {size && (
-                                                                <>
-                                                                    <span className="w-1 h-1 rounded-full bg-slate-700" />
-                                                                    <span className="text-cyan-500/70">{size}</span>
-                                                                </>
-                                                            )}
+                            <div className="space-y-6">
+                                {/* IMAGE GALLERY - NEW */}
+                                {job.resource_urls.some(r => {
+                                    const url = typeof r === 'object' ? r.url : r;
+                                    return /\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
+                                }) && (
+                                    <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
+                                        <SectionLabel>HÌNH ẢNH MINH HỌA DỰ ÁN</SectionLabel>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                                            {job.resource_urls.filter(r => {
+                                                const url = typeof r === 'object' ? r.url : r;
+                                                return /\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
+                                            }).map((resource, idx) => {
+                                                const url = typeof resource === 'object' ? resource.url : resource;
+                                                return (
+                                                    <div key={`img-${idx}`} className="group relative aspect-video rounded-xl border border-white/10 overflow-hidden bg-black/40">
+                                                        <img 
+                                                            src={url.replace('/upload/', '/upload/w_800,c_limit,q_auto:best/')} 
+                                                            alt="Project Preview"
+                                                            className="w-full h-full object-contain pointer-events-none"
+                                                        />
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                                                            <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest bg-black/40 px-2 py-1 rounded">
+                                                                {isHired ? 'BẢN GỐC SẴN SÀNG' : 'CHẾ ĐỘ XEM TRƯỚC'}
+                                                            </span>
+                                                        </div>
+                                                        {/* Individual watermark on each image for extra security */}
+                                                        <div className="absolute inset-0 pointer-events-none opacity-5 flex items-center justify-center">
+                                                            <span className="text-xl font-black font-mono rotate-[-20deg] uppercase tracking-widest">{currentUser?.full_name || 'SECURITY_VIEW'}</span>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                {isHired && (
-                                                    <button 
-                                                        onClick={() => handleIndividualDownload(resource, idx)}
-                                                        className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-cyan-500/20"
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* OTHER DOCUMENTS */}
+                                {job.resource_urls.some(r => {
+                                    const url = typeof r === 'object' ? r.url : r;
+                                    return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
+                                }) && (
+                                    <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
+                                        <SectionLabel>TÀI LIỆU VÀ FILE ĐÍNH KÈM</SectionLabel>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                                            {(job.resource_urls || []).filter(r => {
+                                                const url = typeof r === 'object' ? r.url : r;
+                                                return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
+                                            }).map((resource, idx) => {
+                                                const isObj = typeof resource === 'object' && resource !== null;
+                                                const url = isObj ? resource.url : resource;
+                                                const name = isObj ? resource.name : (url?.split('/').pop().split('?')[0] || `File ${idx + 1}`);
+                                                const size = isObj && resource.size ? (resource.size / 1024).toFixed(1) + ' KB' : null;
+                                                
+                                                const lowName = name?.toLowerCase() || "";
+                                                const isZip = lowName.endsWith('.zip') || lowName.endsWith('.rar');
+                                                const isPdf = lowName.endsWith('.pdf');
+                                                const isVid = /\.(mp4|webm|ogg)$/i.test(lowName);
+
+                                                return (
+                                                    <div 
+                                                        key={`file-${idx}`} 
+                                                        className="group relative flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-2xl p-4 hover:border-cyan-500/40 hover:bg-white/[0.05] transition-all"
                                                     >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                                    </button>
-                                                )}
-                                                {!isHired && (
-                                                    <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-600 border border-slate-700/50 flex items-center justify-center cursor-help group-hover:text-amber-500/50 transition-all" title="Cần được duyệt để tải">
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                        <div className="flex items-center gap-4 overflow-hidden">
+                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5 ${isZip ? 'bg-amber-500/10 text-amber-500' : isPdf ? 'bg-rose-500/10 text-rose-500' : isVid ? 'bg-indigo-500/10 text-indigo-500' : 'bg-cyan-500/10 text-cyan-500'}`}>
+                                                                {isZip ? (
+                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                                                ) : isPdf ? (
+                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                                                ) : isVid ? (
+                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                                                ) : (
+                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-col overflow-hidden">
+                                                                <button 
+                                                                    onClick={() => handleIndividualDownload(resource)}
+                                                                    className="text-[13px] font-black text-white uppercase tracking-wider truncate hover:text-cyan-400 transition-colors text-left"
+                                                                >
+                                                                    {name}
+                                                                </button>
+                                                                <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500 uppercase tracking-widest">
+                                                                    <span>{isZip ? 'Archive' : isPdf ? 'Document' : isVid ? 'Video' : 'Asset'}</span>
+                                                                    {size && (
+                                                                        <>
+                                                                            <span className="w-1 h-1 rounded-full bg-slate-700" />
+                                                                            <span className="text-cyan-500/70">{size}</span>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {isHired && (
+                                                            <button 
+                                                                onClick={() => handleIndividualDownload(resource)}
+                                                                className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-cyan-500/20"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                            </button>
+                                                        )}
+                                                        {!isHired && (
+                                                            <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-600 border border-slate-700/50 flex items-center justify-center cursor-help group-hover:text-amber-500/50 transition-all" title="Cần được duyệt để tải">
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 

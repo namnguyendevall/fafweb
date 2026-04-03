@@ -101,12 +101,25 @@ const ContractSign = () => {
         );
     }
 
+    const processNetAmounts = (content) => {
+        if (!content) return content;
+        // This regex looks for amounts followed by "CRED" and adds the Net amount note
+        return content.replace(/([\d,.]+)\s*CRED/g, (match, amountStr) => {
+            const amount = parseFloat(amountStr.replace(/,/g, ''));
+            if (isNaN(amount)) return match;
+            const net = Math.floor(amount * 0.95);
+            return `${amount.toLocaleString()} CRED (Thực nhận: ${net.toLocaleString()} CRED sau phí 5%)`;
+        });
+    };
+
     const filledContract = contract.contract_content
-        ? contract.contract_content
-            .replace(/\.{10,}/g, userProfile?.full_name || '[CHƯA RÕ]')
-            .replace(/Họ và tên:.*?\n/g, `Họ và tên: ${userProfile?.full_name || '[CHƯA RÕ]'}\n`)
-            .replace(/Email đăng ký.*?:\s*\.+/g, `Email đăng ký trên hệ thống FAF: ${userProfile?.email || '[UNKNOWN_EMAIL]'}`)
-            .replace(/ID người dùng FAF:\s*\.+/g, `ID người dùng FAF: ${userProfile?.id || '[NULL_ID]'}`)
+        ? processNetAmounts(
+            contract.contract_content
+                .replace(/\.{10,}/g, userProfile?.full_name || '[CHƯA RÕ]')
+                .replace(/Họ và tên:.*?\n/g, `Họ và tên: ${userProfile?.full_name || '[CHƯA RÕ]'}\n`)
+                .replace(/Email đăng ký.*?:\s*\.+/g, `Email đăng ký trên hệ thống FAF: ${userProfile?.email || '[UNKNOWN_EMAIL]'}`)
+                .replace(/ID người dùng FAF:\s*\.+/g, `ID người dùng FAF: ${userProfile?.id || '[NULL_ID]'}`)
+          )
         : 'KHÔNG CÓ DỮ LIỆU HỢP ĐỒNG';
 
     const bothSigned = contract.signature_worker && contract.signature_client;
@@ -134,9 +147,15 @@ const ContractSign = () => {
                             <p className="text-[10px] font-mono text-cyan-500/70 uppercase tracking-widest mb-1">HỢP ĐỒNG RÀNG BUỘC</p>
                             <h1 className="text-3xl font-black text-white tracking-widest uppercase mb-3 text-shadow-glow-cyan">{contract.job_title}</h1>
                             <div className="flex items-center gap-3">
-                                <span className="px-2.5 py-1 bg-emerald-900/30 border border-emerald-500/30 text-emerald-400 rounded text-[10px] font-black font-mono uppercase tracking-widest">
-                                    <span className="text-slate-500 mr-2">GIÁ TRỊ:</span>
-                                    ${Number(contract.total_amount || 0).toLocaleString()}
+                                <span className="px-2.5 py-1 bg-emerald-900/30 border border-emerald-500/30 text-emerald-400 rounded text-[10px] font-black font-mono uppercase tracking-widest flex flex-col items-start gap-1">
+                                    <div className="flex items-center">
+                                        <span className="text-slate-500 mr-2">TỔNG GIÁ TRỊ:</span>
+                                        {Number(contract.total_amount || 0).toLocaleString()} CRED
+                                    </div>
+                                    <div className="text-[9px] text-cyan-400 border-t border-emerald-500/20 pt-1 w-full">
+                                        <span className="text-slate-500 mr-2">THỰC NHẬN:</span>
+                                        {Number(contract.total_amount * 0.95).toLocaleString()} CRED (SAU PHÍ 5%)
+                                    </div>
                                 </span>
                             </div>
                         </div>
