@@ -97,57 +97,6 @@ const WorkDetail = () => {
         window.open(getAttachmentUrl(url), '_blank');
     };
 
-    const handleDownloadAll = async () => {
-        if (!job?.resource_urls || job.resource_urls.length === 0) return;
-        
-        try {
-            setIsZipping(true);
-            toast.info(`Đang nén ${job.resource_urls.length} tệp...`);
-            
-            const zip = new JSZip();
-            
-            const downloadPromises = job.resource_urls.map(async (resource, index) => {
-                const url = typeof resource === 'string' ? resource : resource.url;
-                const name = typeof resource === 'object' ? resource.name : null;
-                try {
-                    // Use our backend proxy to avoid CORS and 401 issues with Cloudinary
-                    const fetchUrl = getAttachmentUrl(url, name);
-                    const response = await fetch(fetchUrl, { mode: 'cors' });
-                    
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        if (blob.size > 0) {
-                            const filename = getFileNameFromUrl(resource, blob, index);
-                            zip.file(filename, blob);
-                        }
-                    }
-                } catch (err) {
-                    console.error(`Failed to fetch ${url} for ZIP:`, err);
-                }
-            });
-
-            await Promise.all(downloadPromises);
-            
-            const content = await zip.generateAsync({ type: "blob" });
-            const zipUrl = URL.createObjectURL(content);
-            
-            const link = document.createElement('a');
-            link.href = zipUrl;
-            link.download = `Project_Resources_${id}.zip`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(zipUrl);
-            
-            toast.success("Đã tải xuống tệp ZIP thành công!");
-        } catch (err) {
-            console.error("ZIP creation failed:", err);
-            toast.error("Không thể tạo tệp ZIP. Vui lòng thử lại sau.");
-        } finally {
-            setIsZipping(false);
-        }
-    };
-
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-transparent">
@@ -239,30 +188,10 @@ const WorkDetail = () => {
                             </div>
                         )}
 
-                        {/* Project Resources (NEW) */}
+                        {/* Project Resources */}
                         {job.resource_urls && job.resource_urls.length > 0 && (
                             <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
-                                <div className="flex items-center justify-between mb-2">
-                                    <SectionLabel>PROJECT RESOURCES</SectionLabel>
-                                    <button 
-                                        onClick={handleDownloadAll}
-                                        disabled={isZipping}
-                                        className={`mb-3 px-3 py-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-[9px] font-black font-mono tracking-widest text-cyan-400 uppercase hover:bg-cyan-500/20 transition-all flex items-center gap-2 group ${isZipping ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        {isZipping ? (
-                                            <>
-                                                <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-                                                ĐANG NÉN...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <svg className="w-3.5 h-3.5 group-hover:animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                                TẢI ZIP
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-
+                                <SectionLabel>PROJECT RESOURCES</SectionLabel>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                                     {(job.resource_urls || []).map((resource, idx) => {
                                         const isObj = typeof resource === 'object' && resource !== null;
