@@ -41,7 +41,8 @@ const Step3BudgetMilestones = ({
     userApi
       .getMe()
       .then((res) => {
-        setWallet(res.balance_points);
+        console.log(res.data);
+        setWallet(res.data.balance_points);
       })
       .catch((err) => {
         console.error('Failed to fetch wallet balance:', err);
@@ -71,10 +72,11 @@ const Step3BudgetMilestones = ({
                 </label>
                 <div className="relative group">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-fuchsia-500 font-mono font-black text-lg group-focus-within:animate-pulse">
-                    $
+                    PTS
                   </span>
                   <input
                     type="number"
+                    step="20"
                     value={totalBudget}
                     onChange={(e) => {
                       const value = e.target.value === "" ? "" : Number(e.target.value);
@@ -82,17 +84,22 @@ const Step3BudgetMilestones = ({
                         setTotalBudget(value);
                       }
                     }}
-                    className="w-full pl-10 pr-20 py-4 bg-black/40 border border-white/10 rounded-xl text-white font-mono text-xl outline-none focus:border-fuchsia-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
+                    className="w-full pl-14 pr-20 py-4 bg-black/40 border border-white/10 rounded-xl text-white font-mono text-xl outline-none focus:border-fuchsia-500/50 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-inner"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black font-mono text-slate-600 uppercase tracking-widest">
                     PTS_CREDITS
                   </span>
                 </div>
-                <div className="mt-4 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-slate-700"></div>
-                    <p className="text-[9px] font-mono text-slate-600 uppercase tracking-[0.2em] italic">
-                        {t('postjob.total_budget_desc', 'FUNDS_WILL_BE_LOCKED_IN_ESCROW_UPON_PUBLICATION')}
+                <div className="mt-3 flex flex-col gap-2">
+                    <p className="text-[10px] font-mono text-fuchsia-500/80 uppercase tracking-widest font-bold">
+                       {totalBudgetNum > 0 && `≈ ${(totalBudgetNum * 1000).toLocaleString('vi-VN')} VNĐ`}
                     </p>
+                    <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 animate-pulse"></div>
+                        <p className="text-[9px] font-mono text-slate-500 uppercase tracking-[0.2em] italic">
+                            * Vui lòng nhập bội số của 20 (vd: 100, 500, 1000) để phí 5% không bị lẻ.
+                        </p>
+                    </div>
                 </div>
              </div>
           </div>
@@ -152,6 +159,7 @@ const Step3BudgetMilestones = ({
                       <div className="relative">
                         <input
                           type="number"
+                          step="20"
                           value={checkpoint.points}
                           onChange={(e) => {
                             const value = e.target.value === "" ? "" : Number(e.target.value);
@@ -160,10 +168,15 @@ const Step3BudgetMilestones = ({
                               onUpdateCheckpoint(checkpoint.id, "points", value);
                             }
                           }}
-                          className="w-full px-4 py-2.5 pr-12 bg-black/40 border border-white/5 rounded-lg text-fuchsia-400 font-mono text-sm outline-none focus:border-fuchsia-500/40 transition-all"
+                          className="w-full px-4 py-2.5 pr-12 bg-black/40 border border-white/5 rounded-lg text-fuchsia-400 font-mono text-sm outline-none focus:border-fuchsia-500/40 transition-all font-bold"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black font-mono text-slate-600">PTS</span>
                       </div>
+                      {checkpoint.points > 0 && (
+                        <p className="text-[8px] font-mono text-fuchsia-500/60 mt-1 pl-1">
+                          ≈ {(checkpoint.points * 1000).toLocaleString('vi-VN')} VNĐ
+                        </p>
+                      )}
                     </div>
 
                     {/* Milestone Title (Detailed) */}
@@ -369,6 +382,9 @@ const Step3BudgetMilestones = ({
                               {usedPoints.toLocaleString()}
                             </span>
                             <span className="text-[10px] font-mono text-slate-600 ml-2">/ {totalBudgetNum.toLocaleString()} PTS</span>
+                            <p className="text-[9px] font-mono text-slate-500 font-bold mt-1">
+                               ≈ {(usedPoints * 1000).toLocaleString('vi-VN')} / {(totalBudgetNum * 1000).toLocaleString('vi-VN')} VNĐ
+                            </p>
                         </div>
                       </div>
 
@@ -389,7 +405,8 @@ const Step3BudgetMilestones = ({
                           </div>
                           <div className="p-3 bg-black/40 rounded-xl border border-white/5">
                               <p className="text-[8px] font-mono text-slate-600 uppercase tracking-widest mb-1">{t('postjob.available', 'RESERVE')}</p>
-                              <p className="text-xs font-black font-mono text-emerald-400 italic">{(wallet || 0).toLocaleString()}</p>
+                              <p className="text-xs font-black font-mono text-emerald-400 italic">{(wallet || 0).toLocaleString()} PTS</p>
+                              <p className="text-[8px] font-mono text-emerald-500/50 mt-1 uppercase font-bold">≈ {(wallet * 1000).toLocaleString('vi-VN')} VNĐ</p>
                           </div>
                       </div>
                     </div>
@@ -452,7 +469,18 @@ const Step3BudgetMilestones = ({
                           }
 
                           if (!isBudgetAllocated) errors.push(t('postjob.err_budget_mismatch', { used: usedPoints, total: totalBudgetNum }));
-                          if (totalBudgetNum > wallet) errors.push(`Insufficient balance. You need ${totalBudgetNum.toLocaleString()} PTS but only have ${wallet.toLocaleString()} PTS.`);
+                          if (totalBudgetNum > wallet) errors.push(`Số dư không đủ. Bạn cần ${totalBudgetNum.toLocaleString()} PTS nhưng chỉ còn ${wallet.toLocaleString()} PTS.`);
+                          
+                          // Rule: Multiple of 20
+                          if (totalBudgetNum % 20 !== 0) {
+                              errors.push("Tổng ngân sách phải là bội số của 20 (vd: 100, 200, 1000) để tránh tiền lẻ khi tính phí.");
+                          }
+                          checkpoints.forEach((cp, idx) => {
+                              if (cp.points && Number(cp.points) % 20 !== 0) {
+                                  errors.push(`Số dư giai đoạn ${idx+1} phải là bội số của 20.`);
+                              }
+                          });
+
                           if (errors.length > 0) { setValidationErrors(errors); return; }
                           setValidationErrors([]);
                           onContinue();

@@ -41,11 +41,11 @@ const Step4Contract = ({
     userApi
       .getMe()
       .then((data) => {
-        setUser(data);
+        setUser(data.data);
         setContractInfo({
-          clientName: data.full_name || "..........................................................",
-          clientEmail: data.email || "....................................",
-          clientUserId: String(data.id || ".................................................."),
+          clientName: data.data.full_name || "..........................................................",
+          clientEmail: data.data.email || "....................................",
+          clientUserId: String(data.data.id || ".................................................."),
           workerName: "",
           workerEmail: "",
           workerUserId: "",
