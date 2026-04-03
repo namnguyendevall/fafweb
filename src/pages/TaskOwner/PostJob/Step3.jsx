@@ -92,7 +92,7 @@ const Step3BudgetMilestones = ({
                 </div>
                 <div className="mt-3 flex flex-col gap-2">
                     <p className="text-[10px] font-mono text-fuchsia-500/80 uppercase tracking-widest font-bold">
-                       {totalBudgetNum > 0 && `≈ ${(totalBudgetNum * 1000).toLocaleString('vi-VN')} VNĐ`}
+                       {totalBudgetNum > 0 && `≈ ${(totalBudgetNum).toLocaleString('vi-VN')} VNĐ`}
                     </p>
                     <div className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-500 animate-pulse"></div>
@@ -174,7 +174,7 @@ const Step3BudgetMilestones = ({
                       </div>
                       {checkpoint.points > 0 && (
                         <p className="text-[8px] font-mono text-fuchsia-500/60 mt-1 pl-1">
-                          ≈ {(checkpoint.points * 1000).toLocaleString('vi-VN')} VNĐ
+                          ≈ {(checkpoint.points * 1).toLocaleString('vi-VN')} VNĐ
                         </p>
                       )}
                     </div>
@@ -383,7 +383,7 @@ const Step3BudgetMilestones = ({
                             </span>
                             <span className="text-[10px] font-mono text-slate-600 ml-2">/ {totalBudgetNum.toLocaleString()} PTS</span>
                             <p className="text-[9px] font-mono text-slate-500 font-bold mt-1">
-                               ≈ {(usedPoints * 1000).toLocaleString('vi-VN')} / {(totalBudgetNum * 1000).toLocaleString('vi-VN')} VNĐ
+                               ≈ {(usedPoints * 1).toLocaleString('vi-VN')} / {(totalBudgetNum * 1).toLocaleString('vi-VN')} VNĐ
                             </p>
                         </div>
                       </div>
@@ -406,7 +406,7 @@ const Step3BudgetMilestones = ({
                           <div className="p-3 bg-black/40 rounded-xl border border-white/5">
                               <p className="text-[8px] font-mono text-slate-600 uppercase tracking-widest mb-1">{t('postjob.available', 'RESERVE')}</p>
                               <p className="text-xs font-black font-mono text-emerald-400 italic">{(wallet || 0).toLocaleString()} PTS</p>
-                              <p className="text-[8px] font-mono text-emerald-500/50 mt-1 uppercase font-bold">≈ {(wallet * 1000).toLocaleString('vi-VN')} VNĐ</p>
+                              <p className="text-[8px] font-mono text-emerald-500/50 mt-1 uppercase font-bold">≈ {(wallet * 1).toLocaleString('vi-VN')} VNĐ</p>
                           </div>
                       </div>
                     </div>
