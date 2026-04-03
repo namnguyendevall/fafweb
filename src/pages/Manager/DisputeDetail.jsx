@@ -164,6 +164,64 @@ const DisputeDetail = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
+                    {/* Original Job Blueprint Section - Added */}
+                    <section className="bg-transparent/40 border border-cyan-500/10 rounded-2xl overflow-hidden backdrop-blur-sm">
+                        <div className="p-6 border-b border-cyan-500/5 bg-cyan-500/[0.02]">
+                            <h2 className="text-xs font-black text-cyan-500 uppercase tracking-[0.2em] font-mono">Original_Job_Blueprint</h2>
+                        </div>
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-2">
+                                <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Job_Title</p>
+                                <p className="text-xl font-black text-white uppercase tracking-tight">{dispute.job_title}</p>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Full_Specification_Log</p>
+                                <div className="p-6 rounded-xl bg-slate-950/40 border border-cyan-500/5 text-xs text-slate-300 font-mono leading-relaxed whitespace-pre-wrap uppercase tracking-wider">
+                                    {dispute.job_description || "NO_SPECIFICATION_DATA_FOUND"}
+                                </div>
+                            </div>
+
+                            {/* Job Resources Gallery */}
+                            {(() => {
+                                let resources = dispute.job_resource_urls;
+                                if (typeof resources === 'string') {
+                                    try { resources = JSON.parse(resources); } catch (e) { resources = []; }
+                                }
+                                if (!Array.isArray(resources) || resources.length === 0) return null;
+
+                                return (
+                                    <div className="space-y-4">
+                                        <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Primary_Project_Assets</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {resources.map((res, idx) => {
+                                                const url = typeof res === 'object' ? res.url : res;
+                                                const name = typeof res === 'object' ? res.name : (url.split('/').pop());
+                                                return (
+                                                    <a 
+                                                        key={idx}
+                                                        href={url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-3 p-3 bg-cyan-500/5 border border-cyan-500/10 rounded-xl hover:bg-cyan-500/10 transition-all group"
+                                                    >
+                                                        <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                        </div>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="text-[10px] font-black text-cyan-200 uppercase tracking-wider truncate">{name}</span>
+                                                            <span className="text-[8px] font-mono text-cyan-700 uppercase">Project_Asset_Secured</span>
+                                                        </div>
+                                                    </a>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </section>
+
                     {/* Core Evidence Section */}
                     <section className="bg-transparent/40 border border-rose-500/10 rounded-2xl overflow-hidden backdrop-blur-sm">
                         <div className="p-6 border-b border-rose-500/5 bg-rose-500/[0.02]">
@@ -200,6 +258,33 @@ const DisputeDetail = () => {
                                 <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Evidence_Log</p>
                                 <div className="p-6 rounded-xl bg-transparent/40 border border-rose-500/5 text-xs text-slate-400 font-mono leading-relaxed uppercase tracking-wider">
                                     {dispute.analysis || "OPEN_MANUAL_ANALYSIS"}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Signed Legal Contract Section - Added */}
+                    <section className="bg-transparent/40 border border-emerald-500/10 rounded-2xl overflow-hidden backdrop-blur-sm">
+                        <div className="p-6 border-b border-emerald-500/5 bg-emerald-500/[0.02] flex justify-between items-center">
+                            <h2 className="text-xs font-black text-emerald-500 uppercase tracking-[0.2em] font-mono">Signed_Legal_Contract</h2>
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-black text-emerald-500 uppercase tracking-widest">VERIFIED_HASH_COMPLETE</span>
+                        </div>
+                        <div className="p-8 space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Registry_Value</p>
+                                    <p className="text-xl font-black text-emerald-400 uppercase tracking-tight">${Number(dispute.contract_total_amount || 0).toLocaleString()} CRED</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Conflict_Node_Value</p>
+                                    <p className="text-xl font-black text-rose-500 uppercase tracking-tight">${Number(dispute.checkpoint_amount || 0).toLocaleString()} CRED</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Contract_Verbatim_Content</p>
+                                <div className="p-6 rounded-xl bg-slate-950/40 border border-emerald-500/5 text-xs text-slate-300 font-mono leading-relaxed whitespace-pre-wrap uppercase tracking-wider max-h-[300px] overflow-y-auto custom-scrollbar">
+                                    {dispute.contract_content || "NO_CONTRACT_DATA_FOUND"}
                                 </div>
                             </div>
                         </div>
