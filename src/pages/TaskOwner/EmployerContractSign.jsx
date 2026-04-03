@@ -3,11 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { contractsApi } from '../../api/contracts.api';
 import { userApi } from '../../api/user.api';
+import { useAuth } from '../../auth/AuthContext';
 
 const EmployerContractSign = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const toast = useToast();
+    const { user } = useAuth();
     const [contract, setContract] = useState(null);
     const [loading, setLoading] = useState(true);
     const [signing, setSigning] = useState(false);
@@ -38,29 +40,26 @@ const EmployerContractSign = () => {
 
     useEffect(() => {
         fetchContract();
-    }, [id]);
+    }, [id, user]);
 
     const fetchContract = async () => {
+        if (!user) return; // Wait for user info
+
+        if (!user.full_name || !user.full_name.trim()) {
+            toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi ký hợp đồng.');
+            setTimeout(() => {
+                navigate('/task-owner/profiles');
+            }, 2000);
+            return;
+        }
+
         try {
             setLoading(true);
-            const [res, profileRes] = await Promise.all([
-                contractsApi.getContract(id),
-                userApi.getMe()
-            ]);
-            
-            const profile = profileRes.data;
-            if (!profile || !profile.full_name || !profile.full_name.trim()) {
-                toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi ký hợp đồng.');
-                setTimeout(() => {
-                    navigate('/task-owner/profiles');
-                }, 2000);
-                return;
-            }
-            
+            const res = await contractsApi.getContract(id);
             setContract(res.data);
         } catch (error) {
             console.error('Error fetching contract:', error);
-            toast.error('Failed to load contract');
+            toast.error('Lỗi: Không thể tải dữ liệu hợp đồng.');
         } finally {
             setLoading(false);
         }

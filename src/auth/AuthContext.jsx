@@ -11,8 +11,9 @@ export const AuthProvider = ({ children }) => {
   const fetchMe = async () => {
     try {
       const res = await userApi.getMe();
-      setUser(res);
-      return res; // Return user data
+      const userData = res.data || res;
+      setUser(userData);
+      return userData; 
     } catch (error) {
       // If token is invalid or expired, logout user
       logout();

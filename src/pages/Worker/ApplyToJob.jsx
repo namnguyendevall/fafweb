@@ -54,24 +54,21 @@ const ApplyToJob = () => {
             }
         };
 
-        const checkProfileStatus = async () => {
-            try {
-                const res = await userApi.getMe();
-                if (!res.data || !res.data.full_name || !res.data.full_name.trim()) {
-                    toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi gửi đề xuất ứng tuyển.');
-                    setTimeout(() => {
-                        navigate('/settings');
-                    }, 2000);
-                }
-            } catch (err) {
-                console.error("Profile check failed:", err);
+        const checkProfileStatus = () => {
+            if (!user) return;
+            
+            if (!user.full_name || !user.full_name.trim()) {
+                toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi gửi đề xuất ứng tuyển.');
+                setTimeout(() => {
+                    navigate('/settings');
+                }, 2000);
             }
         };
 
         fetchJobDetails();
         checkBusyStatus();
         checkProfileStatus();
-    }, [id, navigate, toast]);
+    }, [id, navigate, toast, user]);
 
     const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 

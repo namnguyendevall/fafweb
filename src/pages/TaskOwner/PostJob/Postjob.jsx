@@ -9,6 +9,7 @@ import Step4Contract from './Step4';
 import Step5ReviewPublish from './Step5';
 import { jobsApi } from "../../../api/jobs.api";
 import { userApi } from "../../../api/user.api";
+import { useAuth } from "../../../auth/AuthContext";
 import { useTranslation } from 'react-i18next';
 
 const Postjob = () => {
@@ -51,18 +52,14 @@ const Postjob = () => {
 
   useEffect(() => {
     // 🔍 Check profile completeness
-    const checkProfile = async () => {
-        try {
-            const res = await userApi.getMe();
-            const profile = res.data;
-            if (!profile || !profile.full_name || !profile.full_name.trim()) {
-                toast.error(t('postjob.msg_profile_incomplete', 'Bạn cần cập nhật Họ và tên trong hồ sơ trước khi thực hiện thao tác này.'));
-                setTimeout(() => {
-                    navigate('/task-owner/profiles'); // Redirect to profile settings
-                }, 2000);
-            }
-        } catch (err) {
-            console.error("Profile check failed:", err);
+    const checkProfile = () => {
+        if (!user) return;
+        
+        if (!user.full_name || !user.full_name.trim()) {
+            toast.error(t('postjob.msg_profile_incomplete', 'Bạn cần cập nhật Họ và tên trong hồ sơ trước khi thực hiện thao tác này.'));
+            setTimeout(() => {
+                navigate('/task-owner/profiles'); // Redirect to profile settings
+            }, 2000);
         }
     };
     

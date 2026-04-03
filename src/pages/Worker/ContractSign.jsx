@@ -3,11 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { contractsApi } from '../../api/contracts.api';
 import { userApi } from '../../api/user.api';
+import { useAuth } from '../../auth/AuthContext';
 
 const ContractSign = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const toast = useToast();
+    const { user } = useAuth();
     const [contract, setContract] = useState(null);
     const [userProfile, setUserProfile] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -38,22 +40,21 @@ const ContractSign = () => {
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!user) return; // Wait for user info to be ready
+            
+            if (!user.full_name || !user.full_name.trim()) {
+                toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi ký hợp đồng.');
+                setTimeout(() => {
+                    navigate('/settings');
+                }, 2000);
+                return;
+            }
+
             try {
                 setLoading(true);
-                const [contractRes, profileRes] = await Promise.all([
-                    contractsApi.getContractById(id),
-                    userApi.getMe()
-                ]);
-                const profile = profileRes.data;
-                if (!profile || !profile.full_name || !profile.full_name.trim()) {
-                    toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi ký hợp đồng.');
-                    setTimeout(() => {
-                        navigate('/settings');
-                    }, 2000);
-                    return;
-                }
+                const contractRes = await contractsApi.getContractById(id);
                 setContract(contractRes.data);
-                setUserProfile(profile);
+                setUserProfile(user);
             } catch (error) {
                 console.error('Error fetching contract:', error);
                 toast.error('Lỗi: Không thể tải dữ liệu hợp đồng.');
@@ -62,7 +63,7 @@ const ContractSign = () => {
             }
         };
         fetchData();
-    }, [id, toast]);
+    }, [id, toast, user, navigate]);
 
     const handleSignContract = async () => {
         if (!showConfirm) {
