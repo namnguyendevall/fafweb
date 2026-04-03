@@ -93,7 +93,7 @@ const Wallet = () => {
 
     const walletId = user?.id ? `faf_${user.id}_wallet` : 'faf_wallet'
     const totalBalance = user?.balance_points ?? 0
-    const vndBalance = (totalBalance * 1000).toLocaleString()
+    const vndBalance = (totalBalance * 1).toLocaleString()
     const systemFee = 0 // No fee as per user request
 
     const transactions = useMemo(() => {
@@ -364,9 +364,9 @@ const Wallet = () => {
                             <div className="px-6 py-5 space-y-5">
                                 <div className="grid grid-cols-3 gap-3">
                                     {[
-                                        { id: 'Starter', label: 'TIER_1', points: '100C' },
-                                        { id: 'Pro', label: 'TIER_2', points: '500C' },
-                                        { id: 'Expert', label: 'TIER_3', points: '1000C' }
+                                        { id: 'Starter', label: 'TIER_1', points: '100000C' },
+                                        { id: 'Pro', label: 'TIER_2', points: '500000C' },
+                                        { id: 'Expert', label: 'TIER_3', points: '1000000C' }
                                     ].map((pkg) => (
                                         <div key={pkg.id} className="relative">
                                             {pkg.id === 'Pro' && (
@@ -408,9 +408,9 @@ const Wallet = () => {
                                 <button
                                     onClick={() => {
                                         const packagePoints = {
-                                            'Starter': 100,
-                                            'Pro': 500,
-                                            'Expert': 1000
+                                            'Starter': 100000,
+                                            'Pro': 500000,
+                                            'Expert': 1000000
                                         }
                                         const points = customAmount ? parseInt(customAmount) : packagePoints[selectedPackage] || 500
                                         navigate('/deposit-points', { state: { points, package: selectedPackage } })

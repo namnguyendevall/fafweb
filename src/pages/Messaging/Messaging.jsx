@@ -3,16 +3,22 @@ import { useSearchParams } from 'react-router-dom';
 import { useChat } from '../../hooks/useChat';
 import { chatApi } from '../../api/chat.api';
 import { useAuth } from '../../auth/AuthContext';
+import { useChatContext } from '../../contexts/ChatContext';
+import { uploadApi } from '../../api/upload.api';
 
 const Messaging = () => {
     const { user } = useAuth();
     const [searchParams] = useSearchParams();
     const convIdFromUrl = searchParams.get('convId');
+    const { socket } = useChatContext();
     const [conversations, setConversations] = useState([]);
     const [selectedConvId, setSelectedConvId] = useState(convIdFromUrl ? Number(convIdFromUrl) : null);
     const [messageInput, setMessageInput] = useState('');
-    const { messages, sendMessage, loading } = useChat(selectedConvId);
+    const { messages, loading } = useChat(selectedConvId);
     const messagesEndRef = useRef(null);
+    const [attachment, setAttachment] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef(null);
 
     // Load conversation list
     useEffect(() => {
@@ -43,12 +49,40 @@ const Messaging = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const handleSend = (e) => {
+    const handleSend = async (e) => {
         e.preventDefault();
-        if (!messageInput.trim()) return;
+        if (!messageInput.trim() && !attachment) return;
         
-        sendMessage(messageInput);
+        let imageUrl = null;
+        if (attachment) {
+            setUploading(true);
+            try {
+                const res = await uploadApi.uploadSubmission(attachment);
+                imageUrl = res.url || res.data?.url;
+            } catch (err) {
+                console.error("Upload failed", err);
+                setUploading(false);
+                return;
+            }
+            setUploading(false);
+        }
+
+        if (socket && selectedConvId) {
+            socket.emit('send_message', {
+                conversationId: selectedConvId,
+                content: messageInput,
+                imageUrl: imageUrl
+            });
+        }
+
         setMessageInput('');
+        setAttachment(null);
+    };
+
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setAttachment(e.target.files[0]);
+        }
     };
 
     const conversationsWithOtherUser = conversations.map(conv => {
@@ -201,6 +235,7 @@ const Messaging = () => {
                                                 isMe ? `${t.msgMine} rounded-tr-none font-bold` : `${t.msgOther} rounded-tl-none`
                                             }`}>
                                                 <p className="normal-case tracking-normal font-sans">{msg.content}</p>
+                                                {msg.image_url && <a href={msg.image_url} target="_blank" rel="noopener noreferrer"><img src={msg.image_url} alt="attachment" className="max-w-[250px] mt-2 rounded border border-slate-700/50 object-cover" /></a>}
                                                 <div className={`text-[9px] mt-2 font-mono uppercase tracking-widest ${isMe ? 'text-slate-400 text-right' : 'text-slate-500'}`}>
                                                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
@@ -213,27 +248,48 @@ const Messaging = () => {
                         </div>
 
                         {/* Input Area */}
-                        <form onSubmit={handleSend} className={`p-4 sm:p-5 ${t.inputArea} flex gap-3 items-center z-10`}>
-                            <div className="flex-1 flex items-center relative">
-                                <span className={`absolute left-4 text-[12px] font-black pointer-events-none ${t.textPrimary}`}>{'>_'}</span>
-                                <input
-                                    type="text"
-                                    value={messageInput}
-                                    onChange={(e) => setMessageInput(e.target.value)}
-                                    placeholder="TERMINAL_INPUT..."
-                                    className={`w-full pl-10 pr-4 py-3 rounded text-[11px] font-mono tracking-widest outline-none transition-all ${t.inputNode}`}
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={!messageInput.trim()}
-                                className={`w-12 h-12 shrink-0 rounded flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none ${t.sendBtn}`}
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                </svg>
-                            </button>
-                        </form>
+                        <div className="flex flex-col z-10 w-full">
+                            {attachment && (
+                                <div className="px-6 py-2 flex items-center justify-between border-t border-slate-800 text-[11px] text-slate-300 bg-[#090e17]/80">
+                                    <span className="truncate flex-1 font-sans tracking-normal font-bold">ATTACHED: {attachment.name}</span>
+                                    <button type="button" onClick={() => setAttachment(null)} className="ml-2 text-red-500 hover:text-red-400">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                </div>
+                            )}
+                            <form onSubmit={handleSend} className={`p-4 sm:p-5 ${t.inputArea} flex gap-3 items-center w-full`}>
+                                <button type="button" onClick={() => fileInputRef.current?.click()} className={`p-2 sm:p-3 rounded transition-colors text-slate-400 hover:text-white ${t.sendBtn} bg-transparent border-transparent shadow-none`}>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                    </svg>
+                                </button>
+                                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf,.doc,.docx" />
+                                <div className="flex-1 flex items-center relative">
+                                    <span className={`absolute left-4 text-[12px] font-black pointer-events-none ${t.textPrimary}`}>{'>_'}</span>
+                                    <input
+                                        type="text"
+                                        value={messageInput}
+                                        onChange={(e) => setMessageInput(e.target.value)}
+                                        placeholder="TERMINAL_INPUT..."
+                                        disabled={uploading}
+                                        className={`w-full pl-10 pr-4 py-3 rounded text-[11px] font-mono tracking-widest outline-none transition-all disabled:opacity-50 ${t.inputNode}`}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={(!messageInput.trim() && !attachment) || uploading}
+                                    className={`w-12 h-12 shrink-0 rounded flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none ${t.sendBtn}`}
+                                >
+                                    {uploading ? (
+                                        <svg className="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    ) : (
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </form>
+                        </div>
                     </>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center p-10 text-slate-500">

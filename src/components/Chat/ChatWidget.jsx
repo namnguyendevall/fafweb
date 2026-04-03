@@ -3,14 +3,18 @@ import { useChat } from '../../hooks/useChat';
 import { useChatContext } from '../../contexts/ChatContext';
 import { useAuth } from '../../auth/AuthContext';
 import { chatApi } from '../../api/chat.api';
+import { uploadApi } from '../../api/upload.api';
 
 const ChatWidget = () => {
     const { user } = useAuth();
-    const { isOpen, activeConvId, setIsOpen, setActiveConvId, closeChat, unreadCount } = useChatContext();
+    const { isOpen, activeConvId, setIsOpen, setActiveConvId, closeChat, unreadCount, socket } = useChatContext();
     const [conversations, setConversations] = useState([]);
     const [messageInput, setMessageInput] = useState('');
-    const { messages, sendMessage, loading } = useChat(activeConvId);
+    const { messages, loading } = useChat(activeConvId);
     const messagesEndRef = useRef(null);
+    const [attachment, setAttachment] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef(null);
 
     // Fetch conversation list when widget opens or list is empty
     useEffect(() => {
@@ -31,11 +35,40 @@ const ChatWidget = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
-    const handleSend = (e) => {
+    const handleSend = async (e) => {
         e.preventDefault();
-        if (!messageInput.trim()) return;
-        sendMessage(messageInput);
+        if (!messageInput.trim() && !attachment) return;
+        
+        let imageUrl = null;
+        if (attachment) {
+            setUploading(true);
+            try {
+                const res = await uploadApi.uploadSubmission(attachment);
+                imageUrl = res.url || res.data?.url;
+            } catch (err) {
+                console.error("Upload failed", err);
+                setUploading(false);
+                return;
+            }
+            setUploading(false);
+        }
+
+        if (socket && activeConvId) {
+            socket.emit('send_message', {
+                conversationId: activeConvId,
+                content: messageInput,
+                imageUrl: imageUrl
+            });
+        }
+
         setMessageInput('');
+        setAttachment(null);
+    };
+
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setAttachment(e.target.files[0]);
+        }
     };
 
     if (!user) return null;
@@ -136,6 +169,7 @@ const ChatWidget = () => {
                                         isMe ? `${t.msgMine} rounded-tr-none font-bold tracking-wide` : `${t.msgOther} rounded-tl-none`
                                     }`}>
                                         <p>{msg.content}</p>
+                                        {msg.image_url && <a href={msg.image_url} target="_blank" rel="noopener noreferrer"><img src={msg.image_url} alt="attachment" className="max-w-[200px] mt-2 rounded border border-slate-700/50 object-cover" /></a>}
                                     </div>
                                 </div>
                             );
@@ -144,18 +178,39 @@ const ChatWidget = () => {
                     </div>
 
                     {/* Input */}
-                    <form onSubmit={handleSend} className={`p-3 ${t.inputArea} flex gap-2 items-center`}>
-                        <input
-                            type="text"
-                            value={messageInput}
-                            onChange={(e) => setMessageInput(e.target.value)}
-                            placeholder="> TERMINAL_INPUT..."
-                            className={`flex-1 px-3 py-2 rounded font-mono text-[11px] uppercase tracking-wider outline-none transition-colors ${t.inputNode}`}
-                        />
-                        <button type="submit" disabled={!messageInput.trim()} className={`p-2 rounded hover:bg-white/5 transition-colors disabled:opacity-30 ${t.sendBtn}`}>
-                            <svg className="w-4 h-4 rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
-                        </button>
-                    </form>
+                    <div className="flex flex-col bg-[#02040a]/80 border-t border-slate-800">
+                        {attachment && (
+                            <div className="px-3 py-2 flex items-center justify-between border-b border-slate-800 text-[10px] text-slate-300">
+                                <span className="truncate flex-1">{attachment.name}</span>
+                                <button type="button" onClick={() => setAttachment(null)} className="ml-2 text-red-500 hover:text-red-400">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                            </div>
+                        )}
+                        <form onSubmit={handleSend} className={`p-2 ${t.inputArea} flex gap-2 items-center`}>
+                            <button type="button" onClick={() => fileInputRef.current?.click()} className={`p-2 rounded hover:bg-white/5 transition-colors text-slate-400 hover:${t.sendBtn}`}>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                            </button>
+                            <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} accept="image/*,.pdf,.doc,.docx" />
+                            <input
+                                type="text"
+                                value={messageInput}
+                                onChange={(e) => setMessageInput(e.target.value)}
+                                placeholder="> TERMINAL_INPUT..."
+                                disabled={uploading}
+                                className={`flex-1 px-3 py-2 rounded font-mono text-[11px] uppercase tracking-wider outline-none transition-colors disabled:opacity-50 ${t.inputNode}`}
+                            />
+                            <button type="submit" disabled={(!messageInput.trim() && !attachment) || uploading} className={`p-2 rounded hover:bg-white/5 transition-colors disabled:opacity-30 ${t.sendBtn}`}>
+                                {uploading ? (
+                                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                ) : (
+                                    <svg className="w-4 h-4 rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                                )}
+                            </button>
+                        </form>
+                    </div>
                 </div>
             )}
 

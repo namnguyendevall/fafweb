@@ -10,6 +10,11 @@ import { useTranslation } from "react-i18next";
 const Step4Contract = ({
   selectedType,
   jobTitle,
+  jobDescription,
+  checkpoints = [],
+  totalBudgetNum = 0,
+  startDate,
+  endDate,
   contractAccepted,
   setContractAccepted,
   onContinue,
@@ -61,6 +66,10 @@ const Step4Contract = ({
     const workerUserId = contractInfo.workerUserId?.trim() || "..................................................";
     
     if (selectedType === "short-term") {
+      const milestoneLines = checkpoints.map((cp, idx) => {
+        return `   + Giai đoạn ${idx + 1}: ${cp.title || cp.name} - ${cp.points.toLocaleString()} CRED - Thời hạn: ${cp.duration_days || 7} ngày.`;
+      });
+
       return [
         "HỢP ĐỒNG CÔNG VIỆC NGẮN HẠN (SHORT-TERM JOB CONTRACT)",
         "",
@@ -83,21 +92,26 @@ const Step4Contract = ({
         "",
         "Điều 1. Nội dung công việc",
         "Bên B đồng ý thực hiện công việc do Bên A đăng tải trên hệ thống FAF theo mô tả, thời hạn và số điểm thưởng đã được xác nhận.",
-        `Thông tin tham chiếu: ${safeJobTitle}`,
+        `Tiêu đề công việc: ${safeJobTitle}`,
         "",
-        "Điều 2. Thời hạn và điểm thưởng",
-        "- Thời hạn hoàn thành: Theo thông tin công việc trên hệ thống FAF.",
-        "- Điểm thưởng: Theo công việc đã được hệ thống xác nhận và khóa điểm.",
+        "Điều 2. Chi tiết công việc",
+        jobDescription || "Theo mô tả chi tiết trên hệ thống FAF.",
         "",
-        "Điều 3. Quyền và nghĩa vụ các bên",
+        "Điều 3. Tiến độ và Thanh toán (Checkpoints)",
+        `Tổng điểm thưởng: ${totalBudgetNum.toLocaleString()} CRED`,
+        `Thời gian thực hiện dự kiến: ${startDate || '...'} đến ${endDate || '...'}`,
+        "Chi tiết từng giai đoạn:",
+        ...milestoneLines,
+        "",
+        "Điều 4. Quyền và nghĩa vụ các bên",
         "- Bên A có quyền đánh giá kết quả công việc và xác nhận hoàn thành hoặc không hoàn thành.",
         "- Bên B có nghĩa vụ hoàn thành công việc đúng hạn và đúng yêu cầu.",
         "- FAF giữ vai trò trung gian giữ điểm, giải ngân, khóa điểm và xử lý tranh chấp.",
         "",
-        "Điều 4. Vi phạm và xử lý",
+        "Điều 5. Vi phạm và xử lý",
         "Vi phạm hợp đồng sẽ được xử lý theo quy định của hệ thống FAF, bao gồm trừ điểm uy tín, khóa tài khoản tạm thời hoặc hoàn tiền.",
         "",
-        "Điều 5. Hiệu lực hợp đồng",
+        "Điều 6. Hiệu lực hợp đồng",
         "Hợp đồng có hiệu lực kể từ thời điểm cả hai bên xác nhận (ký) và công việc được gắn trên hệ thống FAF.",
         "",
         "ĐẠI DIỆN CÁC BÊN KÝ TÊN",
@@ -193,7 +207,7 @@ const Step4Contract = ({
       return { lockedHtml: html.substring(0, signatureIndex), editableHtml: html.substring(signatureIndex) };
     }
 
-    const endOfLockedPattern = selectedType === "short-term" ? /(<h3>Điều 5\. Hiệu lực hợp đồng<\/h3>[\s\S]*?<p><\/p>)/i : /(<h3>Điều 6\. Hiệu lực hợp đồng<\/h3>[\s\S]*?<p><\/p>)/i;
+    const endOfLockedPattern = selectedType === "short-term" ? /(<h3>Điều 6\. Hiệu lực hợp đồng<\/h3>[\s\S]*?<p><\/p>)/i : /(<h3>Điều 6\. Hiệu lực hợp đồng<\/h3>[\s\S]*?<p><\/p>)/i;
     const match = html.match(endOfLockedPattern);
 
     if (match && match.index !== undefined) {

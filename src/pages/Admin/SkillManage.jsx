@@ -5,6 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 
 const SkillManage = () => {
     const [skills, setSkills] = useState([]);
+    const [proposals, setProposals] = useState([]);
     const [newSkill, setNewSkill] = useState('');
     const [editingSkill, setEditingSkill] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -13,8 +14,12 @@ const SkillManage = () => {
     const fetchSkills = async () => {
         try {
             setLoading(true);
-            const res = await axiosClient.get('/skills');
+            const [res, propRes] = await Promise.all([
+                axiosClient.get('/skills'),
+                axiosClient.get('/admin/skills/inactive')
+            ]);
             setSkills(res.data || []);
+            setProposals(propRes.data || []);
         } catch (error) {
             console.error(error);
             showToast('Failed to fetch skills', 'error');
@@ -61,6 +66,26 @@ const SkillManage = () => {
             showToast('Skill deactivated', 'success');
         } catch (error) {
             showToast('Failed to deactivate skill', 'error');
+        }
+    };
+
+    const handleApproveProposal = async (proposal) => {
+        try {
+            await axiosClient.put(`/admin/skills/inactive/${proposal.id}/approve`);
+            fetchSkills();
+            showToast('Skill approved and integrated', 'success');
+        } catch (error) {
+            showToast('Action failed', 'error');
+        }
+    };
+
+    const handleRejectProposal = async (id) => {
+        try {
+            await axiosClient.put(`/admin/skills/inactive/${id}/reject`);
+            fetchSkills();
+            showToast('Skill rejected', 'success');
+        } catch (error) {
+            showToast('Action failed', 'error');
         }
     };
 
@@ -114,6 +139,52 @@ const SkillManage = () => {
                             </div>
                         </form>
                     </div>
+
+                    {/* Proposals Section */}
+                    {proposals.length > 0 && (
+                        <div className="mb-8">
+                            <div className="flex items-center gap-3 mb-4">
+                                <h2 className="text-lg font-bold text-white flex items-center gap-2 uppercase tracking-widest">
+                                    <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                    USER_PROPOSED_SKILLS
+                                </h2>
+                                <span className="rounded bg-amber-500/10 border border-amber-500/30 px-2 py-1 text-[10px] font-bold tracking-widest uppercase text-amber-500 animate-pulse">
+                                    {proposals.length} PENDING
+                                </span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {proposals.map(prop => (
+                                    <div key={prop.id} className="bg-[#090e17] border border-[#1e293b] rounded-xl p-5 shadow-lg relative overflow-hidden group hover:border-amber-500/50 transition-all">
+                                        <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                                            <svg className="w-16 h-16 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                        </div>
+                                        <div className="relative z-10">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <h3 className="font-bold text-white text-lg">{prop.name}</h3>
+                                                <span className="text-[10px] bg-rose-500/10 border border-rose-500/30 text-rose-400 px-2 py-0.5 rounded uppercase font-bold tracking-widest shadow-[0_0_10px_rgba(244,63,94,0.2)]">PROPOSAL</span>
+                                            </div>
+                                            <p className="text-sm text-slate-400 mb-4 line-clamp-2 min-h-[40px] border-l-2 border-[#1e293b] pl-3 italic group-hover:border-amber-500/30 transition-colors">Slug: {prop.slug}</p>
+                                            <div className="flex gap-3">
+                                                <button
+                                                    onClick={() => handleApproveProposal(prop)}
+                                                    className="flex-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 py-2 rounded text-[10px] font-bold tracking-widest uppercase hover:bg-emerald-500/20 hover:text-white hover:border-emerald-500/50 transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)]"
+                                                >
+                                                    [APPROVE]
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRejectProposal(prop.id)}
+                                                    className="flex-1 bg-rose-500/10 text-rose-400 border border-rose-500/30 py-2 rounded text-[10px] font-bold tracking-widest uppercase hover:bg-rose-500/20 hover:text-white hover:border-rose-500/50 transition-all shadow-[0_0_10px_rgba(244,63,94,0.1)]"
+                                                >
+                                                    [REJECT]
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Skills Table */}
                     <div className="bg-[#090e17] rounded-xl shadow-lg border border-[#1e293b] overflow-hidden">

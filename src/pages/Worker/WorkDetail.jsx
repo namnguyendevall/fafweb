@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import JSZip from 'jszip';
 import { jobsApi } from '../../api/jobs.api';
 import { contractsApi } from '../../api/contracts.api';
 import { useToast } from '../../contexts/ToastContext';
@@ -25,6 +26,7 @@ const WorkDetail = () => {
     const [hasActiveContract, setHasActiveContract] = useState(false);
     const [hasApplied, setHasApplied] = useState(false);
     const [myProposal, setMyProposal] = useState(null);
+    const [isZipping, setIsZipping] = useState(false);
 
     useEffect(() => {
         const fetchJobDetails = async () => {
@@ -79,6 +81,95 @@ const WorkDetail = () => {
             await openChat(job.client_id);
         } catch {
             toast.error('Failed to open chat with employer');
+        }
+    };
+
+    const getFileNameFromUrl = (url, blob, index) => {
+        // Try to extract filename from URL
+        let filename = url.split('/').pop().split('?')[0];
+        
+        // If it looks like a hash (Cloudinary public ID) or is missing extension
+        if (!filename || filename.length < 5 || !filename.includes('.')) {
+            const mimeToExt = {
+                'application/zip': 'zip',
+                'application/x-zip-compressed': 'zip',
+                'application/pdf': 'pdf',
+                'image/jpeg': 'jpg',
+                'image/png': 'png',
+                'image/gif': 'gif',
+                'video/mp4': 'mp4',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+                'application/msword': 'doc',
+                'application/x-rar-compressed': 'rar',
+                'application/octet-stream': 'bin'
+            };
+            
+            const ext = mimeToExt[blob.type] || blob.type.split('/')[1] || 'bin';
+            filename = `resource_${index + 1}.${ext}`;
+        }
+        return filename;
+    };
+
+    const handleIndividualDownload = async (url, index) => {
+        try {
+            toast.info("Đang chuẩn bị tải xuống...");
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const filename = getFileNameFromUrl(url, blob, index);
+            
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+        } catch (err) {
+            console.error("Download failed:", err);
+            toast.error("Tải xuống thất bại. Vui lòng thử lại.");
+        }
+    };
+
+    const handleDownloadAll = async () => {
+        if (!job?.resource_urls || job.resource_urls.length === 0) return;
+        
+        try {
+            setIsZipping(true);
+            toast.info(`Đang nén ${job.resource_urls.length} tệp...`);
+            
+            const zip = new JSZip();
+            
+            const downloadPromises = job.resource_urls.map(async (url, index) => {
+                try {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const filename = getFileNameFromUrl(url, blob, index);
+                    zip.file(filename, blob);
+                } catch (err) {
+                    console.error(`Failed to fetch ${url}:`, err);
+                }
+            });
+
+            await Promise.all(downloadPromises);
+            
+            const content = await zip.generateAsync({ type: "blob" });
+            const zipUrl = URL.createObjectURL(content);
+            
+            const link = document.createElement('a');
+            link.href = zipUrl;
+            link.download = `Project_Resources_${id}.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(zipUrl);
+            
+            toast.success("Đã tải xuống tệp ZIP thành công!");
+        } catch (err) {
+            console.error("ZIP creation failed:", err);
+            toast.error("Không thể tạo tệp ZIP. Vui lòng thử lại sau.");
+        } finally {
+            setIsZipping(false);
         }
     };
 
@@ -176,15 +267,32 @@ const WorkDetail = () => {
                         {/* Project Resources (NEW) */}
                         {job.resource_urls && job.resource_urls.length > 0 && (
                             <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
-                                <SectionLabel>PROJECT RESOURCES</SectionLabel>
+                                <div className="flex items-center justify-between mb-2">
+                                    <SectionLabel>PROJECT RESOURCES</SectionLabel>
+                                    <button 
+                                        onClick={handleDownloadAll}
+                                        disabled={isZipping}
+                                        className={`mb-3 px-3 py-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-[9px] font-black font-mono tracking-widest text-cyan-400 uppercase hover:bg-cyan-500/20 transition-all flex items-center gap-2 group ${isZipping ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        {isZipping ? (
+                                            <>
+                                                <div className="w-3 h-3 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+                                                ĐANG NÉN...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-3.5 h-3.5 group-hover:animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                TẢI ZIP
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
                                     {job.resource_urls.map((url, idx) => (
-                                        <a 
+                                        <button 
                                             key={idx} 
-                                            href={url} 
-                                            target="_blank" 
-                                            rel="noreferrer" 
-                                            className="aspect-video relative rounded-xl border border-white/5 bg-black/40 overflow-hidden group hover:border-cyan-500/50 transition-all font-mono"
+                                            onClick={() => handleIndividualDownload(url, idx)}
+                                            className="aspect-video relative rounded-xl border border-white/5 bg-black/40 overflow-hidden group hover:border-cyan-500/50 transition-all font-mono text-left w-full"
                                         >
                                             {url.match(/\.(mp4|webm|ogg)$/i) ? (
                                                 <div className="w-full h-full flex flex-col items-center justify-center gap-2">
@@ -207,7 +315,7 @@ const WorkDetail = () => {
                                                 <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                 <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             </div>
-                                        </a>
+                                        </button>
                                     ))}
                                 </div>
                             </div>

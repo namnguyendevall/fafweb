@@ -31,6 +31,7 @@ const Postjob = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [skills, setSkills] = useState([]);
+  const [resourceUrls, setResourceUrls] = useState([]);
 
   // Step 3
   const [totalBudget, setTotalBudget] = useState('5000');
@@ -125,6 +126,10 @@ const Postjob = () => {
         toast.error(t('postjob.err_category_required', 'Vui lòng chọn danh mục công việc'));
         return;
       }
+      if (category.id === 'other' && (!category.name || !category.name.trim())) {
+        toast.error('Vui lòng nhập tên danh mục tùy chỉnh');
+        return;
+      }
       if (!startDate) {
         toast.error('Vui lòng chọn ngày bắt đầu dự kiến');
         return;
@@ -178,10 +183,12 @@ const Postjob = () => {
         description: jobDescription,
         jobType: selectedType.replace(/-/g, '_').toUpperCase(),
         budget: totalBudgetNum,
-        categoryId: Number(category?.id),
-        skills: skills.filter(s => s && s.id).map(s => Number(s.id)),
+        categoryId: category?.id === 'other' ? null : Number(category?.id),
+        categoryName: category?.id === 'other' ? category?.name : null,
+        skills: skills.filter(s => s).map(s => typeof s === 'string' ? { name: s, id: null } : { id: s.id || null, name: s.name }),
         startDate: startDate ? new Date(startDate).toISOString().split("T")[0] : null,
         endDate: endDate ? new Date(endDate).toISOString().split("T")[0] : null,
+        resourceUrls: resourceUrls,
         checkpoints: checkpoints.map(cp => ({
           title: cp.title || cp.name,
           description: cp.description || "",
@@ -224,6 +231,23 @@ const Postjob = () => {
 
   return (
     <div className="w-full min-h-screen bg-transparent text-slate-300 relative flex overflow-hidden">
+      {/* GLOBAL LOADING OVERLAY */}
+      {loading && (
+        <div className="fixed inset-0 z-[9999] bg-[#020617]/90 backdrop-blur-md flex flex-col items-center justify-center font-mono">
+            <div className="relative mb-8">
+                <div className="w-24 h-24 border-t-2 border-l-2 border-fuchsia-500 rounded-full animate-spin shadow-[0_0_20px_rgba(217,70,239,0.4)]" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-16 h-16 border-b-2 border-r-2 border-fuchsia-400 rounded-full animate-spin-reverse opacity-50" />
+                </div>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+                <p className="text-fuchsia-500 font-black text-xs tracking-[0.5em] animate-pulse uppercase">
+                    {isEditing ? "UPDATING_JOB_STRUCTURE..." : "PUBLISHING_MISSION_PROTOCOL..."}
+                </p>
+                <p className="text-[9px] text-slate-500 tracking-[0.3em] font-bold">PLEASE_WAIT_FOR_NETWORK_SYNC</p>
+            </div>
+        </div>
+      )}
       
       <div className="flex-1 flex flex-col relative z-10 w-full overflow-y-auto custom-scrollbar">
         <PostingProgress
@@ -255,6 +279,8 @@ const Postjob = () => {
               setEndDate={setEndDate}
               skills={skills}
               setSkills={setSkills}
+              resourceUrls={resourceUrls}
+              setResourceUrls={setResourceUrls}
               onContinue={handleContinue}
               onBack={handleBack}
             />
@@ -275,6 +301,8 @@ const Postjob = () => {
               usedPercent={usedPercent}
               isOverBudget={isOverBudget}
               isBudgetAllocated={isBudgetAllocated}
+              startDate={startDate}
+              endDate={endDate}
               onContinue={handleContinue}
               onBack={handleBack}
             />
@@ -284,6 +312,11 @@ const Postjob = () => {
             <Step4Contract
               selectedType={selectedType}
               jobTitle={jobTitle}
+              jobDescription={jobDescription}
+              checkpoints={checkpoints}
+              totalBudgetNum={totalBudgetNum}
+              startDate={startDate}
+              endDate={endDate}
               contractAccepted={contractAccepted}
               setContractAccepted={setContractAccepted}
               onContinue={(html) => {

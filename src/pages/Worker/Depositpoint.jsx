@@ -7,15 +7,14 @@ const Depositpoint = () => {
     const { success, error } = useToast()
     const navigate = useNavigate()
     const location = useLocation()
-    const initialPoints = location.state?.points || 100
-
+    const initialPoints = location.state?.points || 100000
     const [points, setPoints] = useState(initialPoints)
-    const [vndAmount, setVndAmount] = useState(initialPoints * 1000)
+    const [vndAmount, setVndAmount] = useState(initialPoints)
     const [paymentMethod, setPaymentMethod] = useState('zalopay')
     const [processingFee, setProcessingFee] = useState(0)
     const [loading, setLoading] = useState(false)
 
-    const exchangeRate = 1000 // 1 Point = 1,000 VND
+    const exchangeRate = 1 // 1 Point = 1 VND
 
     useEffect(() => {
         setVndAmount(points * exchangeRate)
@@ -36,9 +35,10 @@ const Depositpoint = () => {
     const totalDue = subtotal + processingFee
 
     const handlePayment = async () => {
-        if (points < 1) {
-            toast.error("Vui lòng nạp tối thiểu 1 CRED")
-            return
+        const minimumPoints = 1000;
+        if (points < minimumPoints || (points * exchangeRate) < 1000) {
+            error(`Vui lòng nạp tối thiểu ${minimumPoints.toLocaleString()} CRED (tương đương 1,000 VND)`);
+            return;
         }
 
         setLoading(true)

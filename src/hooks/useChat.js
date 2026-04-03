@@ -61,16 +61,17 @@ export const useChat = (conversationId) => {
         };
     }, [socket, conversationId]);
 
-    const sendMessage = useCallback((content) => {
+    const sendMessage = useCallback((content, imageUrl = null) => {
         if (!socket || !conversationId) {
             console.warn('Cannot send message: socket not connected or no conversation selected');
             return;
         }
 
-        console.log('Sending message:', { conversationId, content });
+        console.log('Sending message:', { conversationId, content, imageUrl });
         socket.emit('send_message', {
             conversationId,
-            content
+            content,
+            imageUrl
         });
     }, [socket, conversationId]);
 

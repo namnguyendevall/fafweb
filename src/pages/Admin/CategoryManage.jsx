@@ -15,7 +15,7 @@ const CategoryManage = () => {
             setLoading(true);
             const [catRes, propRes] = await Promise.all([
                 axiosClient.get('/categories'),
-                axiosClient.get('/admin/categories/proposals')
+                axiosClient.get('/admin/categories/inactive')
             ]);
             setCategories(catRes.data || []);
             setProposals(propRes.data || []);
@@ -46,16 +46,9 @@ const CategoryManage = () => {
 
     const handleApproveProposal = async (proposal) => {
         try {
-            // First approve the proposal
-            await axiosClient.put(`/admin/categories/proposals/${proposal.id}/approve`);
-            // Then create the actual category
-            await axiosClient.post('/categories', {
-                name: proposal.name,
-                slug: proposal.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, ''),
-                description: proposal.description
-            });
+            await axiosClient.put(`/admin/categories/inactive/${proposal.id}/approve`);
             fetchData();
-            showToast('Proposal approved and category created', 'success');
+            showToast('Proposal approved and integrated', 'success');
         } catch (error) {
             showToast('Action failed', 'error');
         }
@@ -63,7 +56,7 @@ const CategoryManage = () => {
 
     const handleRejectProposal = async (id) => {
         try {
-            await axiosClient.put(`/admin/categories/proposals/${id}/reject`);
+            await axiosClient.put(`/admin/categories/inactive/${id}/reject`);
             fetchData();
             showToast('Proposal rejected', 'success');
         } catch (error) {

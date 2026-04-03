@@ -53,7 +53,7 @@ const FindWork = () => {
     const [tab, setTab] = useState('SHORT_TERM');
     const [sort, setSort] = useState('match');
     const [categoryId, setCategoryId] = useState('');
-    const [budgetRange, setBudgetRange] = useState([0, 20000]);
+    const [budgetRange, setBudgetRange] = useState([0, 10000000]);
     const [minMatchScore, setMinMatchScore] = useState(0);
     const [page, setPage] = useState(1);
     const [jobs, setJobs] = useState([]);

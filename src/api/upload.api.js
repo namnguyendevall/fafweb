@@ -7,9 +7,13 @@ export const uploadApi = {
    * @param {string} filename
    * @returns {Promise<{url: string, publicId: string}>}
    */
-  uploadSubmission: async (file, filename = 'file') => {
+  uploadSubmission: async (file, filename = null) => {
     const formData = new FormData();
-    formData.append('file', file, filename);
+    if (filename) {
+        formData.append('file', file, filename);
+    } else {
+        formData.append('file', file);
+    }
 
     // axiosClient automatically handles base URL and credentials
     return axiosClient.post('/uploads/submission', formData, {

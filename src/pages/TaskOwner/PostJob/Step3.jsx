@@ -14,12 +14,44 @@ const Step3BudgetMilestones = ({
   usedPercent,
   isOverBudget,
   isBudgetAllocated,
+  startDate,
+  endDate,
   onContinue,
   onBack,
 }) => {
   const { t } = useTranslation();
   const [wallet, setWallet] = useState(0);
   const [validationErrors, setValidationErrors] = useState([]);
+  const [checkpointUploadProgress, setCheckpointUploadProgress] = useState({ id: null, current: 0, total: 0 });
+
+  const handleDownloadResource = async (url, index) => {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        let filename = url.split('/').pop().split('?')[0];
+        if (!filename || filename.length < 5 || !filename.includes('.')) {
+            const mimeToExt = {
+                'application/zip': 'zip',
+                'application/pdf': 'pdf',
+                'image/jpeg': 'jpg',
+                'image/png': 'png',
+                'application/octet-stream': 'zip'
+            };
+            const ext = mimeToExt[blob.type] || blob.type.split('/')[1] || 'bin';
+            filename = `checkpoint_res_${index + 1}.${ext}`;
+        }
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+        window.open(url, '_blank');
+    }
+  };
 
   useEffect(() => {
     userApi
@@ -193,6 +225,93 @@ const Step3BudgetMilestones = ({
                           className="w-full px-4 py-3 bg-black/40 border border-white/5 rounded-lg text-slate-400 font-mono text-xs outline-none focus:border-fuchsia-500/40 transition-all resize-none italic"
                         />
                     </div>
+
+                    {/* Materials and Google Drive Link */}
+                    <div className="md:col-span-2 space-y-2 pt-4 border-t border-white/5">
+                      <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest font-mono flex items-center justify-between">
+                        <span>{t('postjob.checkpoint_materials', 'MATERIALS & ATTACHMENTS')}</span>
+                        <span className="text-[8px] text-fuchsia-500/50 hover:text-fuchsia-400 transition-colors uppercase italic cursor-help" title="If your files are large, please upload them to Google Drive and paste the link here.">
+                          Khuyến khích link Drive
+                        </span>
+                      </label>
+                      <div className="flex flex-col gap-3">
+                        <input
+                          type="text"
+                          placeholder="Dán link Google Drive hoặc Dropbox vào đây..."
+                          className="w-full px-4 py-2 bg-black/40 border border-white/10 rounded-lg text-white font-mono text-xs placeholder-slate-700 outline-none focus:border-fuchsia-500/40 transition-all"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.target.value.trim()) {
+                                e.preventDefault();
+                                const currentUrls = checkpoint.resourceUrls || [];
+                                onUpdateCheckpoint(checkpoint.id, "resourceUrls", [...currentUrls, e.target.value.trim()]);
+                                e.target.value = '';
+                            }
+                          }}
+                        />
+                        <div className="flex items-center gap-4">
+                          {checkpointUploadProgress.id === checkpoint.id ? (
+                            <div className="inline-flex flex-col gap-1">
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg text-fuchsia-400 font-mono text-[9px] animate-pulse">
+                                    <div className="w-2.5 h-2.5 border-2 border-fuchsia-500 border-t-transparent rounded-full animate-spin" />
+                                    TẢI LÊN ({checkpointUploadProgress.current}/{checkpointUploadProgress.total})...
+                                </div>
+                                <div className="w-full bg-white/5 h-0.5 rounded-full overflow-hidden">
+                                    <div 
+                                        className="bg-fuchsia-500 h-full transition-all duration-300" 
+                                        style={{ width: `${(checkpointUploadProgress.current / checkpointUploadProgress.total) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+                          ) : (
+                            <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-[#0f172a] hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors text-slate-300 font-mono text-[10px]">
+                              <svg className="w-3 h-3 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                              Tải lên (Chọn nhiều file)
+                              <input type="file" multiple className="hidden" accept="image/*,.pdf,.doc,.docx,.zip,.rar" onChange={async (e) => {
+                                const files = Array.from(e.target.files || []);
+                                if (files.length > 0) {
+                                    try {
+                                        setCheckpointUploadProgress({ id: checkpoint.id, current: 0, total: files.length });
+                                        const { uploadApi } = await import('../../../api/upload.api');
+                                        
+                                        const newUrls = [];
+                                        for (let i = 0; i < files.length; i++) {
+                                            const res = await uploadApi.uploadSubmission(files[i], files[i].name);
+                                            if (res && res.url) {
+                                                newUrls.push(res.url);
+                                            }
+                                            setCheckpointUploadProgress(prev => ({ ...prev, current: i + 1 }));
+                                        }
+                                        
+                                        const currentUrls = checkpoint.resourceUrls || [];
+                                        onUpdateCheckpoint(checkpoint.id, "resourceUrls", [...currentUrls, ...newUrls]);
+                                    } catch (error) {
+                                        console.error("Checkpoint upload failed:", error);
+                                    } finally {
+                                        setCheckpointUploadProgress({ id: null, current: 0, total: 0 });
+                                    }
+                                }
+                              }} />
+                            </label>
+                          )}
+                        </div>
+                        {/* Display uploaded/added links */}
+                        {(checkpoint.resourceUrls || []).length > 0 && (
+                          <div className="flex flex-col gap-2 mt-1">
+                            {(checkpoint.resourceUrls || []).map((url, idx) => (
+                               <div key={idx} className="flex items-center justify-between text-[10px] px-2 py-1.5 bg-black/40 border border-emerald-500/10 rounded text-emerald-400 font-mono">
+                                   <button 
+                                     onClick={() => handleDownloadResource(url, idx)} 
+                                     className="truncate hover:underline max-w-[80%] text-left"
+                                   >
+                                     {url.split('/').pop().split('?')[0] || `Tài liệu ${idx + 1}`}
+                                   </button>
+                                <button type="button" onClick={() => onUpdateCheckpoint(checkpoint.id, "resourceUrls", (checkpoint.resourceUrls || []).filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-300">✕</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -304,7 +423,25 @@ const Step3BudgetMilestones = ({
                       <button
                         onClick={() => {
                           const errors = [];
-                          checkpoints.forEach((cp, idx) => { if (!cp.duration_days || cp.duration_days < 1) errors.push(`Milestone ${idx+1} requires valid duration mapping in days`); });
+                          let totalCPDays = 0;
+                          checkpoints.forEach((cp, idx) => { 
+                            if (!cp.duration_days || cp.duration_days < 1) {
+                              errors.push(`Milestone ${idx+1} requires valid duration mapping in days`); 
+                            } else {
+                              totalCPDays += Number(cp.duration_days);
+                            }
+                          });
+
+                          if (startDate && endDate) {
+                            const start = new Date(startDate);
+                            const end = new Date(endDate);
+                            const jobDurationDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+                            
+                            if (totalCPDays > jobDurationDays) {
+                              errors.push(`Tổng thời gian Checkpoint (${totalCPDays} ngày) vượt mức hợp đồng (${jobDurationDays} ngày)`);
+                            }
+                          }
+
                           if (!isBudgetAllocated) errors.push(t('postjob.err_budget_mismatch', { used: usedPoints, total: totalBudgetNum }));
                           if (totalBudgetNum > wallet) errors.push(`Insufficient balance. You need ${totalBudgetNum.toLocaleString()} PTS but only have ${wallet.toLocaleString()} PTS.`);
                           if (errors.length > 0) { setValidationErrors(errors); return; }
