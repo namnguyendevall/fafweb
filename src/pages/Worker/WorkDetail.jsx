@@ -27,6 +27,47 @@ const WorkDetail = () => {
     const [hasApplied, setHasApplied] = useState(false);
     const [myProposal, setMyProposal] = useState(null);
     const [isZipping, setIsZipping] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
+
+    // Security & Access Control
+    useEffect(() => {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+            try {
+                setCurrentUser(JSON.parse(userStr));
+            } catch (e) {
+                console.error("User parsing failed");
+            }
+        }
+
+        // Block Right Click
+        const handleContextMenu = (e) => e.preventDefault();
+        // Block Keyboard Shortcuts
+        const handleKeyDown = (e) => {
+            // F12, PrintScreen
+            if (e.key === 'F12' || e.key === 'PrintScreen') {
+                e.preventDefault();
+                toast.info("Security Profile: Print/Inspect disabled.");
+            }
+            // Ctrl+S, Ctrl+P, Ctrl+U, Ctrl+Shift+I
+            if (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || (e.shiftKey && e.key === 'I'))) {
+                e.preventDefault();
+                toast.info("Security Profile: Action restricted.");
+            }
+        };
+
+        window.addEventListener('contextmenu', handleContextMenu);
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('contextmenu', handleContextMenu);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [toast]);
+
+    const isHired = job?.contract && currentUser && (
+        String(job.contract.worker_id) === String(currentUser.id) ||
+        String(job.client_id) === String(currentUser.id)
+    );
 
     useEffect(() => {
         const fetchJobDetails = async () => {
@@ -93,6 +134,10 @@ const WorkDetail = () => {
     };
 
     const handleIndividualDownload = (resource) => {
+        if (!isHired) {
+            toast.error("Vui lòng ứng tuyển và được duyệt để tải tài liệu này.");
+            return;
+        }
         const url = typeof resource === 'string' ? resource : resource.url;
         window.open(getAttachmentUrl(url), '_blank');
     };
@@ -125,7 +170,17 @@ const WorkDetail = () => {
     }
 
     return (
-        <div className="min-h-screen bg-transparent text-slate-300">
+        <div className="min-h-screen bg-transparent text-slate-300 relative select-none" style={{ userSelect: 'none' }}>
+            {/* Watermark Overlay */}
+            {currentUser && (
+                <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] overflow-hidden flex flex-wrap gap-20 p-20 content-start">
+                    {Array.from({ length: 20 }).map((_, i) => (
+                        <div key={i} className="text-xl font-black font-mono rotate-[-30deg] whitespace-nowrap uppercase tracking-[0.5em]">
+                            {currentUser.full_name || currentUser.email} // ID_{currentUser.id} // SECURED_VIEW
+                        </div>
+                    ))}
+                </div>
+            )}
 
             <div className="relative z-10 w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Breadcrumb */}
@@ -242,12 +297,19 @@ const WorkDetail = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <button 
-                                                    onClick={() => handleIndividualDownload(resource, idx)}
-                                                    className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-cyan-500/20"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                                </button>
+                                                {isHired && (
+                                                    <button 
+                                                        onClick={() => handleIndividualDownload(resource, idx)}
+                                                        className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-cyan-500/20"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                    </button>
+                                                )}
+                                                {!isHired && (
+                                                    <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-600 border border-slate-700/50 flex items-center justify-center cursor-help group-hover:text-amber-500/50 transition-all" title="Cần được duyệt để tải">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })}
