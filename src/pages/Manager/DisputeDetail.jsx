@@ -16,6 +16,8 @@ const DisputeDetail = () => {
     const [newMessage, setNewMessage] = useState("");
     const [summary, setSummary] = useState("");
     const [confirmModal, setConfirmModal] = useState({ open: false, resolution: '', message: '' });
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const fileInputRef = React.useRef(null);
 
     useEffect(() => {
         fetchData();
@@ -40,15 +42,40 @@ const DisputeDetail = () => {
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim()) return;
+        if (!newMessage.trim() && selectedFiles.length === 0) return;
+        
         try {
-            await managerApi.addDisputeMessage(id, newMessage);
+            const formData = new FormData();
+            formData.append("message", newMessage);
+            selectedFiles.forEach(file => {
+                formData.append("attachments", file);
+            });
+
+            await managerApi.addDisputeMessage(id, formData);
             setNewMessage("");
+            setSelectedFiles([]);
             fetchData();
         } catch (error) {
             console.error("Failed to send message:", error);
-            toast.error("Hệ thống: Không thể gửi tin nhắn hòa giải.");
+            toast.error("Hệ thống: Không thể gửi tin nhắn hoặc tệp đính kèm.");
         }
+    };
+
+    const handleFileSelect = (e) => {
+        const files = Array.from(e.target.files);
+        const validFiles = files.filter(file => {
+            const sizeMB = file.size / (1024 * 1024);
+            if (sizeMB > 10) {
+                toast.warning(`File ${file.name} quá lớn (>10MB).`);
+                return false;
+            }
+            return true;
+        });
+        setSelectedFiles(prev => [...prev, ...validFiles]);
+    };
+
+    const removeFile = (index) => {
+        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleResolve = (resolution) => {
@@ -243,7 +270,12 @@ const DisputeDetail = () => {
                                     </div>
                                     <div className="text-right space-y-1">
                                         <p className="text-[9px] font-mono font-black text-rose-500/50 uppercase tracking-widest">Registry_Value</p>
-                                        <p className="text-lg font-black text-rose-400 uppercase tracking-tight">${Number(dispute.checkpoint_amount || 0).toLocaleString()} CRED</p>
+                                        <div className="flex flex-col items-end gap-1">
+                                            <p className="text-lg font-black text-rose-400 uppercase tracking-tight">${Number(dispute.checkpoint_amount || 0).toLocaleString()} CRED</p>
+                                            <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest border border-slate-800 px-1.5 py-0.5 rounded">
+                                                Est_Duration: {dispute.checkpoint_duration_days || 'N/A'} Days
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -342,29 +374,84 @@ const DisputeDetail = () => {
                                     </div>
                                     <div className={`p-3 rounded-lg border text-[10px] font-mono uppercase leading-relaxed ${m.role === 'manager' || m.role === 'ADMIN' ? 'bg-emerald-500/[0.05] border-emerald-500/20 text-emerald-300' : 'bg-rose-500/[0.02] border-rose-500/5 text-slate-300'}`}>
                                         {m.message}
+                                        
+                                        {/* Attachments Rendering */}
+                                        {m.attachments && (typeof m.attachments === 'string' ? JSON.parse(m.attachments) : m.attachments).length > 0 && (
+                                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                {(typeof m.attachments === 'string' ? JSON.parse(m.attachments) : m.attachments).map((url, i) => {
+                                                    const isImg = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                                                    return (
+                                                        <div key={i} className="relative group/attach">
+                                                            {isImg ? (
+                                                                <a href={url} target="_blank" rel="noreferrer" className="block rounded-lg overflow-hidden border border-white/10 hover:border-rose-500/50 transition-all">
+                                                                    <img src={url} alt="Evidence" className="w-full h-32 object-cover" />
+                                                                </a>
+                                                            ) : (
+                                                                <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[8px] truncate">
+                                                                    <svg className="w-4 h-4 shrink-0 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                                                                    ATTACHMENT_{i+1}
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )) : (
                                 <p className="text-center py-10 text-[10px] font-mono text-slate-600 uppercase tracking-widest italic">No communication logs detected in this node</p>
                             )}
                         </div>
-
+ 
                         {/* Mediation Input */}
                         {dispute.status === 'OPEN' && (
-                            <form onSubmit={handleSendMessage} className="p-4 bg-rose-500/[0.03] border-t border-rose-500/10 flex gap-4">
-                                <input 
-                                    value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
-                                    placeholder="ENTER_MEDIATION_COMMAND_OR_QUERY..."
-                                    className="flex-1 bg-slate-950/50 border border-rose-500/20 rounded-xl px-4 py-3 text-[10px] font-mono text-rose-400 placeholder:text-rose-900 outline-none focus:border-rose-500/50 transition-all uppercase tracking-widest"
-                                />
-                                <button 
-                                    type="submit"
-                                    className="px-6 py-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-500 text-[10px] font-black font-mono tracking-widest uppercase hover:bg-rose-500/30 transition-all shadow-[0_0_15px_rgba(244,63,94,0.1)] active:scale-95"
-                                >
-                                    TRANSMIT
-                                </button>
-                            </form>
+                            <div className="p-4 bg-rose-500/[0.03] border-t border-rose-500/10 space-y-3">
+                                {/* Selected Files Preview */}
+                                {selectedFiles.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 px-2">
+                                        {selectedFiles.map((f, i) => (
+                                            <div key={i} className="flex items-center gap-2 px-2 py-1 rounded bg-rose-500/10 border border-rose-500/20 text-[8px] font-mono text-rose-400">
+                                                <span className="truncate max-w-[100px]">{f.name}</span>
+                                                <button onClick={() => removeFile(i)} className="hover:text-white transition-colors">✕</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <form onSubmit={handleSendMessage} className="flex gap-4">
+                                    <div className="flex-1 relative">
+                                        <input 
+                                            value={newMessage}
+                                            onChange={(e) => setNewMessage(e.target.value)}
+                                            placeholder="ENTER_MEDIATION_COMMAND_OR_QUERY..."
+                                            className="w-full bg-slate-950/50 border border-rose-500/20 rounded-xl pl-12 pr-4 py-3 text-[10px] font-mono text-rose-400 placeholder:text-rose-900 outline-none focus:border-rose-500/50 transition-all uppercase tracking-widest"
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-all border border-rose-500/20"
+                                            title="ATTACH_EVIDENCE"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                                        </button>
+                                        <input 
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleFileSelect}
+                                            multiple
+                                            className="hidden"
+                                            accept="image/*,.pdf,.doc,.docx"
+                                        />
+                                    </div>
+                                    <button 
+                                        type="submit"
+                                        className="px-6 py-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-500 text-[10px] font-black font-mono tracking-widest uppercase hover:bg-rose-500/30 transition-all shadow-[0_0_15px_rgba(244,63,94,0.1)] active:scale-95"
+                                    >
+                                        TRANSMIT
+                                    </button>
+                                </form>
+                            </div>
                         )}
                     </section>
                 </div>

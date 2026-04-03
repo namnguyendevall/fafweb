@@ -57,8 +57,10 @@ const managerApi = {
         return axiosClient.get(`/disputes/${id}/messages`);
     },
 
-    addDisputeMessage: (id, message) => {
-        return axiosClient.post(`/disputes/${id}/messages`, { message });
+    addDisputeMessage: (id, payload) => {
+        // If payload is FormData, axios will handle headers automatically
+        const data = payload instanceof FormData ? payload : { message: payload };
+        return axiosClient.post(`/disputes/${id}/messages`, data);
     },
 
     resolveDispute: (id, resolution, resolution_summary) => {
