@@ -84,77 +84,17 @@ const WorkDetail = () => {
         }
     };
 
-    const getAttachmentUrl = (url, name) => {
+    const getAttachmentUrl = (url) => {
         if (!url || typeof url !== 'string') return url;
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
-        // Use our backend proxy to avoid CORS and 401 issues with Cloudinary
-        return `${baseUrl}/uploads/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name || "")}`;
+        if (url.includes('cloudinary.com') && !url.includes('fl_attachment')) {
+            return url.replace('/upload/', '/upload/fl_attachment/');
+        }
+        return url;
     };
 
-    const getFileNameFromUrl = (resource, blob, index) => {
+    const handleIndividualDownload = (resource) => {
         const url = typeof resource === 'string' ? resource : resource.url;
-        const name = typeof resource === 'object' ? resource.name : null;
-        
-        if (name) return name;
-
-        // Try to extract filename from URL
-        let filename = url.split('/').pop().split('?')[0];
-        
-        // If it looks like a hash (Cloudinary public ID) or is missing extension
-        if (!filename || filename.length < 5 || !filename.includes('.')) {
-            const mimeToExt = {
-                'application/zip': 'zip',
-                'application/x-zip-compressed': 'zip',
-                'application/pdf': 'pdf',
-                'image/jpeg': 'jpg',
-                'image/png': 'png',
-                'image/gif': 'gif',
-                'video/mp4': 'mp4',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-                'application/msword': 'doc',
-                'application/x-rar-compressed': 'rar',
-                'application/octet-stream': 'zip'
-            };
-            
-            const ext = mimeToExt[blob.type] || blob.type.split('/')[1] || 'bin';
-            filename = `resource_${index + 1}.${ext}`;
-        }
-        return filename;
-    };
-
-    const handleIndividualDownload = async (resource, index) => {
-        const url = typeof resource === 'string' ? resource : resource.url;
-        const name = typeof resource === 'object' ? resource.name : null;
-        
-        try {
-            toast.info("Đang kết nối server...");
-            
-            // First attempt: fetch to control filename
-            const response = await fetch(getAttachmentUrl(url, name), {
-                mode: 'cors',
-                credentials: 'omit'
-            });
-
-            if (!response.ok) throw new Error("Fetch failed");
-            
-            const blob = await response.blob();
-            if (blob.size === 0) throw new Error("Empty blob received");
-
-            const filename = name || getFileNameFromUrl(resource, blob, index);
-            
-            const downloadUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(downloadUrl);
-        } catch (err) {
-            console.warn("Standard download blocked by CORS/Browser, falling back to direct link:", err);
-            // Fallback: Open in new window with fl_attachment which forces download via server
-            window.open(getAttachmentUrl(url, name), '_blank');
-        }
+        window.open(getAttachmentUrl(url), '_blank');
     };
 
     const handleDownloadAll = async () => {

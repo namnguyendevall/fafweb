@@ -24,50 +24,17 @@ const Step3BudgetMilestones = ({
   const [validationErrors, setValidationErrors] = useState([]);
   const [checkpointUploadProgress, setCheckpointUploadProgress] = useState({ id: null, current: 0, total: 0 });
 
-  const getAttachmentUrl = (url, name) => {
+  const getAttachmentUrl = (url) => {
     if (!url || typeof url !== 'string') return url;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
-    return `${baseUrl}/uploads/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name || "")}`;
+    if (url.includes('cloudinary.com') && !url.includes('fl_attachment')) {
+        return url.replace('/upload/', '/upload/fl_attachment/');
+    }
+    return url;
   };
 
-  const handleDownloadResource = async (resource, index) => {
+  const handleDownloadResource = (resource) => {
     const url = typeof resource === 'string' ? resource : resource.url;
-    const name = typeof resource === 'object' ? resource.name : null;
-
-    try {
-        const response = await fetch(getAttachmentUrl(url, name), { mode: 'cors' });
-        if (!response.ok) throw new Error("Fetch failed");
-        const blob = await response.blob();
-        if (blob.size === 0) throw new Error("Empty blob body");
-        
-        let filename = name;
-        if (!filename) {
-          filename = url.split('/').pop().split('?')[0];
-          if (!filename || filename.length < 5 || !filename.includes('.')) {
-              const mimeToExt = {
-                  'application/zip': 'zip',
-                  'application/pdf': 'pdf',
-                  'image/jpeg': 'jpg',
-                  'image/png': 'png',
-                  'application/octet-stream': 'zip'
-              };
-              const ext = mimeToExt[blob.type] || blob.type.split('/')[1] || 'bin';
-              filename = `checkpoint_res_${index + 1}.${ext}`;
-          }
-        }
-        
-        const downloadUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
-        console.warn("Download fallback:", error);
-        window.open(getAttachmentUrl(url), '_blank');
-    }
+    window.open(getAttachmentUrl(url), '_blank');
   };
 
   useEffect(() => {
