@@ -214,9 +214,6 @@ const Step3BudgetMilestones = ({
                     <div className="md:col-span-2 space-y-2 pt-4 border-t border-white/5">
                       <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest font-mono flex items-center justify-between">
                         <span>{t('postjob.checkpoint_materials', 'MATERIALS & ATTACHMENTS')}</span>
-                        <span className="text-[8px] text-fuchsia-500/50 hover:text-fuchsia-400 transition-colors uppercase italic cursor-help" title="If your files are large, please upload them to Google Drive and paste the link here.">
-                          Khuyến khích link Drive
-                        </span>
                       </label>
                       <div className="flex flex-col gap-3">
                         <input
@@ -232,26 +229,23 @@ const Step3BudgetMilestones = ({
                             }
                           }}
                         />
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
                           {checkpointUploadProgress.id === checkpoint.id ? (
-                            <div className="inline-flex flex-col gap-1">
-                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg text-fuchsia-400 font-mono text-[9px] animate-pulse">
-                                    <div className="w-2.5 h-2.5 border-2 border-fuchsia-500 border-t-transparent rounded-full animate-spin" />
-                                    TẢI LÊN ({checkpointUploadProgress.current}/{checkpointUploadProgress.total})...
-                                </div>
-                                <div className="w-full bg-white/5 h-0.5 rounded-full overflow-hidden">
-                                    <div 
-                                        className="bg-fuchsia-500 h-full transition-all duration-300" 
-                                        style={{ width: `${(checkpointUploadProgress.current / checkpointUploadProgress.total) * 100}%` }}
-                                    />
-                                </div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 border border-slate-700/50 rounded-lg text-fuchsia-400 font-mono text-[9px] animate-pulse">
+                                <div className="w-2.5 h-2.5 border-2 border-fuchsia-500 border-t-transparent rounded-full animate-spin" />
+                                ĐANG TẢI LÊN ({checkpointUploadProgress.current}/{checkpointUploadProgress.total})...
                             </div>
                           ) : (
-                            <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-[#0f172a] hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors text-slate-300 font-mono text-[10px]">
-                              <svg className="w-3 h-3 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                              Tải lên (Chọn nhiều file)
-                              <input type="file" multiple className="hidden" accept="image/*,.pdf,.doc,.docx,.zip,.rar" onChange={async (e) => {
+                            <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-black/40 hover:bg-slate-800 border border-white/10 rounded-lg transition-colors text-slate-300 font-mono text-[10px]">
+                              <svg className="w-3.5 h-3.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                              Tải lên file (Không hỗ trợ .zip/.rar)
+                              <input type="file" className="hidden" accept="image/*,.pdf,.doc,.docx" onChange={async (e) => {
                                 const files = Array.from(e.target.files || []);
+                                const invalidFiles = files.filter(f => f.name.endsWith('.zip') || f.name.endsWith('.rar'));
+                                if (invalidFiles.length > 0) {
+                                  toast.error("Hệ thống không hỗ trợ file .zip hoặc .rar. Vui lòng tải lên từng file lẻ.");
+                                  return;
+                                }
                                 if (files.length > 0) {
                                     try {
                                         setCheckpointUploadProgress({ id: checkpoint.id, current: 0, total: files.length });
@@ -281,6 +275,7 @@ const Step3BudgetMilestones = ({
                               }} />
                             </label>
                           )}
+                          <span className="text-[9px] text-slate-500 italic">Hỗ trợ: ảnh, pdf, doc</span>
                         </div>
                         {/* Display uploaded/added links */}
                         {(checkpoint.resourceUrls || []).length > 0 && (

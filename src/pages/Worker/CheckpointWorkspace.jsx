@@ -554,7 +554,7 @@ const CheckpointWorkspace = () => {
                                             <p className="text-cyan-100 font-black font-mono text-sm tracking-widest uppercase mb-2">Kéo thả video vào đây</p>
                                             <p className="text-slate-500 text-[10px] font-mono tracking-widest uppercase">Định dạng: MP4, MOV, AVI, WEBM</p>
                                         </div>
-                                        <input type="file" accept="video/*" multiple onChange={handleVideoUpload} className="hidden" />
+                                        <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" />
                                     </label>
 
                                     {uploadedVideos.length > 0 && (
@@ -774,7 +774,17 @@ const CheckpointWorkspace = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <input type="file" onChange={e => setSubmitFile(e.target.files?.[0] || null)} className="hidden" />
+                                    <input type="file" accept="image/*,.pdf,.doc,.docx,video/*" onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const ext = file.name.split('.').pop().toLowerCase();
+                                            if (['zip', 'rar', '7z'].includes(ext)) {
+                                                toast.error("Hệ thống không hỗ trợ file nén. Vui lòng tải lên từng file lẻ.");
+                                                return;
+                                            }
+                                            setSubmitFile(file);
+                                        }
+                                    }} className="hidden" />
                                 </label>
                             </div>
 

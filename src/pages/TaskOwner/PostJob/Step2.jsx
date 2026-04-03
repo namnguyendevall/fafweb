@@ -214,11 +214,16 @@ const Step2JobDetails = ({
                             </div>
                         </div>
                     ) : (
-                      <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-[#0f172a] hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors text-slate-300 font-mono text-xs">
-                        <svg className="w-4 h-4 text-fuchsia-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                        Tải lên tài liệu (Chọn nhiều file)
-                        <input type="file" multiple className="hidden" accept="image/*,.pdf,.doc,.docx,.zip,.rar" onChange={async (e) => {
+                      <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 bg-black/40 hover:bg-slate-800 border border-white/10 rounded-lg transition-colors text-slate-300 font-mono text-[10px]">
+                        <svg className="w-3.5 h-3.5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        Tải lên file (Không hỗ trợ .zip/.rar)
+                        <input type="file" className="hidden" accept="image/*,.pdf,.doc,.docx" onChange={async (e) => {
                             const files = Array.from(e.target.files || []);
+                            const invalidFiles = files.filter(f => f.name.endsWith('.zip') || f.name.endsWith('.rar'));
+                            if (invalidFiles.length > 0) {
+                                toast.error("Hệ thống không hỗ trợ file .zip hoặc .rar. Vui lòng tải lên từng file đơn lẻ.");
+                                return;
+                            }
                             if (files.length > 0) {
                                 try {
                                     setIsUploading(true);
@@ -248,7 +253,7 @@ const Step2JobDetails = ({
                         }} />
                       </label>
                     )}
-                  <span className="text-[10px] text-slate-500 italic">Hỗ trợ: ảnh, pdf, doc, zip, rar</span>
+                  <span className="text-[10px] text-slate-500 italic">Hỗ trợ: ảnh, pdf, doc</span>
                </div>
                
                {/* Display uploaded/added links */}
