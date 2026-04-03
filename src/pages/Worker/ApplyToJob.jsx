@@ -5,6 +5,7 @@ import { proposalsApi } from '../../api/proposals.api';
 import { useAuth } from '../../auth/AuthContext';
 import { jobsApi } from '../../api/jobs.api';
 import { contractsApi } from '../../api/contracts.api';
+import { userApi } from '../../api/user.api';
 
 const SectionLabel = ({ children }) => (
     <p className="text-[9px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-3 flex items-center gap-1.5 border-b border-cyan-500/20 pb-2">
@@ -53,8 +54,23 @@ const ApplyToJob = () => {
             }
         };
 
+        const checkProfileStatus = async () => {
+            try {
+                const res = await userApi.getMe();
+                if (!res.data || !res.data.full_name || !res.data.full_name.trim()) {
+                    toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi gửi đề xuất ứng tuyển.');
+                    setTimeout(() => {
+                        navigate('/settings');
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error("Profile check failed:", err);
+            }
+        };
+
         fetchJobDetails();
         checkBusyStatus();
+        checkProfileStatus();
     }, [id, navigate, toast]);
 
     const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));

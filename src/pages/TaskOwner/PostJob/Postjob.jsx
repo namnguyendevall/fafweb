@@ -8,6 +8,7 @@ import Step3BudgetMilestones from './Step3';
 import Step4Contract from './Step4';
 import Step5ReviewPublish from './Step5';
 import { jobsApi } from "../../../api/jobs.api";
+import { userApi } from "../../../api/user.api";
 import { useTranslation } from 'react-i18next';
 
 const Postjob = () => {
@@ -49,6 +50,26 @@ const Postjob = () => {
   const [contractAccepted, setContractAccepted] = useState(false);
 
   useEffect(() => {
+    // 🔍 Check profile completeness
+    const checkProfile = async () => {
+        try {
+            const res = await userApi.getMe();
+            const profile = res.data;
+            if (!profile || !profile.full_name || !profile.full_name.trim()) {
+                toast.error(t('postjob.msg_profile_incomplete', 'Bạn cần cập nhật Họ và tên trong hồ sơ trước khi thực hiện thao tác này.'));
+                setTimeout(() => {
+                    navigate('/task-owner/profiles'); // Redirect to profile settings
+                }, 2000);
+            }
+        } catch (err) {
+            console.error("Profile check failed:", err);
+        }
+    };
+    
+    if (!isEditing) {
+        checkProfile();
+    }
+
     if (isEditing) {
       setLoading(true);
       jobsApi.getJobDetail(id)

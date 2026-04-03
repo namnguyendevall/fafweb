@@ -44,8 +44,16 @@ const ContractSign = () => {
                     contractsApi.getContractById(id),
                     userApi.getMe()
                 ]);
+                const profile = profileRes.data;
+                if (!profile || !profile.full_name || !profile.full_name.trim()) {
+                    toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi ký hợp đồng.');
+                    setTimeout(() => {
+                        navigate('/settings');
+                    }, 2000);
+                    return;
+                }
                 setContract(contractRes.data);
-                setUserProfile(profileRes);
+                setUserProfile(profile);
             } catch (error) {
                 console.error('Error fetching contract:', error);
                 toast.error('Lỗi: Không thể tải dữ liệu hợp đồng.');

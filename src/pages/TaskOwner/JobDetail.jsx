@@ -345,6 +345,20 @@ const JobDetail = () => {
                                                                     >
                                                                         View Profile
                                                                     </button>
+                                                                    {contract && contract.status === 'COMPLETED' && (
+                                                                        <button 
+                                                                            onClick={() => { setRatingTarget(contract.worker_id); setIsRatingModalOpen(true); }}
+                                                                            disabled={contract.is_reviewed}
+                                                                            className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all font-mono text-[10px] font-black uppercase tracking-widest ${
+                                                                                contract.is_reviewed 
+                                                                                ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 opacity-50 cursor-not-allowed' 
+                                                                                : 'bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500/20'
+                                                                            }`}
+                                                                        >
+                                                                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                                                            {contract.is_reviewed ? 'ĐÃ ĐÁNH GIÁ' : 'Đánh Giá Worker'}
+                                                                        </button>
+                                                                    )}
                                                                     <button 
                                                                         onClick={() => handleStartChat(proposal.worker_id)}
                                                                         className="flex-1 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center justify-center gap-1"

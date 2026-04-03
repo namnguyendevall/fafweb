@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { contractsApi } from '../../api/contracts.api';
+import { userApi } from '../../api/user.api';
 
 const EmployerContractSign = () => {
     const { id } = useParams();
@@ -41,7 +42,21 @@ const EmployerContractSign = () => {
 
     const fetchContract = async () => {
         try {
-            const res = await contractsApi.getContract(id);
+            setLoading(true);
+            const [res, profileRes] = await Promise.all([
+                contractsApi.getContract(id),
+                userApi.getMe()
+            ]);
+            
+            const profile = profileRes.data;
+            if (!profile || !profile.full_name || !profile.full_name.trim()) {
+                toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi ký hợp đồng.');
+                setTimeout(() => {
+                    navigate('/task-owner/profiles');
+                }, 2000);
+                return;
+            }
+            
             setContract(res.data);
         } catch (error) {
             console.error('Error fetching contract:', error);
