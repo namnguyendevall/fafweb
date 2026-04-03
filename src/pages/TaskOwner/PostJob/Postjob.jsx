@@ -18,6 +18,7 @@ const Postjob = () => {
   const { t } = useTranslation();
   const isEditing = !!id;
   const toast = useToast();
+  const { user } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -87,7 +88,7 @@ const Postjob = () => {
         })
         .finally(() => setLoading(false));
     }
-  }, [id, isEditing]);
+  }, [id, isEditing, user, navigate, toast, t]);
 
   const totalBudgetNum = parseFloat(totalBudget) || 0;
 
