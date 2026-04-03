@@ -222,14 +222,39 @@ const DisputeDetail = () => {
                         </div>
                     </section>
 
-                    {/* Core Evidence Section */}
+                    {/* Conflict Parameters Section */}
                     <section className="bg-transparent/40 border border-rose-500/10 rounded-2xl overflow-hidden backdrop-blur-sm">
-                        <div className="p-6 border-b border-rose-500/5 bg-rose-500/[0.02]">
+                        <div className="p-6 border-b border-rose-500/5 bg-rose-500/[0.02] flex justify-between items-center">
                             <h2 className="text-xs font-black text-rose-500 uppercase tracking-[0.2em] font-mono">Conflict_Parameters</h2>
+                            {dispute.checkpoint_deadline && (
+                                <span className="text-[9px] font-mono text-rose-400 uppercase tracking-widest bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                                    DEADLINE_EXPIRED: {new Date(dispute.checkpoint_deadline).toLocaleDateString()}
+                                </span>
+                            )}
                         </div>
                         
                         <div className="p-8 space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {/* Checkpoint Detail Spec - Added */}
+                            <div className="p-6 bg-rose-500/[0.03] border border-rose-500/10 border-dashed rounded-xl space-y-4">
+                                <div className="flex justify-between items-start">
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-mono font-black text-rose-500/50 uppercase tracking-widest">Disputed_Milestone_Node</p>
+                                        <p className="text-lg font-black text-white uppercase tracking-tight">{dispute.checkpoint_title || "UNKNOWN_NODE"}</p>
+                                    </div>
+                                    <div className="text-right space-y-1">
+                                        <p className="text-[9px] font-mono font-black text-rose-500/50 uppercase tracking-widest">Registry_Value</p>
+                                        <p className="text-lg font-black text-rose-400 uppercase tracking-tight">${Number(dispute.checkpoint_amount || 0).toLocaleString()} CRED</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-[9px] font-mono font-black text-rose-500/50 uppercase tracking-widest">Specified_Instruction_Log</p>
+                                    <div className="text-[11px] font-mono text-slate-400 uppercase leading-relaxed max-h-[100px] overflow-y-auto">
+                                        {dispute.checkpoint_description || "NO_DETAILED_INSTRUCTIONS_PROVIDED_BY_SOURCE"}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-1">
                                     <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Raiser_Entity</p>
                                     <p className="text-sm font-black text-white uppercase tracking-tight">
@@ -283,9 +308,10 @@ const DisputeDetail = () => {
 
                             <div className="space-y-3">
                                 <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Contract_Verbatim_Content</p>
-                                <div className="p-6 rounded-xl bg-slate-950/40 border border-emerald-500/5 text-xs text-slate-300 font-mono leading-relaxed whitespace-pre-wrap uppercase tracking-wider max-h-[300px] overflow-y-auto custom-scrollbar">
-                                    {dispute.contract_content || "NO_CONTRACT_DATA_FOUND"}
-                                </div>
+                                <div 
+                                    className="p-6 rounded-xl bg-slate-950/40 border border-emerald-500/5 text-xs text-slate-300 font-mono leading-relaxed uppercase tracking-wider max-h-[300px] overflow-y-auto custom-scrollbar prose prose-invert prose-xs max-w-none prose-p:my-1 prose-headings:my-2 prose-headings:text-emerald-400 prose-strong:text-white"
+                                    dangerouslySetInnerHTML={{ __html: dispute.contract_content || "NO_CONTRACT_DATA_FOUND" }}
+                                />
                             </div>
                         </div>
                     </section>
