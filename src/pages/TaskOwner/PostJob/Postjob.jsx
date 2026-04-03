@@ -346,6 +346,7 @@ const Postjob = () => {
               onSaveDraft={handleSaveDraft}
               onBack={handleBack}
               isEditing={isEditing}
+              resourceUrls={resourceUrls}
             />
           )}
         </main>

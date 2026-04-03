@@ -29,6 +29,7 @@ const Step5ReviewPublish = ({
   contractHtml,
   startDate,
   endDate,
+  resourceUrls,
 }) => {
   const { t } = useTranslation();
 
@@ -115,6 +116,31 @@ const Step5ReviewPublish = ({
                   </span>
                 ))}
             </div>
+
+            {/* Project Resources Summary */}
+            {resourceUrls && resourceUrls.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-white/5">
+                <p className="text-[8px] font-mono text-slate-600 uppercase tracking-widest mb-4">{t('postjob.attached_resources', 'ATTACHED_RESOURCES')}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {resourceUrls.map((res, idx) => {
+                    const isObj = typeof res === 'object' && res !== null;
+                    const name = isObj ? res.name : (typeof res === 'string' ? res.split('/').pop().split('?')[0] : `Resource ${idx + 1}`);
+                    const size = isObj && res.size ? (res.size / 1024).toFixed(1) + ' KB' : null;
+                    return (
+                      <div key={idx} className="flex items-center gap-3 p-2 bg-white/5 rounded-xl border border-white/5">
+                        <div className="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center text-fuchsia-500 shrink-0">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        </div>
+                        <div className="overflow-hidden">
+                          <p className="text-[10px] font-black text-slate-300 font-mono uppercase tracking-widest truncate">{name}</p>
+                          {size && <p className="text-[8px] font-mono text-slate-600 uppercase tracking-tighter">{size}</p>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

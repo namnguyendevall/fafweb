@@ -24,22 +24,38 @@ const Step3BudgetMilestones = ({
   const [validationErrors, setValidationErrors] = useState([]);
   const [checkpointUploadProgress, setCheckpointUploadProgress] = useState({ id: null, current: 0, total: 0 });
 
-  const handleDownloadResource = async (url, index) => {
+  const getAttachmentUrl = (url, name) => {
+    if (!url || typeof url !== 'string') return url;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+    return `${baseUrl}/uploads/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name || "")}`;
+  };
+
+  const handleDownloadResource = async (resource, index) => {
+    const url = typeof resource === 'string' ? resource : resource.url;
+    const name = typeof resource === 'object' ? resource.name : null;
+
     try {
-        const response = await fetch(url);
+        const response = await fetch(getAttachmentUrl(url, name), { mode: 'cors' });
+        if (!response.ok) throw new Error("Fetch failed");
         const blob = await response.blob();
-        let filename = url.split('/').pop().split('?')[0];
-        if (!filename || filename.length < 5 || !filename.includes('.')) {
-            const mimeToExt = {
-                'application/zip': 'zip',
-                'application/pdf': 'pdf',
-                'image/jpeg': 'jpg',
-                'image/png': 'png',
-                'application/octet-stream': 'zip'
-            };
-            const ext = mimeToExt[blob.type] || blob.type.split('/')[1] || 'bin';
-            filename = `checkpoint_res_${index + 1}.${ext}`;
+        if (blob.size === 0) throw new Error("Empty blob body");
+        
+        let filename = name;
+        if (!filename) {
+          filename = url.split('/').pop().split('?')[0];
+          if (!filename || filename.length < 5 || !filename.includes('.')) {
+              const mimeToExt = {
+                  'application/zip': 'zip',
+                  'application/pdf': 'pdf',
+                  'image/jpeg': 'jpg',
+                  'image/png': 'png',
+                  'application/octet-stream': 'zip'
+              };
+              const ext = mimeToExt[blob.type] || blob.type.split('/')[1] || 'bin';
+              filename = `checkpoint_res_${index + 1}.${ext}`;
+          }
         }
+        
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = downloadUrl;
@@ -49,7 +65,8 @@ const Step3BudgetMilestones = ({
         document.body.removeChild(link);
         URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-        window.open(url, '_blank');
+        console.warn("Download fallback:", error);
+        window.open(getAttachmentUrl(url), '_blank');
     }
   };
 
@@ -273,17 +290,21 @@ const Step3BudgetMilestones = ({
                                         setCheckpointUploadProgress({ id: checkpoint.id, current: 0, total: files.length });
                                         const { uploadApi } = await import('../../../api/upload.api');
                                         
-                                        const newUrls = [];
+                                        const newAssets = [];
                                         for (let i = 0; i < files.length; i++) {
                                             const res = await uploadApi.uploadSubmission(files[i], files[i].name);
                                             if (res && res.url) {
-                                                newUrls.push(res.url);
+                                                newAssets.push({
+                                                  url: res.url,
+                                                  name: res.filename || files[i].name,
+                                                  size: res.size || files[i].size
+                                                });
                                             }
                                             setCheckpointUploadProgress(prev => ({ ...prev, current: i + 1 }));
                                         }
                                         
                                         const currentUrls = checkpoint.resourceUrls || [];
-                                        onUpdateCheckpoint(checkpoint.id, "resourceUrls", [...currentUrls, ...newUrls]);
+                                        onUpdateCheckpoint(checkpoint.id, "resourceUrls", [...currentUrls, ...newAssets]);
                                     } catch (error) {
                                         console.error("Checkpoint upload failed:", error);
                                     } finally {
@@ -296,18 +317,44 @@ const Step3BudgetMilestones = ({
                         </div>
                         {/* Display uploaded/added links */}
                         {(checkpoint.resourceUrls || []).length > 0 && (
-                          <div className="flex flex-col gap-2 mt-1">
-                            {(checkpoint.resourceUrls || []).map((url, idx) => (
-                               <div key={idx} className="flex items-center justify-between text-[10px] px-2 py-1.5 bg-black/40 border border-emerald-500/10 rounded text-emerald-400 font-mono">
-                                   <button 
-                                     onClick={() => handleDownloadResource(url, idx)} 
-                                     className="truncate hover:underline max-w-[80%] text-left"
-                                   >
-                                     {url.split('/').pop().split('?')[0] || `Tài liệu ${idx + 1}`}
-                                   </button>
-                                <button type="button" onClick={() => onUpdateCheckpoint(checkpoint.id, "resourceUrls", (checkpoint.resourceUrls || []).filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-300">✕</button>
-                              </div>
-                            ))}
+                          <div className="flex flex-col gap-2 mt-2">
+                            {(checkpoint.resourceUrls || []).map((res, idx) => {
+                               const isObj = typeof res === 'object';
+                               const name = isObj ? res.name : (res.split('/').pop().split('?')[0] || `Tài liệu ${idx + 1}`);
+                               const size = isObj && res.size ? (res.size / 1024).toFixed(1) + ' KB' : null;
+                               const isZip = name.toLowerCase().endsWith('.zip') || name.toLowerCase().endsWith('.rar');
+                               const isPdf = name.toLowerCase().endsWith('.pdf');
+                               const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(name);
+
+                               return (
+                                 <div key={idx} className="flex items-center justify-between group bg-white/5 border border-white/10 rounded-xl p-2 hover:border-emerald-500/30 transition-all hover:bg-white/[0.05]">
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                      <div className={`w-6 h-6 rounded flex items-center justify-center shrink-0 ${isZip ? 'text-amber-500' : isPdf ? 'text-rose-500' : isImg ? 'text-emerald-500' : 'text-fuchsia-500'}`}>
+                                         {isZip ? (
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                         ) : isPdf ? (
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                         ) : isImg ? (
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                         ) : (
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                         )}
+                                      </div>
+                                      <div className="flex flex-col overflow-hidden">
+                                        <button 
+                                          type="button"
+                                          onClick={() => handleDownloadResource(res, idx)} 
+                                          className="text-[10px] font-mono text-slate-400 hover:text-emerald-400 truncate text-left transition-colors"
+                                        >
+                                          {name}
+                                        </button>
+                                        {size && <span className="text-[8px] font-mono text-slate-600 uppercase tracking-tighter">{size}</span>}
+                                      </div>
+                                    </div>
+                                    <button type="button" onClick={() => onUpdateCheckpoint(checkpoint.id, "resourceUrls", (checkpoint.resourceUrls || []).filter((_, i) => i !== idx))} className="text-slate-600 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-all p-1">✕</button>
+                                  </div>
+                               )
+                            })}
                           </div>
                         )}
                       </div>

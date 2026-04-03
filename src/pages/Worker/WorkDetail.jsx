@@ -84,7 +84,19 @@ const WorkDetail = () => {
         }
     };
 
-    const getFileNameFromUrl = (url, blob, index) => {
+    const getAttachmentUrl = (url, name) => {
+        if (!url || typeof url !== 'string') return url;
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+        // Use our backend proxy to avoid CORS and 401 issues with Cloudinary
+        return `${baseUrl}/uploads/download?url=${encodeURIComponent(url)}&name=${encodeURIComponent(name || "")}`;
+    };
+
+    const getFileNameFromUrl = (resource, blob, index) => {
+        const url = typeof resource === 'string' ? resource : resource.url;
+        const name = typeof resource === 'object' ? resource.name : null;
+        
+        if (name) return name;
+
         // Try to extract filename from URL
         let filename = url.split('/').pop().split('?')[0];
         
@@ -101,7 +113,7 @@ const WorkDetail = () => {
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
                 'application/msword': 'doc',
                 'application/x-rar-compressed': 'rar',
-                'application/octet-stream': 'bin'
+                'application/octet-stream': 'zip'
             };
             
             const ext = mimeToExt[blob.type] || blob.type.split('/')[1] || 'bin';
@@ -110,12 +122,25 @@ const WorkDetail = () => {
         return filename;
     };
 
-    const handleIndividualDownload = async (url, index) => {
+    const handleIndividualDownload = async (resource, index) => {
+        const url = typeof resource === 'string' ? resource : resource.url;
+        const name = typeof resource === 'object' ? resource.name : null;
+        
         try {
-            toast.info("Đang chuẩn bị tải xuống...");
-            const response = await fetch(url);
+            toast.info("Đang kết nối server...");
+            
+            // First attempt: fetch to control filename
+            const response = await fetch(getAttachmentUrl(url, name), {
+                mode: 'cors',
+                credentials: 'omit'
+            });
+
+            if (!response.ok) throw new Error("Fetch failed");
+            
             const blob = await response.blob();
-            const filename = getFileNameFromUrl(url, blob, index);
+            if (blob.size === 0) throw new Error("Empty blob received");
+
+            const filename = name || getFileNameFromUrl(resource, blob, index);
             
             const downloadUrl = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -126,8 +151,9 @@ const WorkDetail = () => {
             document.body.removeChild(link);
             URL.revokeObjectURL(downloadUrl);
         } catch (err) {
-            console.error("Download failed:", err);
-            toast.error("Tải xuống thất bại. Vui lòng thử lại.");
+            console.warn("Standard download blocked by CORS/Browser, falling back to direct link:", err);
+            // Fallback: Open in new window with fl_attachment which forces download via server
+            window.open(getAttachmentUrl(url, name), '_blank');
         }
     };
 
@@ -140,14 +166,23 @@ const WorkDetail = () => {
             
             const zip = new JSZip();
             
-            const downloadPromises = job.resource_urls.map(async (url, index) => {
+            const downloadPromises = job.resource_urls.map(async (resource, index) => {
+                const url = typeof resource === 'string' ? resource : resource.url;
+                const name = typeof resource === 'object' ? resource.name : null;
                 try {
-                    const response = await fetch(url);
-                    const blob = await response.blob();
-                    const filename = getFileNameFromUrl(url, blob, index);
-                    zip.file(filename, blob);
+                    // Use our backend proxy to avoid CORS and 401 issues with Cloudinary
+                    const fetchUrl = getAttachmentUrl(url, name);
+                    const response = await fetch(fetchUrl, { mode: 'cors' });
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        if (blob.size > 0) {
+                            const filename = getFileNameFromUrl(resource, blob, index);
+                            zip.file(filename, blob);
+                        }
+                    }
                 } catch (err) {
-                    console.error(`Failed to fetch ${url}:`, err);
+                    console.error(`Failed to fetch ${url} for ZIP:`, err);
                 }
             });
 
@@ -287,36 +322,66 @@ const WorkDetail = () => {
                                         )}
                                     </button>
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-                                    {job.resource_urls.map((url, idx) => (
-                                        <button 
-                                            key={idx} 
-                                            onClick={() => handleIndividualDownload(url, idx)}
-                                            className="aspect-video relative rounded-xl border border-white/5 bg-black/40 overflow-hidden group hover:border-cyan-500/50 transition-all font-mono text-left w-full"
-                                        >
-                                            {url.match(/\.(mp4|webm|ogg)$/i) ? (
-                                                <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                                                    <svg className="w-8 h-8 text-cyan-500/30" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                                                    <span className="text-[9px] font-black text-cyan-500/40 tracking-widest uppercase">REF_VID_{idx + 1}</span>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <img src={url} alt={`Res ${idx}`} className="w-full h-full object-cover opacity-40 group-hover:opacity-100 grayscale group-hover:grayscale-0 transition-all duration-700" />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 group-hover:opacity-20 transition-opacity" />
-                                                    <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 shadow-[0_0_5px_rgba(6,182,212,1)]" />
-                                                        <span className="text-[9px] font-black text-cyan-400 tracking-widest uppercase truncate max-w-[80px]">REF_{idx+1}.IMG</span>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                                    {(job.resource_urls || []).map((resource, idx) => {
+                                        const isObj = typeof resource === 'object' && resource !== null;
+                                        const url = isObj ? resource.url : resource;
+                                        const name = isObj ? resource.name : (url?.split('/').pop().split('?')[0] || `Resource ${idx + 1}`);
+                                        const size = isObj && resource.size ? (resource.size / 1024).toFixed(1) + ' KB' : null;
+                                        
+                                        const lowName = name?.toLowerCase() || "";
+                                        const isZip = lowName.endsWith('.zip') || lowName.endsWith('.rar');
+                                        const isPdf = lowName.endsWith('.pdf');
+                                        const isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(lowName);
+                                        const isVid = /\.(mp4|webm|ogg)$/i.test(lowName);
+
+                                        return (
+                                            <div 
+                                                key={idx} 
+                                                className="group relative flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-2xl p-4 hover:border-cyan-500/40 hover:bg-white/[0.05] transition-all"
+                                            >
+                                                <div className="flex items-center gap-4 overflow-hidden">
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isZip ? 'bg-amber-500/10 text-amber-500' : isPdf ? 'bg-rose-500/10 text-rose-500' : isImg ? 'bg-emerald-500/10 text-emerald-500' : isVid ? 'bg-indigo-500/10 text-indigo-500' : 'bg-cyan-500/10 text-cyan-500'}`}>
+                                                        {isZip ? (
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
+                                                        ) : isPdf ? (
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                                        ) : isImg ? (
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                        ) : isVid ? (
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                                        ) : (
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                        )}
                                                     </div>
-                                                </>
-                                            )}
-                                            
-                                            {/* Hover HUD */}
-                                            <div className="absolute inset-0 border border-cyan-500/0 group-hover:border-cyan-500/30 transition-all pointer-events-none">
-                                                <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                <div className="absolute bottom-0 left-0 w-4 h-4 border-b border-l border-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                    <div className="flex flex-col overflow-hidden">
+                                                        <button 
+                                                            onClick={() => handleIndividualDownload(resource, idx)}
+                                                            className="text-[13px] font-black text-white uppercase tracking-wider truncate hover:text-cyan-400 transition-colors text-left"
+                                                        >
+                                                            {name}
+                                                        </button>
+                                                        <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500 uppercase tracking-widest">
+                                                            <span>{isZip ? 'Archive' : isPdf ? 'Document' : isImg ? 'Image' : isVid ? 'Video' : 'Asset'}</span>
+                                                            {size && (
+                                                                <>
+                                                                    <span className="w-1 h-1 rounded-full bg-slate-700" />
+                                                                    <span className="text-cyan-500/70">{size}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    onClick={() => handleIndividualDownload(resource, idx)}
+                                                    className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-cyan-500/20"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                </button>
                                             </div>
-                                        </button>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
