@@ -52,6 +52,7 @@ const JobDetail = () => {
             setRecommendedWorkers(recommendedRes.data || []);
 
             // Fetch full contract details if contract exists
+            console.log('Job data:', jobRes.data);
             if (jobRes.data.contract?.id) {
                 try {
                     console.log('Fetching contract detail for ID:', jobRes.data.contract.id);
@@ -186,7 +187,10 @@ const JobDetail = () => {
                             <div className="text-xs text-gray-500 dark:text-gray-400">
                                 Budget:{" "}
                                 <span className="font-semibold text-gray-900 dark:text-white">
-                                    ${Number(job.budget).toLocaleString()}
+                                    {Number(job.budget).toLocaleString()} CRED
+                                </span>
+                                <span className="ml-2 text-[10px] font-bold text-blue-500">
+                                    ≈ {Number(job.budget).toLocaleString('vi-VN')} VNĐ
                                 </span>
                             </div>
                         </div>
@@ -320,7 +324,8 @@ const JobDetail = () => {
                                                                         </p>
                                                                     </div>
                                                                     <div className="text-right">
-                                                                        <p className="font-bold text-gray-900 dark:text-white text-lg">${Number(proposal.proposed_price || 0).toLocaleString()}</p>
+                                                                        <p className="font-bold text-gray-900 dark:text-white text-lg">{Number(proposal.proposed_price || 0).toLocaleString()} CRED</p>
+                                                                        <p className="text-[10px] font-bold text-blue-500 mt-0.5">≈ {Number(proposal.proposed_price || 0).toLocaleString('vi-VN')} VNĐ</p>
                                                                         <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full mt-1 ${
                                                                             proposal.status === 'ACCEPTED' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 
                                                                             proposal.status === 'REJECTED' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400' : 
@@ -345,18 +350,18 @@ const JobDetail = () => {
                                                                     >
                                                                         View Profile
                                                                     </button>
-                                                                    {contract && contract.status === 'COMPLETED' && (
+                                                                    {contractDetail && contractDetail.status === 'COMPLETED' && (
                                                                         <button 
-                                                                            onClick={() => { setRatingTarget(contract.worker_id); setIsRatingModalOpen(true); }}
-                                                                            disabled={contract.is_reviewed}
+                                                                            onClick={() => { setIsReviewModalOpen(true); }}
+                                                                            disabled={contractDetail.is_reviewed}
                                                                             className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all font-mono text-[10px] font-black uppercase tracking-widest ${
-                                                                                contract.is_reviewed 
+                                                                                contractDetail.is_reviewed 
                                                                                 ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 opacity-50 cursor-not-allowed' 
                                                                                 : 'bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500/20'
                                                                             }`}
                                                                         >
                                                                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                                                                            {contract.is_reviewed ? 'ĐÃ ĐÁNH GIÁ' : 'Đánh Giá Worker'}
+                                                                            {contractDetail.is_reviewed ? 'ĐÃ ĐÁNH GIÁ' : 'Đánh Giá Worker'}
                                                                         </button>
                                                                     )}
                                                                     <button 
@@ -430,7 +435,8 @@ const JobDetail = () => {
                                                                 </div>
                                                             </div>
                                                             <div className="text-right">
-                                                                <p className="font-bold text-gray-900 dark:text-white">${worker.hourly_rate || 0}/hr</p>
+                                                                <p className="font-bold text-gray-900 dark:text-white">{worker.hourly_rate || 0} CRED/hr</p>
+                                                                <p className="text-[10px] font-bold text-blue-500">≈ {Number(worker.hourly_rate || 0).toLocaleString('vi-VN')} VNĐ/hr</p>
                                                                 <button 
                                                                     onClick={() => handleInviteWorker(worker.id)}
                                                                     className="mt-2 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-800 px-3 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
@@ -511,7 +517,8 @@ const JobDetail = () => {
                                                                         </div>
                                                                     </div>
                                                                     <div className="text-right">
-                                                                        <div className="font-bold text-gray-900 dark:text-white text-xl">${Number(cp.amount).toLocaleString()}</div>
+                                                                        <div className="font-bold text-gray-900 dark:text-white text-xl">{Number(cp.amount).toLocaleString()} CRED</div>
+                                                                        <p className="text-[10px] font-bold text-emerald-500 mt-1">≈ {Number(cp.amount).toLocaleString('vi-VN')} VNĐ</p>
                                                                         <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${
                                                                             status === 'APPROVED' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 
                                                                             status === 'SUBMITTED' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400' :
@@ -559,7 +566,8 @@ const JobDetail = () => {
                                                     <div className="grid grid-cols-2 gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl border border-blue-100 dark:border-blue-800">
                                                         <div>
                                                             <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Total Contract Value</div>
-                                                            <div className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">${Number(contractDetail.total_amount || 0).toLocaleString()}</div>
+                                                            <div className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">{Number(contractDetail.total_amount || 0).toLocaleString()} CRED</div>
+                                                            <p className="text-[11px] font-bold text-blue-500 mt-1">≈ {Number(contractDetail.total_amount || 0).toLocaleString('vi-VN')} VNĐ</p>
                                                         </div>
                                                         <div>
                                                             <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Contract ID</div>
@@ -795,7 +803,10 @@ const JobDetail = () => {
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600 dark:text-gray-400">Budget</span>
-                                        <span className="font-medium">${Number(job.budget).toLocaleString()}</span>
+                                        <div className="text-right">
+                                            <span className="font-bold text-gray-900 dark:text-white">{Number(job.budget).toLocaleString()} CRED</span>
+                                            <p className="text-[10px] font-bold text-blue-500">≈ {Number(job.budget).toLocaleString('vi-VN')} VNĐ</p>
+                                        </div>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600 dark:text-gray-400">Status</span>
