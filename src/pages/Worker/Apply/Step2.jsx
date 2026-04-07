@@ -49,21 +49,24 @@ const Step2 = ({ onBack, onNext, job, proposalData, setProposalData }) => {
                                     <span className="text-lg font-extrabold text-slate-900 dark:text-white">Your Proposed Price</span>
                                     <span className="text-sm text-slate-500 dark:text-slate-400">Budget: ${Number(job?.budget || 0).toLocaleString()}</span>
                                 </div>
-                                <div className="relative">
+                                <div className="relative group">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 font-semibold">$</span>
                                     <input
                                         type="number"
                                         value={proposalData.proposedPrice}
-                                        onChange={(e) => handleChange('proposedPrice', e.target.value)}
-                                        min="1"
-                                        step="0.01"
-                                        required
-                                        className="w-full pl-8 pr-4 py-3 border-2 border-slate-300 dark:border-slate-600 rounded-xl text-xl font-bold focus:border-cyan-900/300 focus:ring-2 focus:ring-cyan-800/50 transition-all"
-                                        placeholder="Enter your price"
+                                        readOnly
+                                        disabled
+                                        className="w-full pl-8 pr-4 py-3 border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 rounded-xl text-xl font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-80"
                                     />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                        <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                        </svg>
+                                    </div>
                                 </div>
-                                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                                    💡 Tip: Be competitive but fair. Employers typically expect proposals within 80-120% of the budget.
+                                <p className="mt-2 text-[10px] uppercase font-black tracking-widest text-emerald-500 dark:text-emerald-400 flex items-center gap-1.5 animate-pulse">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    GIÁ CỐ ĐỊNH THEO NGÂN SÁCH CỦA CHỦ DỰ ÁN
                                 </p>
                             </label>
                         </div>
@@ -113,10 +116,21 @@ Include:
                                                         </span>
                                                     </div>
                                                     <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-1">
-                                                        {checkpoint.name || `Checkpoint ${index + 1}`}
+                                                        {checkpoint.title || checkpoint.name || `Checkpoint ${index + 1}`}
                                                     </h3>
                                                     {checkpoint.description && (
-                                                        <p className="text-sm text-slate-600 dark:text-slate-400">{checkpoint.description}</p>
+                                                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{checkpoint.description}</p>
+                                                    )}
+                                                    {checkpoint.due_date ? (
+                                                        <p className="text-[10px] text-cyan-500 font-mono flex items-center gap-1.5 uppercase tracking-wider font-bold">
+                                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                            HẠN CHÓT: {new Date(checkpoint.due_date).toLocaleDateString()}
+                                                        </p>
+                                                    ) : checkpoint.duration_days && (
+                                                        <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5 uppercase tracking-wider italic opacity-70">
+                                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                            THỜI LƯỢNG: {checkpoint.duration_days} ngày thực hiện
+                                                        </p>
                                                     )}
                                                 </div>
                                                 {checkpoint.amount && (
