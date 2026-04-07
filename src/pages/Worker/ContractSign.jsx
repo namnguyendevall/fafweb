@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { contractsApi } from '../../api/contracts.api';
@@ -18,6 +18,7 @@ const ContractSign = () => {
     const [otp, setOtp] = useState('');
     const [otpSent, setOtpSent] = useState(false);
     const [countdown, setCountdown] = useState(0);
+    const hasCheckedProfile = useRef(false);
 
     useEffect(() => {
         let timer;
@@ -43,6 +44,9 @@ const ContractSign = () => {
             if (!user) return; // Wait for user info to be ready
             
             if (!user.full_name || !user.full_name.trim()) {
+                if (hasCheckedProfile.current) return;
+                hasCheckedProfile.current = true;
+                
                 toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi ký hợp đồng.');
                 setTimeout(() => {
                     navigate('/settings');

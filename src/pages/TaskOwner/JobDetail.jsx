@@ -147,7 +147,7 @@ const JobDetail = () => {
 
     return (
         <>
-        <div className="flex-1 flex flex-col bg-transparent min-h-screen">
+        <div className="flex-1 flex flex-col bg-transparent min-h-screen overflow-x-hidden">
                 {/* Header */}
                 <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 px-6 sm:px-10 py-6 sticky top-0 z-20 shadow-sm">
                     <div className="flex items-center justify-between gap-4">
@@ -158,7 +158,7 @@ const JobDetail = () => {
                             >
                                 <span className="mr-1">←</span> Back to My Jobs
                             </button>
-                            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{job.title}</h1>
+                            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight break-all">{job.title}</h1>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                 {job.category_name} • {new Date(job.created_at).toLocaleDateString()}
                             </p>
@@ -201,13 +201,13 @@ const JobDetail = () => {
                 <main className="flex-1 p-6 overflow-y-auto">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Left: job details */}
-                        <div className="lg:col-span-2 space-y-6">
+                        <div className="lg:col-span-2 space-y-6 min-w-0">
                             {/* Overview */}
                             <section className="bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-700 p-8 shadow-sm hover:shadow-md transition-shadow">
                                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                                     Description
                                 </h2>
-                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-all">
                                     {job.description || "No description provided."}
                                 </p>
                             </section>

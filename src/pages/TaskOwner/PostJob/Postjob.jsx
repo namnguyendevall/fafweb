@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '../../../contexts/ToastContext';
 import PostingProgress from './PostingProgress';
@@ -22,6 +22,7 @@ const Postjob = () => {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const hasShownProfileToast = useRef(false);
   
   // Form State
   const [selectedType, setSelectedType] = useState('SHORT_TERM');
@@ -57,6 +58,9 @@ const Postjob = () => {
         if (!user) return;
         
         if (!user.full_name || !user.full_name.trim()) {
+            if (hasShownProfileToast.current) return;
+            hasShownProfileToast.current = true;
+            
             toast.error(t('postjob.msg_profile_incomplete', 'Bạn cần cập nhật Họ và tên trong hồ sơ trước khi thực hiện thao tác này.'));
             setTimeout(() => {
                 navigate('/task-owner/profiles'); // Redirect to profile settings

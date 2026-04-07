@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { proposalsApi } from '../../api/proposals.api';
@@ -28,6 +28,7 @@ const ApplyToJob = () => {
         coverLetter: '',
         proposedPrice: ''
     });
+    const hasCheckedProfile = useRef(false);
 
     useEffect(() => {
         const fetchJobDetails = async () => {
@@ -58,6 +59,9 @@ const ApplyToJob = () => {
             if (!user) return;
             
             if (!user.full_name || !user.full_name.trim()) {
+                if (hasCheckedProfile.current) return;
+                hasCheckedProfile.current = true;
+                
                 toast.error('Bạn cần cập nhật Họ và tên trong hồ sơ trước khi gửi đề xuất ứng tuyển.');
                 setTimeout(() => {
                     navigate('/settings');

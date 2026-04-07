@@ -75,6 +75,8 @@ const WorkDetail = () => {
                 setLoading(true);
                 const res = await jobsApi.getJobDetail(id);
                 setJob(res.data);
+
+                console.log(res.data);
                 
                 if (res.data.contract?.id) {
                     try {
@@ -170,7 +172,7 @@ const WorkDetail = () => {
     }
 
     return (
-        <div className="min-h-screen bg-transparent text-slate-300 relative select-none" style={{ userSelect: 'none' }}>
+        <div className="min-h-screen bg-transparent text-slate-300 relative select-none overflow-x-hidden" style={{ userSelect: 'none' }}>
             {/* Watermark Overlay */}
             {currentUser && (
                 <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] overflow-hidden flex flex-wrap gap-20 p-20 content-start">
@@ -187,18 +189,18 @@ const WorkDetail = () => {
                 <nav className="mb-6 flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-slate-500">
                     <Link to="/find-work" className="hover:text-cyan-400 transition-colors">FIND WORK</Link>
                     <span className="text-slate-700">›</span>
-                    <span className="text-cyan-500">{job.category_name || 'JOB DETAILS'}</span>
+                    <span className="text-cyan-500 truncate max-w-[200px]">{job.category_name || 'JOB DETAILS'}</span>
                 </nav>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 overflow-hidden">
                     {/* ── MAIN CONTENT ── */}
-                    <div className="space-y-6">
+                    <div className="space-y-6 min-w-0">
                         {/* Header Card */}
                         <div className="rounded-2xl border p-8 relative overflow-hidden group" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
                             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                                 <div>
-                                    <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wide mb-4 leading-tight group-hover:text-cyan-300 transition-colors">{job.title}</h1>
+                                    <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wide mb-4 leading-tight group-hover:text-cyan-300 transition-colors break-all">{job.title}</h1>
                                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] font-mono text-slate-400">
                                         <div className="flex items-center gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-cyan-500/50"></span>
@@ -226,7 +228,7 @@ const WorkDetail = () => {
                         {/* Description */}
                         <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
                             <SectionLabel>JOB DESCRIPTION</SectionLabel>
-                            <p className="text-[13px] text-slate-300 leading-relaxed font-mono whitespace-pre-wrap">{job.description}</p>
+                            <p className="text-[13px] text-slate-300 leading-relaxed font-mono whitespace-pre-wrap break-all">{job.description}</p>
                         </div>
 
                         {/* Skills */}
