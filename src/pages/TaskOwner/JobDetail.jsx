@@ -507,10 +507,10 @@ const JobDetail = () => {
                                                                             {cp.description && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{cp.description}</p>}
                                                                             
                                                                             <div className="flex gap-4 mt-2">
-                                                                                {cp.due_date && (
+                                                                                {cp.deadline && (
                                                                                     <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                                                                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                                                                        Due: {new Date(cp.due_date).toLocaleDateString()}
+                                                                                        Deadline: {new Date(cp.deadline).toLocaleDateString()} {cp.duration_days && `(${cp.duration_days} days)`}
                                                                                     </p>
                                                                                 )}
                                                                             </div>
