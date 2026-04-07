@@ -523,12 +523,32 @@ const CheckpointReview = () => {
                                                         </h3>
                                                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{checkpoint.description}</p>
                                                         
-                                                        {checkpoint.due_date && (
-                                                            <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                                                        {checkpoint.due_date ? (
+                                                            <div className="flex flex-col gap-1 mt-2">
+                                                                <p className="text-xs text-blue-500 font-bold flex items-center gap-1.5 uppercase tracking-wider">
+                                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                    HẠN CHÓT: {new Date(checkpoint.due_date).toLocaleDateString()} {new Date(checkpoint.due_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                                </p>
+                                                                {checkpoint.status === 'PENDING' && (
+                                                                    <p className="text-[10px] font-bold text-rose-500 flex items-center gap-1">
+                                                                        <span className="animate-pulse">●</span> CÒN LẠI: {(() => {
+                                                                            const diff = new Date(checkpoint.due_date) - new Date();
+                                                                            if (diff < 0) return "ĐÃ QUÁ HẠN";
+                                                                            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                                                            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                                                            return `${days} ngày ${hours} giờ`;
+                                                                        })()}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        ) : checkpoint.duration_days && (
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 italic flex items-center gap-1.5 uppercase tracking-tighter opacity-70">
                                                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                                 </svg>
-                                                                Due: {new Date(checkpoint.due_date).toLocaleDateString()}
+                                                                Dự kiến: {checkpoint.duration_days} ngày thực hiện
                                                             </p>
                                                         )}
                                                     </div>
