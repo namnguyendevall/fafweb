@@ -123,9 +123,22 @@ const Step3 = ({ onBack, job, proposalData }) => {
                                                     <span className="text-sm font-extrabold text-slate-900 dark:text-white">{index + 1}.</span>
                                                     <div className="flex flex-col">
                                                         <span className="text-sm text-slate-700 dark:text-slate-300 font-bold">{checkpoint.title || checkpoint.name || `Checkpoint ${index + 1}`}</span>
-                                                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">
-                                                            {checkpoint.description || 'No description'}
-                                                        </span>
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-[10px] text-slate-500 uppercase tracking-widest font-mono line-clamp-1">
+                                                                {checkpoint.description || 'No description'}
+                                                            </span>
+                                                            {checkpoint.due_date ? (
+                                                                <span className="text-[9px] text-cyan-600 dark:text-cyan-400 font-bold font-mono flex items-center gap-1 uppercase tracking-tighter">
+                                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                    HẠN CHÓT: {new Date(checkpoint.due_date).toLocaleDateString()}
+                                                                </span>
+                                                            ) : checkpoint.duration_days && (
+                                                                <span className="text-[9px] text-slate-500 font-mono flex items-center gap-1 uppercase tracking-tighter italic opacity-70">
+                                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                                    Thời lượng: {checkpoint.duration_days} ngày
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                                 {checkpoint.amount && (

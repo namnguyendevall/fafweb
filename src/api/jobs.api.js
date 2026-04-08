@@ -40,6 +40,10 @@ export const jobsApi = {
     return axiosClient.put(`/jobs/${id}`, data);
   },
 
+  renewJob: (id, data) => {
+    return axiosClient.patch(`/jobs/${id}/renew`, data);
+  },
+
   // Proposals
   getJobProposals: (jobId) => {
     return axiosClient.get("/proposals", { params: { jobId } });

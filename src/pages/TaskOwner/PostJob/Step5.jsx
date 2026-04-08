@@ -159,21 +159,31 @@ const Step5ReviewPublish = ({
           </div>
 
           <div className="space-y-4">
-            {checkpoints.map((cp, index) => (
-              <div key={cp.id} className="flex items-center gap-6 p-4 bg-black/40 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-black font-mono text-fuchsia-500 border border-white/10 shrink-0">
-                    {String(index + 1).padStart(2, '0')}
+            {(() => {
+              let currentPreviewDate = startDate ? new Date(startDate) : new Date();
+              return checkpoints.map((cp, index) => {
+                const days = parseInt(cp.duration_days) || 7;
+                currentPreviewDate = new Date(currentPreviewDate.getTime() + days * 24 * 60 * 60 * 1000);
+                
+                return (
+                  <div key={cp.id} className="flex items-center gap-6 p-4 bg-black/40 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
+                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-black font-mono text-fuchsia-500 border border-white/10 shrink-0">
+                        {String(index + 1).padStart(2, '0')}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-black text-white font-mono uppercase tracking-wider truncate">{cp.title || cp.name}</p>
+                          <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest italic truncate">{cp.description || "NO_SUB_PROTOCOLS"}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                          <p className="text-[10px] font-black text-fuchsia-500 font-mono">{parseFloat(cp.points).toLocaleString()} PTS</p>
+                          <p className="text-[8px] font-mono text-slate-600 uppercase tracking-widest">
+                            {currentPreviewDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                          </p>
+                      </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-black text-white font-mono uppercase tracking-wider truncate">{cp.title || cp.name}</p>
-                      <p className="text-[9px] font-mono text-slate-500 uppercase tracking-widest italic truncate">{cp.description || "NO_SUB_PROTOCOLS"}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                      <p className="text-[10px] font-black text-fuchsia-500 font-mono">{parseFloat(cp.points).toLocaleString()} PTS</p>
-                      <p className="text-[8px] font-mono text-slate-600 uppercase tracking-widest">{formatDate(cp.due_date, t)}</p>
-                  </div>
-              </div>
-            ))}
+                );
+              });
+            })()}
           </div>
         </section>
 

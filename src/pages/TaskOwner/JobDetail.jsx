@@ -137,6 +137,23 @@ const JobDetail = () => {
         }
     };
 
+    const handleRenewJob = async () => {
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 7);
+        const newEndDateStr = prompt("Nhập ngày hết hạn bài đăng mới (YYYY-MM-DD):", defaultDate.toISOString().split('T')[0]);
+        
+        if (!newEndDateStr) return;
+
+        try {
+            await jobsApi.renewJob(job.id, { endDate: newEndDateStr });
+            toast.success("Gia hạn bài đăng thành công! Bài đăng hiện đã hiển thị trở lại.");
+            fetchJobData();
+        } catch (error) {
+            console.error("Renewal Error:", error);
+            toast.error(error.response?.data?.message || "Gia hạn thất bại.");
+        }
+    };
+
     if (loading) return <div className="flex items-center justify-center p-20">Loading...</div>;
     if (error || !job) return (
         <div className="flex-1 flex flex-col items-center justify-center p-6">
@@ -147,7 +164,7 @@ const JobDetail = () => {
 
     return (
         <>
-        <div className="flex-1 flex flex-col bg-transparent min-h-screen">
+        <div className="flex-1 flex flex-col bg-transparent min-h-screen overflow-x-hidden">
                 {/* Header */}
                 <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 px-6 sm:px-10 py-6 sticky top-0 z-20 shadow-sm">
                     <div className="flex items-center justify-between gap-4">
@@ -158,7 +175,7 @@ const JobDetail = () => {
                             >
                                 <span className="mr-1">←</span> Back to My Jobs
                             </button>
-                            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">{job.title}</h1>
+                            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight break-all">{job.title}</h1>
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                                 {job.category_name} • {new Date(job.created_at).toLocaleDateString()}
                             </p>
@@ -177,12 +194,22 @@ const JobDetail = () => {
                                         : job.status === "IN_PROGRESS"
                                             ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400"
                                             : job.status === "CANCELLED"
-                                            ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400" 
+                                            ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400"
+                                            : job.status === "EXPIRED"
+                                            ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400"
                                             : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
                                         }`}
                                 >
-                                    {job.status}
+                                    {job.status === "EXPIRED" ? "Hết hạn (EXPIRED)" : job.status}
                                 </span>
+                                {job.status === "EXPIRED" && (
+                                    <button
+                                        onClick={handleRenewJob}
+                                        className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 font-bold text-white text-xs rounded-xl hover:from-amber-400 hover:to-orange-400 transition-all shadow-md shadow-amber-500/20"
+                                    >
+                                        Gia hạn bài đăng
+                                    </button>
+                                )}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400">
                                 Budget:{" "}
@@ -201,13 +228,13 @@ const JobDetail = () => {
                 <main className="flex-1 p-6 overflow-y-auto">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Left: job details */}
-                        <div className="lg:col-span-2 space-y-6">
+                        <div className="lg:col-span-2 space-y-6 min-w-0">
                             {/* Overview */}
                             <section className="bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-700 p-8 shadow-sm hover:shadow-md transition-shadow">
                                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                                     Description
                                 </h2>
-                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+                                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-all">
                                     {job.description || "No description provided."}
                                 </p>
                             </section>
@@ -507,10 +534,28 @@ const JobDetail = () => {
                                                                             {cp.description && <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{cp.description}</p>}
                                                                             
                                                                             <div className="flex gap-4 mt-2">
-                                                                                {cp.due_date && (
-                                                                                    <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                                                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                                                                        Due: {new Date(cp.due_date).toLocaleDateString()}
+                                                                                {cp.due_date ? (
+                                                                                    <div className="flex flex-col gap-0.5 mt-2">
+                                                                                        <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                                                            <svg className="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                                                            Hạn chót: {new Date(cp.due_date).toLocaleDateString()} {new Date(cp.due_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                                                        </p>
+                                                                                        {status === 'PENDING' && (
+                                                                                            <p className="text-[10px] font-bold text-rose-500 flex items-center gap-1">
+                                                                                                <span className="animate-pulse">●</span> Còn: {(() => {
+                                                                                                    const diff = new Date(cp.due_date) - new Date();
+                                                                                                    if (diff < 0) return "ĐÃ QUÁ HẠN";
+                                                                                                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                                                                                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                                                                                    return `${days}d ${hours}h`;
+                                                                                                })()}
+                                                                                            </p>
+                                                                                        )}
+                                                                                    </div>
+                                                                                ) : cp.duration_days && (
+                                                                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 italic flex items-center gap-1">
+                                                                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                                                        Dự kiến: {cp.duration_days} ngày thực hiện
                                                                                     </p>
                                                                                 )}
                                                                             </div>
@@ -518,6 +563,7 @@ const JobDetail = () => {
                                                                     </div>
                                                                     <div className="text-right">
                                                                         <div className="font-bold text-gray-900 dark:text-white text-xl">{Number(cp.amount).toLocaleString()} CRED</div>
+                                                                        <div className="text-[10px] text-blue-500 font-bold">Worker nhận: {Math.round(Number(cp.amount) * 0.95).toLocaleString()} CRED</div>
                                                                         <p className="text-[10px] font-bold text-emerald-500 mt-1">≈ {Number(cp.amount).toLocaleString('vi-VN')} VNĐ</p>
                                                                         <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${
                                                                             status === 'APPROVED' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 

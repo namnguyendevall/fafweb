@@ -75,6 +75,8 @@ const WorkDetail = () => {
                 setLoading(true);
                 const res = await jobsApi.getJobDetail(id);
                 setJob(res.data);
+
+                console.log(res.data);
                 
                 if (res.data.contract?.id) {
                     try {
@@ -170,7 +172,7 @@ const WorkDetail = () => {
     }
 
     return (
-        <div className="min-h-screen bg-transparent text-slate-300 relative select-none" style={{ userSelect: 'none' }}>
+        <div className="min-h-screen bg-transparent text-slate-300 relative select-none overflow-x-hidden" style={{ userSelect: 'none' }}>
             {/* Watermark Overlay */}
             {currentUser && (
                 <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] overflow-hidden flex flex-wrap gap-20 p-20 content-start">
@@ -187,18 +189,18 @@ const WorkDetail = () => {
                 <nav className="mb-6 flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-slate-500">
                     <Link to="/find-work" className="hover:text-cyan-400 transition-colors">FIND WORK</Link>
                     <span className="text-slate-700">›</span>
-                    <span className="text-cyan-500">{job.category_name || 'JOB DETAILS'}</span>
+                    <span className="text-cyan-500 truncate max-w-[200px]">{job.category_name || 'JOB DETAILS'}</span>
                 </nav>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 overflow-hidden">
                     {/* ── MAIN CONTENT ── */}
-                    <div className="space-y-6">
+                    <div className="space-y-6 min-w-0">
                         {/* Header Card */}
                         <div className="rounded-2xl border p-8 relative overflow-hidden group" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
                             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                                 <div>
-                                    <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wide mb-4 leading-tight group-hover:text-cyan-300 transition-colors">{job.title}</h1>
+                                    <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wide mb-4 leading-tight group-hover:text-cyan-300 transition-colors break-all">{job.title}</h1>
                                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] font-mono text-slate-400">
                                         <div className="flex items-center gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-cyan-500/50"></span>
@@ -226,7 +228,7 @@ const WorkDetail = () => {
                         {/* Description */}
                         <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
                             <SectionLabel>JOB DESCRIPTION</SectionLabel>
-                            <p className="text-[13px] text-slate-300 leading-relaxed font-mono whitespace-pre-wrap">{job.description}</p>
+                            <p className="text-[13px] text-slate-300 leading-relaxed font-mono whitespace-pre-wrap break-all">{job.description}</p>
                         </div>
 
                         {/* Skills */}
@@ -381,10 +383,42 @@ const WorkDetail = () => {
                                                     </div>
                                                     <h3 className="text-sm font-black text-white tracking-wide uppercase">{cp.name || `Giai đoạn ${idx+1}`}</h3>
                                                     {cp.description && <p className="text-[12px] text-slate-400 font-mono mt-2">{cp.description}</p>}
+                                                    {cp.due_date ? (
+                                                        <div className="flex flex-col gap-1 mt-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                                <span className="text-[11px] text-cyan-400 font-mono font-bold uppercase tracking-wider">
+                                                                    HẠN CHÓT: {new Date(cp.due_date).toLocaleDateString()} {new Date(cp.due_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                                </span>
+                                                            </div>
+                                                            {cp.status === 'PENDING' && (
+                                                                <div className="text-[10px] text-rose-400 font-mono italic animate-pulse">
+                                                                    ⏳ Còn lại: {(() => {
+                                                                        const diff = new Date(cp.due_date) - new Date();
+                                                                        if (diff < 0) return "ĐÃ QUÁ HẠN";
+                                                                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                                                        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                                                        return `${days} ngày ${hours} giờ`;
+                                                                    })()}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : cp.duration_days && (
+                                                        <div className="flex items-center gap-2 mt-2">
+                                                            <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                                            <span className="text-[11px] text-slate-500 font-mono italic">
+                                                                Dự kiến: {cp.duration_days} ngày thực hiện (sẽ bắt đầu sau Giai đoạn trước)
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 {cp.amount && (
                                                     <div className="text-right shrink-0">
-                                                        <div className="text-lg font-black text-cyan-400 font-mono">${Number(cp.amount).toLocaleString()}</div>
+                                                        <div className="text-lg font-black text-slate-500 font-mono line-through opacity-50">${Number(cp.amount).toLocaleString()}</div>
+                                                        <div className="text-xl font-black text-cyan-400 font-mono">
+                                                            ${Math.round(Number(cp.amount) * 0.95).toLocaleString()}
+                                                            <span className="text-[10px] text-cyan-500/70 block uppercase tracking-tighter">Thực nhận (-5% phí)</span>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
