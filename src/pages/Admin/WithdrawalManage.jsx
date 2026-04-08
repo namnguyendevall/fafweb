@@ -4,11 +4,11 @@ import { useToast } from '../../contexts/ToastContext';
 import managerApi from '../../api/manager.api';
 
 const WithdrawalManage = () => {
-    const { showToast } = useToast();
+    const { success, error, warning } = useToast();
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('PENDING'); // PENDING, APPROVED, REJECTED, ALL
-    
+
     // Modal State
     const [modalConfig, setModalConfig] = useState({ isOpen: false, request: null, status: null });
     const [adminNote, setAdminNote] = useState('');
@@ -16,19 +16,24 @@ const WithdrawalManage = () => {
     const [uploading, setUploading] = useState(false);
     const [processing, setProcessing] = useState(false);
     const fileInputRef = useRef(null);
+    const notify = useCallback((type, message) => {
+        const handlerMap = { success, error, warning };
+        if (handlerMap[type] && typeof handlerMap[type] === 'function') return handlerMap[type](message);
+        window.alert(message);
+    }, [success, error, warning]);
 
     const fetchRequests = useCallback(async () => {
         try {
             setLoading(true);
             const res = await managerApi.getWithdrawals();
-            setRequests(res.data || []);
+            setRequests(Array.isArray(res?.data) ? res.data : []);
         } catch (error) {
             console.error(error);
-            showToast('Failed to fetch withdrawal requests', 'error');
+            notify('error', 'Failed to fetch withdrawal requests');
         } finally {
             setLoading(false);
         }
-    }, [showToast]);
+    }, [notify]);
 
     useEffect(() => {
         fetchRequests();
@@ -62,10 +67,10 @@ const WithdrawalManage = () => {
             setUploading(true);
             const res = await managerApi.uploadFile(file);
             setProofImage(res.url);
-            showToast('Proof image uploaded', 'success');
+            notify('success', 'Proof image uploaded');
         } catch (error) {
             console.error(error);
-            showToast('Upload failed', 'error');
+            notify('error', 'Upload failed');
         } finally {
             setUploading(false);
         }
@@ -75,11 +80,6 @@ const WithdrawalManage = () => {
         const { request, status } = modalConfig;
         if (!request) return;
 
-        if (status === 'APPROVED' && !proofImage) {
-            showToast('Please upload a proof image for approval', 'warning');
-            return;
-        }
-
         try {
             setProcessing(true);
             console.log('DEBUG: Processing withdrawal:', { id: request.id, status, adminNote, proofImage });
@@ -88,12 +88,14 @@ const WithdrawalManage = () => {
                 admin_note: adminNote,
                 proof_image_url: proofImage
             });
-            showToast(`Request ${status.toLowerCase()} successfully`, 'success');
-            fetchRequests();
+            notify('success', `Request ${status.toLowerCase()} successfully`);
             closeModal();
+            setTimeout(() => {
+                window.location.reload();
+            }, 350);
         } catch (error) {
             console.error(error);
-            showToast('Failed to process request', 'error');
+            notify('error', error?.response?.data?.message || 'Failed to process request');
         } finally {
             setProcessing(false);
         }
@@ -103,9 +105,9 @@ const WithdrawalManage = () => {
         return new Intl.NumberFormat('vi-VN').format(amount || 0);
     };
 
-    const filteredRequests = requests.filter(r => {
+    const filteredRequests = (Array.isArray(requests) ? requests : []).filter(r => {
         if (filter === 'ALL') return true;
-        return r.status === filter;
+        return (r?.status || '').toUpperCase() === filter;
     });
 
     const getStatusStyle = (status) => {
@@ -120,10 +122,10 @@ const WithdrawalManage = () => {
     return (
         <div className="min-h-screen bg-[#02040a] flex font-mono text-slate-300 selection:bg-indigo-500/30">
             <AdminSidebar />
-            
+
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
                 <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] pointer-events-none"></div>
-                
+
                 <header className="bg-[#090e17]/80 backdrop-blur-md border-b border-[#1e293b] px-6 py-4 sticky top-0 z-10 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-white flex items-center gap-3">
@@ -143,17 +145,16 @@ const WithdrawalManage = () => {
                                 <button
                                     key={f}
                                     onClick={() => setFilter(f)}
-                                    className={`px-4 py-2 rounded border text-[10px] font-black tracking-widest transition-all ${
-                                        filter === f 
+                                    className={`px-4 py-2 rounded border text-[10px] font-black tracking-widest transition-all ${filter === f
                                         ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.2)]'
                                         : 'bg-[#090e17] text-slate-500 border-[#1e293b] hover:border-indigo-500/30 hover:text-indigo-300'
-                                    }`}
+                                        }`}
                                 >
                                     {f}
                                 </button>
                             ))}
                         </div>
-                        <button 
+                        <button
                             onClick={fetchRequests}
                             className="p-2 rounded border border-[#1e293b] hover:border-indigo-500/50 text-slate-500 hover:text-indigo-400 transition-all"
                         >
@@ -190,8 +191,8 @@ const WithdrawalManage = () => {
                                                 NO_WITHDRAWAL_REQUESTS_FOUND
                                             </td>
                                         </tr>
-                                    ) : filteredRequests.map(r => (
-                                        <tr key={r.id} className="group hover:bg-white/[0.01] transition-colors border-b border-[#1e293b]/50">
+                                    ) : filteredRequests.map((r, idx) => (
+                                        <tr key={r?.id ?? `withdraw-${idx}`} className="group hover:bg-white/[0.01] transition-colors border-b border-[#1e293b]/50">
                                             <td className="px-6 py-5 text-center font-bold text-slate-500">#{r.id}</td>
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-3">
@@ -224,14 +225,14 @@ const WithdrawalManage = () => {
                                                         )}
                                                     </div>
                                                     {r.proof_image_url && (
-                                                        <a 
-                                                            href={r.proof_image_url} 
-                                                            target="_blank" 
+                                                        <a
+                                                            href={r.proof_image_url}
+                                                            target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="inline-flex items-center gap-2 text-[9px] font-black text-emerald-400 hover:text-emerald-300 transition-colors uppercase italic"
                                                         >
-                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                                            VIEW_PROOF_ID_{r.id.slice(-4)}
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                            VIEW_PROOF_ID_{String(r?.id ?? 'NA').slice(-4)}
                                                         </a>
                                                     )}
                                                 </div>
@@ -249,13 +250,13 @@ const WithdrawalManage = () => {
                                             <td className="px-6 py-5 text-right">
                                                 {r.status === 'PENDING' ? (
                                                     <div className="flex justify-end gap-2">
-                                                        <button 
+                                                        <button
                                                             onClick={() => openModal(r, 'APPROVED')}
                                                             className="px-3 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 rounded text-[9px] font-black tracking-widest transition-all uppercase shadow-[0_0_10px_rgba(16,185,129,0.1)]"
                                                         >
                                                             APPROVE
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             onClick={() => openModal(r, 'REJECTED')}
                                                             className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 border border-rose-500/30 rounded text-[9px] font-black tracking-widest transition-all uppercase"
                                                         >
@@ -263,26 +264,26 @@ const WithdrawalManage = () => {
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                        <div className="flex flex-col items-end gap-1">
-                                                            <span className="text-[9px] text-slate-600 font-bold uppercase italic font-mono">
-                                                                PROCESSED_AT_{new Date(r.updated_at).toLocaleDateString()}
-                                                            </span>
-                                                            <div className="flex gap-2">
-                                                                <button 
-                                                                    onClick={() => openModal(r, 'VIEW')}
-                                                                    className="text-[9px] font-black text-indigo-400 hover:text-indigo-300 hover:underline tracking-widest uppercase transition-all"
-                                                                >
-                                                                    [DETAILS]
-                                                                </button>
-                                                                <button 
-                                                                    onClick={() => openModal(r, r.status)}
-                                                                    className="text-[9px] font-black text-slate-500 hover:text-white hover:underline tracking-widest uppercase transition-all"
-                                                                >
-                                                                    [RE-EDIT]
-                                                                </button>
-                                                            </div>
+                                                    <div className="flex flex-col items-end gap-1">
+                                                        <span className="text-[9px] text-slate-600 font-bold uppercase italic font-mono">
+                                                            PROCESSED_AT_{new Date(r.updated_at).toLocaleDateString()}
+                                                        </span>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => openModal(r, 'VIEW')}
+                                                                className="text-[9px] font-black text-indigo-400 hover:text-indigo-300 hover:underline tracking-widest uppercase transition-all"
+                                                            >
+                                                                [DETAILS]
+                                                            </button>
+                                                            <button
+                                                                onClick={() => openModal(r, r.status)}
+                                                                className="text-[9px] font-black text-slate-500 hover:text-white hover:underline tracking-widest uppercase transition-all"
+                                                            >
+                                                                [RE-EDIT]
+                                                            </button>
                                                         </div>
-                                                    )}
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -299,21 +300,19 @@ const WithdrawalManage = () => {
                     <div className="absolute inset-0 bg-[#02040a]/90 backdrop-blur-md" onClick={closeModal}></div>
                     <div className="relative bg-[#090e17] border border-[#1e293b] rounded-2xl w-full max-w-lg overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]">
                         {/* Modal Header */}
-                        <div className={`px-6 py-4 border-b border-[#1e293b] flex items-center justify-between ${
-                            modalConfig.status === 'VIEW' ? 'bg-indigo-500/5' :
+                        <div className={`px-6 py-4 border-b border-[#1e293b] flex items-center justify-between ${modalConfig.status === 'VIEW' ? 'bg-indigo-500/5' :
                             modalConfig.status === 'APPROVED' ? 'bg-emerald-500/5' : 'bg-rose-500/5'
-                        }`}>
+                            }`}>
                             <div>
-                                <h3 className={`text-lg font-black uppercase tracking-widest ${
-                                    modalConfig.status === 'VIEW' ? 'text-indigo-400' :
+                                <h3 className={`text-lg font-black uppercase tracking-widest ${modalConfig.status === 'VIEW' ? 'text-indigo-400' :
                                     modalConfig.status === 'APPROVED' ? 'text-emerald-400' : 'text-rose-400'
-                                }`}>
+                                    }`}>
                                     {modalConfig.status === 'VIEW' ? 'REQUEST_DETAILS' : `${modalConfig.status}_SEQUENCE`}
                                 </h3>
                                 <p className="text-[10px] text-slate-500 font-mono mt-0.5">ID: {modalConfig.request?.id}</p>
                             </div>
                             <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
 
@@ -334,7 +333,7 @@ const WithdrawalManage = () => {
                             {/* Note Input */}
                             <div>
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">ADMIN_NOTE</label>
-                                <textarea 
+                                <textarea
                                     value={adminNote}
                                     onChange={(e) => setAdminNote(e.target.value)}
                                     readOnly={modalConfig.status === 'VIEW'}
@@ -349,19 +348,18 @@ const WithdrawalManage = () => {
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 block">
                                         TRANSACTION_PROOF
                                     </label>
-                                    <div 
+                                    <div
                                         onClick={modalConfig.status !== 'VIEW' ? () => fileInputRef.current?.click() : undefined}
-                                        className={`w-full border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-all ${
-                                            proofImage 
-                                            ? 'border-emerald-500/50 bg-emerald-500/5' 
+                                        className={`w-full border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition-all ${proofImage
+                                            ? 'border-emerald-500/50 bg-emerald-500/5'
                                             : modalConfig.status === 'VIEW' ? 'border-[#1e293b]' : 'border-[#1e293b] hover:border-indigo-500/50 hover:bg-white/[0.02]'
-                                        } ${modalConfig.status !== 'VIEW' ? 'cursor-pointer' : ''}`}
+                                            } ${modalConfig.status !== 'VIEW' ? 'cursor-pointer' : ''}`}
                                     >
                                         {modalConfig.status !== 'VIEW' && (
-                                            <input 
-                                                type="file" 
-                                                ref={fileInputRef} 
-                                                className="hidden" 
+                                            <input
+                                                type="file"
+                                                ref={fileInputRef}
+                                                className="hidden"
                                                 onChange={handleFileChange}
                                                 accept="image/*"
                                             />
@@ -374,14 +372,14 @@ const WithdrawalManage = () => {
                                         ) : proofImage ? (
                                             <div className="flex flex-col items-center gap-4 text-emerald-400 w-full animate-in fade-in duration-500">
                                                 <div className="flex flex-col items-center gap-2">
-                                                    <svg className="w-8 h-8 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+                                                    <svg className="w-8 h-8 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                                                     <span className="text-[10px] font-black uppercase tracking-[0.2em]">PROOF_VERIFIED</span>
                                                 </div>
                                                 <div className="w-full relative group/img">
                                                     <div className="w-full h-48 overflow-hidden rounded-xl border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
-                                                        <img 
-                                                            src={proofImage} 
-                                                            alt="Proof" 
+                                                        <img
+                                                            src={proofImage}
+                                                            alt="Proof"
                                                             className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-700"
                                                             onError={(e) => {
                                                                 e.target.onerror = null;
@@ -389,10 +387,10 @@ const WithdrawalManage = () => {
                                                             }}
                                                         />
                                                     </div>
-                                                    <a 
-                                                        href={proofImage} 
-                                                        target="_blank" 
-                                                        rel="noopener noreferrer" 
+                                                    <a
+                                                        href={proofImage}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
                                                         className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover/img:opacity-100 transition-opacity rounded-xl backdrop-blur-sm"
                                                     >
                                                         <span className="bg-white text-black px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest translate-y-2 group-hover/img:translate-y-0 transition-transform">EXPAND_NODE</span>
@@ -401,7 +399,7 @@ const WithdrawalManage = () => {
                                             </div>
                                         ) : (
                                             <div className="flex flex-col items-center gap-2 text-slate-600 italic">
-                                                <svg className="w-8 h-8 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                <svg className="w-8 h-8 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                                 <span className="text-[10px] font-black uppercase tracking-widest">{modalConfig.status === 'VIEW' ? 'NO_PROOF_CAPTURED' : 'AWAITING_FILE_UPLOAD'}</span>
                                             </div>
                                         )}
@@ -413,7 +411,7 @@ const WithdrawalManage = () => {
                         {/* Modal Footer */}
                         <div className="p-6 bg-[#02040a] border-t border-[#1e293b] flex gap-3">
                             {modalConfig.status === 'VIEW' ? (
-                                <button 
+                                <button
                                     onClick={closeModal}
                                     className="flex-1 px-4 py-2 rounded-xl bg-indigo-500 text-white font-black text-[10px] tracking-widest hover:bg-indigo-400 transition-all uppercase shadow-lg shadow-indigo-500/20"
                                 >
@@ -421,20 +419,19 @@ const WithdrawalManage = () => {
                                 </button>
                             ) : (
                                 <>
-                                    <button 
+                                    <button
                                         onClick={closeModal}
                                         className="flex-1 px-4 py-2 rounded-xl border border-[#1e293b] text-slate-500 font-black text-[10px] tracking-widest hover:text-white hover:border-slate-500 transition-all uppercase"
                                     >
                                         CANCEL
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={handleConfirmProcess}
                                         disabled={processing || uploading}
-                                        className={`flex-1 px-4 py-2 rounded-xl font-black text-[10px] tracking-widest transition-all uppercase shadow-lg ${
-                                            modalConfig.status === 'APPROVED' 
-                                            ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/20' 
+                                        className={`flex-1 px-4 py-2 rounded-xl font-black text-[10px] tracking-widest transition-all uppercase shadow-lg ${modalConfig.status === 'APPROVED'
+                                            ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/20'
                                             : 'bg-rose-500 text-white hover:bg-rose-400 shadow-rose-500/20'
-                                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                            } disabled:opacity-50 disabled:cursor-not-allowed`}
                                     >
                                         {processing ? 'EXECUTING...' : `CONFIRM_${modalConfig.status}`}
                                     </button>
