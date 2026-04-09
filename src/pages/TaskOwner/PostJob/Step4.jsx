@@ -74,12 +74,12 @@ const Step4Contract = ({
     return defaultContractText.split("\n").map(line => {
       const trimmed = line.trim();
       if (!trimmed) return "<p></p>";
-      if (trimmed.startsWith(t("auto.db_22deea")) && trimmed.includes("JOB CONTRACT")) return `<h2>{escapeHtml(trimmed)} CRED</h2>`;
-      if (trimmed.startsWith(t("auto.db_23358e")) || trimmed === t("auto.db_2195a1") || trimmed === t("auto.db_0b51d6")) return `<h3>{escapeHtml(trimmed)} CRED</h3>`;
-      if (trimmed.startsWith(t("auto.db_637f84")) || trimmed.startsWith(t("auto.db_8153e3")) || trimmed.startsWith(t("auto.db_b784be")) || trimmed.startsWith(t("auto.db_d1b2f3")) || trimmed === t("auto.db_7e6d8e")) return `<p><strong>{escapeHtml(trimmed)} CRED</strong></p>`;
-      return `<p>{escapeHtml(line)} CRED</p>`;
+      if (trimmed.startsWith(t("auto.db_22deea")) && trimmed.includes("JOB CONTRACT")) return `<h2>${escapeHtml(trimmed)}</h2>`;
+      if (trimmed.startsWith(t("auto.db_23358e")) || trimmed === t("auto.db_2195a1") || trimmed === t("auto.db_0b51d6")) return `<h3>${escapeHtml(trimmed)}</h3>`;
+      if (trimmed.startsWith(t("auto.db_637f84")) || trimmed.startsWith(t("auto.db_8153e3")) || trimmed.startsWith(t("auto.db_b784be")) || trimmed.startsWith(t("auto.db_d1b2f3")) || trimmed === t("auto.db_7e6d8e")) return `<p><strong>${escapeHtml(trimmed)}</strong></p>`;
+      return `<p>${escapeHtml(line)}</p>`;
     }).join("");
-  }, [defaultContractText]);
+  }, [defaultContractText, t]);
   const {
     lockedHtml,
     editableHtml
