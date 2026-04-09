@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import JSZip from 'jszip';
@@ -6,183 +7,194 @@ import { contractsApi } from '../../api/contracts.api';
 import { useToast } from '../../contexts/ToastContext';
 import { useChatContext } from '../../contexts/ChatContext';
 import { proposalsApi } from '../../api/proposals.api';
-
-const SectionLabel = ({ children }) => (
-    <p className="text-[9px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-3 flex items-center gap-1.5">
+import { reviewsApi } from '../../api/reviews.api';
+import ReviewModal from '../../components/Reviews/ReviewModal';
+const SectionLabel = ({
+  children
+}) => <p className="text-[9px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-3 flex items-center gap-1.5">
         <span className="text-cyan-400">//</span> {children}
-    </p>
-);
-
+    </p>;
 const WorkDetail = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const toast = useToast();
-    const { openChat } = useChatContext();
-    
-    const [job, setJob] = useState(null);
-    const [contractDetail, setContractDetail] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [hasActiveContract, setHasActiveContract] = useState(false);
-    const [hasApplied, setHasApplied] = useState(false);
-    const [myProposal, setMyProposal] = useState(null);
-    const [isZipping, setIsZipping] = useState(false);
-    const [currentUser, setCurrentUser] = useState(null);
+  const {
+    t
+  } = useTranslation();
+  const {
+    id
+  } = useParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const {
+    openChat
+  } = useChatContext();
+  const [job, setJob] = useState(null);
+  const [contractDetail, setContractDetail] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [hasActiveContract, setHasActiveContract] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
+  const [myProposal, setMyProposal] = useState(null);
+  const [isZipping, setIsZipping] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
-    // Security & Access Control
-    useEffect(() => {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-            try {
-                setCurrentUser(JSON.parse(userStr));
-            } catch (e) {
-                console.error("User parsing failed");
-            }
-        }
+  // Security & Access Control
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch (e) {
+        console.error("User parsing failed");
+      }
+    }
 
-        // Block Right Click
-        const handleContextMenu = (e) => e.preventDefault();
-        // Block Keyboard Shortcuts
-        const handleKeyDown = (e) => {
-            // F12, PrintScreen
-            if (e.key === 'F12' || e.key === 'PrintScreen') {
-                e.preventDefault();
-                toast.info("Security Profile: Print/Inspect disabled.");
-            }
-            // Ctrl+S, Ctrl+P, Ctrl+U, Ctrl+Shift+I
-            if (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || (e.shiftKey && e.key === 'I'))) {
-                e.preventDefault();
-                toast.info("Security Profile: Action restricted.");
-            }
-        };
-
-        window.addEventListener('contextmenu', handleContextMenu);
-        window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('contextmenu', handleContextMenu);
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [toast]);
-
-    const isHired = job?.contract && currentUser && (
-        String(job.contract.worker_id) === String(currentUser.id) ||
-        String(job.client_id) === String(currentUser.id)
-    );
-
-    useEffect(() => {
-        const fetchJobDetails = async () => {
-            try {
-                setLoading(true);
-                const res = await jobsApi.getJobDetail(id);
-                setJob(res.data);
-
-                console.log(res.data);
-                
-                if (res.data.contract?.id) {
-                    try {
-                        const contractRes = await contractsApi.getContractById(res.data.contract.id);
-                        setContractDetail(contractRes.data);
-                    } catch {
-                        setContractDetail(res.data.contract);
-                    }
-                }
-            } catch (err) {
-                setError('Failed to load job details');
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchJobDetails();
-
-        // Check if worker already has an active or pending contract
-        contractsApi.getMyActiveContract()
-            .then(res => {
-                if (res.data && ['ACTIVE', 'IN_PROGRESS', 'PENDING'].includes(res.data.status)) {
-                    setHasActiveContract(true);
-                }
-            })
-            .catch(() => {
-                // No active contract or error — allow apply
-                setHasActiveContract(false);
-            });
-
-        // Check if already applied
-        proposalsApi.getMyProposals()
-            .then(res => {
-                const existing = (res.data || []).find(p => p.job_id === Number(id));
-                if (existing) {
-                    setHasApplied(true);
-                    setMyProposal(existing);
-                }
-            })
-            .catch(err => console.error("Error checking proposal status:", err));
-    }, [id]);
-
-    const handleContactEmployer = async () => {
-        if (!job?.client_id) return toast.error('Employer information not found');
-        try {
-            await openChat(job.client_id);
-        } catch {
-            toast.error('Failed to open chat with employer');
-        }
+    // Block Right Click
+    const handleContextMenu = e => e.preventDefault();
+    // Block Keyboard Shortcuts
+    const handleKeyDown = e => {
+      // F12, PrintScreen
+      if (e.key === 'F12' || e.key === 'PrintScreen') {
+        e.preventDefault();
+        toast.info("Security Profile: Print/Inspect disabled.");
+      }
+      // Ctrl+S, Ctrl+P, Ctrl+U, Ctrl+Shift+I
+      if (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || e.shiftKey && e.key === 'I')) {
+        e.preventDefault();
+        toast.info("Security Profile: Action restricted.");
+      }
     };
-
-    const getAttachmentUrl = (url) => {
-        if (!url || typeof url !== 'string') return url;
-        if (url.includes('cloudinary.com') && !url.includes('fl_attachment')) {
-            return url.replace('/upload/', '/upload/fl_attachment/');
-        }
-        return url;
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
     };
-
-    const handleIndividualDownload = (resource) => {
-        if (!isHired) {
-            toast.error("Vui lòng ứng tuyển và được duyệt để tải tài liệu này.");
-            return;
+  }, [toast]);
+  const isHired = job?.contract && currentUser && (String(job.contract.worker_id) === String(currentUser.id) || String(job.client_id) === String(currentUser.id));
+  useEffect(() => {
+    const fetchJobDetails = async () => {
+      try {
+        setLoading(true);
+        const res = await jobsApi.getJobDetail(id);
+        setJob(res.data);
+        console.log(res.data);
+        if (res.data.contract?.id) {
+          try {
+            const contractRes = await contractsApi.getContractById(res.data.contract.id);
+            setContractDetail(contractRes.data);
+            
+            // Check for existing reviews
+            const reviewsRes = await reviewsApi.getContractReviews(res.data.contract.id);
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+              const u = JSON.parse(userStr);
+              const userReview = reviewsRes.data.find(r => String(r.reviewer_id) === String(u.id));
+              if (userReview) setHasReviewed(true);
+            }
+          } catch {
+            setContractDetail(res.data.contract);
+          }
         }
-        const url = typeof resource === 'string' ? resource : resource.url;
-        window.open(getAttachmentUrl(url), '_blank');
+      } catch (err) {
+        setError('Failed to load job details');
+      } finally {
+        setLoading(false);
+      }
     };
+    fetchJobDetails();
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-transparent">
+    // Check if worker already has an active or pending contract
+    contractsApi.getMyActiveContract().then(res => {
+      if (res.data && ['ACTIVE', 'IN_PROGRESS', 'PENDING'].includes(res.data.status)) {
+        setHasActiveContract(true);
+      }
+    }).catch(() => {
+      // No active contract or error — allow apply
+      setHasActiveContract(false);
+    });
+
+    // Check if already applied
+    proposalsApi.getMyProposals().then(res => {
+      const existing = (res.data || []).find(p => p.job_id === Number(id));
+      if (existing) {
+        setHasApplied(true);
+        setMyProposal(existing);
+      }
+    }).catch(err => console.error("Error checking proposal status:", err));
+  }, [id]);
+  const handleContactEmployer = async () => {
+    if (!job?.client_id) return toast.error('Employer information not found');
+    try {
+      setActionLoading(true);
+      await openChat(job.client_id);
+      toast.success(t("job.chat_opened", "Secure communication channel opened."));
+    } catch {
+      toast.error('Failed to open chat with employer');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+  
+  const handleShare = () => {
+    try {
+      navigator.clipboard.writeText(window.location.href);
+      toast.success(t("job.link_copied", "Job transmission link copied to clipboard."));
+    } catch (err) {
+      toast.error("Failed to copy link");
+    }
+  };
+  const getAttachmentUrl = url => {
+    if (!url || typeof url !== 'string') return url;
+    if (url.includes('cloudinary.com') && !url.includes('fl_attachment')) {
+      return url.replace('/upload/', '/upload/fl_attachment/');
+    }
+    return url;
+  };
+  const handleIndividualDownload = resource => {
+    if (!isHired) {
+      toast.error(t("job.applied_approval_required"));
+      return;
+    }
+    const url = typeof resource === 'string' ? resource : resource.url;
+    toast.info(t("job.preparing_download", "Preparing individual asset for secure download..."));
+    window.open(getAttachmentUrl(url), '_blank');
+  };
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-transparent">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-10 h-10 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
                     <span className="text-cyan-400 font-mono text-[10px] tracking-widest uppercase animate-pulse">Scanning Data...</span>
                 </div>
-            </div>
-        );
-    }
-
-    if (error || !job) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-transparent p-4">
-                <div className="max-w-md w-full rounded-2xl border p-8 text-center" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(239,68,68,0.3)' }}>
+            </div>;
+  }
+  if (error || !job) {
+    return <div className="min-h-screen flex items-center justify-center bg-transparent p-4">
+                <div className="max-w-md w-full rounded-2xl border p-8 text-center" style={{
+        background: 'linear-gradient(145deg,#0d1224,#0f172a)',
+        borderColor: 'rgba(239,68,68,0.3)'
+      }}>
                     <div className="text-4xl mb-4">⚠️</div>
                     <h2 className="text-lg font-black text-white uppercase tracking-widest font-mono mb-2">SIGNAL LOST</h2>
                     <p className="text-[12px] text-slate-400 font-mono mb-6">{error || 'Job data could not be retrieved.'}</p>
-                    <button onClick={() => navigate('/find-work')}
-                        className="px-6 py-2.5 rounded-xl font-black text-[11px] tracking-widest uppercase font-mono bg-cyan-600/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all">
+                    <button onClick={() => navigate('/find-work')} className="px-6 py-2.5 rounded-xl font-black text-[11px] tracking-widest uppercase font-mono bg-cyan-600/20 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all">
                         Return to Hub
                     </button>
                 </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="min-h-screen bg-transparent text-slate-300 relative select-none overflow-x-hidden" style={{ userSelect: 'none' }}>
+            </div>;
+  }
+  return <div className="min-h-screen bg-transparent text-slate-300 relative select-none overflow-x-hidden" style={{
+    userSelect: 'none'
+  }}>
             {/* Watermark Overlay */}
-            {currentUser && (
-                <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] overflow-hidden flex flex-wrap gap-20 p-20 content-start">
-                    {Array.from({ length: 20 }).map((_, i) => (
-                        <div key={i} className="text-xl font-black font-mono rotate-[-30deg] whitespace-nowrap uppercase tracking-[0.5em]">
+            {currentUser && <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] overflow-hidden flex flex-wrap gap-20 p-20 content-start">
+                    {Array.from({
+        length: 20
+      }).map((_, i) => <div key={i} className="text-xl font-black font-mono rotate-[-30deg] whitespace-nowrap uppercase tracking-[0.5em]">
                             {currentUser.full_name || currentUser.email} // ID_{currentUser.id} // SECURED_VIEW
-                        </div>
-                    ))}
-                </div>
-            )}
+                        </div>)}
+                </div>}
 
             <div className="relative z-10 w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Breadcrumb */}
@@ -196,7 +208,10 @@ const WorkDetail = () => {
                     {/* ── MAIN CONTENT ── */}
                     <div className="space-y-6 min-w-0">
                         {/* Header Card */}
-                        <div className="rounded-2xl border p-8 relative overflow-hidden group" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.2)' }}>
+                        <div className="rounded-2xl border p-8 relative overflow-hidden group" style={{
+            background: 'linear-gradient(145deg,#0d1224,#0f172a)',
+            borderColor: 'rgba(6,182,212,0.2)'
+          }}>
                             <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                                 <div>
@@ -226,351 +241,321 @@ const WorkDetail = () => {
                         </div>
 
                         {/* Description */}
-                        <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
+                        <div className="rounded-2xl border p-8" style={{
+            background: 'linear-gradient(145deg,#0d1224,#0f172a)',
+            borderColor: 'rgba(6,182,212,0.15)'
+          }}>
                             <SectionLabel>JOB DESCRIPTION</SectionLabel>
                             <p className="text-[13px] text-slate-300 leading-relaxed font-mono whitespace-pre-wrap break-all">{job.description}</p>
+                            {job.skills?.length > 0 && <div className="rounded-2xl border p-8 mt-6" style={{
+                                background: 'linear-gradient(145deg,#0d1224,#0f172a)',
+                                borderColor: 'rgba(6,182,212,0.15)'
+                            }}>
+                                <SectionLabel>{t("job.required_skills")}</SectionLabel>
+                                <div className="flex flex-wrap gap-2 mt-4">
+                                    {job.skills.map((skill, idx) => <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-black font-mono tracking-wide border bg-cyan-900/20 border-cyan-500/30 text-cyan-400">
+                                            {typeof skill === 'string' ? skill : skill.name}
+                                        </span>)}
+                                </div>
+                            </div>}
                         </div>
 
-                        {/* Skills */}
-                        {job.skills?.length > 0 && (
-                            <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
-                                <SectionLabel>REQUIRED SKILLS</SectionLabel>
-                                <div className="flex flex-wrap gap-2 mt-4">
-                                    {job.skills.map((skill, idx) => (
-                                        <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-black font-mono tracking-wide border bg-cyan-900/20 border-cyan-500/30 text-cyan-400">
-                                            {typeof skill === 'string' ? skill : skill.name}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
                         {/* Project Resources */}
-                        {job.resource_urls && job.resource_urls.length > 0 && (
-                            <div className="space-y-6">
+                        {job.resource_urls && job.resource_urls.length > 0 && <div className="space-y-6">
                                 {/* IMAGE GALLERY - NEW */}
                                 {job.resource_urls.some(r => {
-                                    const url = typeof r === 'object' ? r.url : r;
-                                    return /\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
-                                }) && (
-                                    <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
-                                        <SectionLabel>HÌNH ẢNH MINH HỌA DỰ ÁN</SectionLabel>
+              const url = typeof r === 'object' ? r.url : r;
+              return /\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
+            }) && <div className="rounded-2xl border p-8" style={{
+              background: 'linear-gradient(145deg,#0d1224,#0f172a)',
+              borderColor: 'rgba(6,182,212,0.15)'
+            }}>
+                                        <SectionLabel>{t("job.project_images")}</SectionLabel>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
                                             {job.resource_urls.filter(r => {
-                                                const url = typeof r === 'object' ? r.url : r;
-                                                return /\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
-                                            }).map((resource, idx) => {
-                                                const url = typeof resource === 'object' ? resource.url : resource;
-                                                return (
-                                                    <div key={`img-${idx}`} className="group relative aspect-video rounded-xl border border-white/10 overflow-hidden bg-black/40">
-                                                        <img 
-                                                            src={url.replace('/upload/', '/upload/w_800,c_limit,q_auto:best/')} 
-                                                            alt="Project Preview"
-                                                            className="w-full h-full object-contain pointer-events-none"
-                                                        />
+                  const url = typeof r === 'object' ? r.url : r;
+                  return /\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
+                }).map((resource, idx) => {
+                  const url = typeof resource === 'object' ? resource.url : resource;
+                  return <div key={`img-${idx}`} className="group relative aspect-video rounded-xl border border-white/10 overflow-hidden bg-black/40">
+                                                        <img src={url.replace('/upload/', '/upload/w_800,c_limit,q_auto:best/')} alt="Project Preview" className="w-full h-full object-contain pointer-events-none" />
                                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                                                             <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest bg-black/40 px-2 py-1 rounded">
-                                                                {isHired ? 'BẢN GỐC SẴN SÀNG' : 'CHẾ ĐỘ XEM TRƯỚC'}
+                                                                {isHired ? t("job.original_ready") : t("job.preview_mode")}
                                                             </span>
                                                         </div>
                                                         {/* Individual watermark on each image for extra security */}
                                                         <div className="absolute inset-0 pointer-events-none opacity-5 flex items-center justify-center">
                                                             <span className="text-xl font-black font-mono rotate-[-20deg] uppercase tracking-widest">{currentUser?.full_name || 'SECURITY_VIEW'}</span>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
+                                                    </div>;
+                })}
                                         </div>
-                                    </div>
-                                )}
+                                    </div>}
 
                                 {/* OTHER DOCUMENTS */}
                                 {job.resource_urls.some(r => {
-                                    const url = typeof r === 'object' ? r.url : r;
-                                    return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
-                                }) && (
-                                    <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
-                                        <SectionLabel>TÀI LIỆU VÀ FILE ĐÍNH KÈM</SectionLabel>
+              const url = typeof r === 'object' ? r.url : r;
+              return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
+            }) && <div className="rounded-2xl border p-8" style={{
+              background: 'linear-gradient(145deg,#0d1224,#0f172a)',
+              borderColor: 'rgba(6,182,212,0.15)'
+            }}>
+                                        <SectionLabel>{t("job.attachments")}</SectionLabel>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                                             {(job.resource_urls || []).filter(r => {
-                                                const url = typeof r === 'object' ? r.url : r;
-                                                return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
-                                            }).map((resource, idx) => {
-                                                const isObj = typeof resource === 'object' && resource !== null;
-                                                const url = isObj ? resource.url : resource;
-                                                const name = isObj ? resource.name : (url?.split('/').pop().split('?')[0] || `File ${idx + 1}`);
-                                                const size = isObj && resource.size ? (resource.size / 1024).toFixed(1) + ' KB' : null;
-                                                
-                                                const lowName = name?.toLowerCase() || "";
-                                                const isZip = lowName.endsWith('.zip') || lowName.endsWith('.rar');
-                                                const isPdf = lowName.endsWith('.pdf');
-                                                const isVid = /\.(mp4|webm|ogg)$/i.test(lowName);
-
-                                                return (
-                                                    <div 
-                                                        key={`file-${idx}`} 
-                                                        className="group relative flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-2xl p-4 hover:border-cyan-500/40 hover:bg-white/[0.05] transition-all"
-                                                    >
+                  const url = typeof r === 'object' ? r.url : r;
+                  return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url.toLowerCase());
+                }).map((resource, idx) => {
+                  const isObj = typeof resource === 'object' && resource !== null;
+                  const url = isObj ? resource.url : resource;
+                  const name = isObj ? resource.name : url?.split('/').pop().split('?')[0] || `File ${idx + 1}`;
+                  const size = isObj && resource.size ? (resource.size / 1024).toFixed(1) + ' KB' : null;
+                  const lowName = name?.toLowerCase() || "";
+                  const isZip = lowName.endsWith('.zip') || lowName.endsWith('.rar');
+                  const isPdf = lowName.endsWith('.pdf');
+                  const isVid = /\.(mp4|webm|ogg)$/i.test(lowName);
+                  return <div key={`file-${idx}`} className="group relative flex items-center justify-between bg-white/[0.03] border border-white/10 rounded-2xl p-4 hover:border-cyan-500/40 hover:bg-white/[0.05] transition-all">
                                                         <div className="flex items-center gap-4 overflow-hidden">
                                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border border-white/5 ${isZip ? 'bg-amber-500/10 text-amber-500' : isPdf ? 'bg-rose-500/10 text-rose-500' : isVid ? 'bg-indigo-500/10 text-indigo-500' : 'bg-cyan-500/10 text-cyan-500'}`}>
-                                                                {isZip ? (
-                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-                                                                ) : isPdf ? (
-                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                                                                ) : isVid ? (
-                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                                                ) : (
-                                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                                                )}
+                                                                {isZip ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg> : isPdf ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg> : isVid ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                                                             </div>
                                                             <div className="flex flex-col overflow-hidden">
-                                                                <button 
-                                                                    onClick={() => handleIndividualDownload(resource)}
-                                                                    className="text-[13px] font-black text-white uppercase tracking-wider truncate hover:text-cyan-400 transition-colors text-left"
-                                                                >
+                                                                <button onClick={() => handleIndividualDownload(resource)} className="text-[13px] font-black text-white uppercase tracking-wider truncate hover:text-cyan-400 transition-colors text-left">
                                                                     {name}
                                                                 </button>
                                                                 <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500 uppercase tracking-widest">
                                                                     <span>{isZip ? 'Archive' : isPdf ? 'Document' : isVid ? 'Video' : 'Asset'}</span>
-                                                                    {size && (
-                                                                        <>
+                                                                    {size && <>
                                                                             <span className="w-1 h-1 rounded-full bg-slate-700" />
                                                                             <span className="text-cyan-500/70">{size}</span>
-                                                                        </>
-                                                                    )}
+                                                                        </>}
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        {isHired && (
-                                                            <button 
-                                                                onClick={() => handleIndividualDownload(resource)}
-                                                                className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-cyan-500/20"
-                                                            >
+                                                        {isHired && <button onClick={() => handleIndividualDownload(resource)} className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-cyan-500/20">
                                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                                            </button>
-                                                        )}
-                                                        {!isHired && (
-                                                            <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-600 border border-slate-700/50 flex items-center justify-center cursor-help group-hover:text-amber-500/50 transition-all" title="Cần được duyệt để tải">
+                                                            </button>}
+                                                        {!isHired && <div className="w-8 h-8 rounded-lg bg-slate-800/50 text-slate-600 border border-slate-700/50 flex items-center justify-center cursor-help group-hover:text-amber-500/50 transition-all" title={t("job.approval_required")}>
                                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
+                                                            </div>}
+                                                    </div>;
+                })}
                                         </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                    </div>}
+                            </div>}
 
                         {/* Milestones */}
-                        {job.checkpoints?.length > 0 && (
-                            <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
-                                <SectionLabel>TIẾN ĐỘ DỰ ÁN</SectionLabel>
+                        {job.checkpoints?.length > 0 && <div className="rounded-2xl border p-8" style={{
+            background: 'linear-gradient(145deg,#0d1224,#0f172a)',
+            borderColor: 'rgba(6,182,212,0.15)'
+          }}>
+                                <SectionLabel>{t("job.project_progress")}</SectionLabel>
                                 <div className="space-y-4 mt-4">
-                                    {job.checkpoints.map((cp, idx) => (
-                                        <div key={cp.id || idx} className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-5 hover:border-cyan-500/30 transition-colors">
+                                    {job.checkpoints.map((cp, idx) => <div key={cp.id || idx} className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-5 hover:border-cyan-500/30 transition-colors">
                                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                                                 <div>
                                                     <div className="flex items-center gap-3 mb-2">
-                                                        <span className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-widest">GIAI ĐOẠN 0{idx + 1}</span>
-                                                        <span className={`px-2 py-0.5 rounded border text-[9px] font-black font-mono tracking-widest uppercase ${
-                                                            cp.status === 'COMPLETED' || cp.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' :
-                                                            cp.status === 'SUBMITTED' ? 'bg-amber-900/30 text-amber-400 border-amber-500/30' :
-                                                            cp.status === 'IN_PROGRESS' ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/30' :
-                                                            'bg-slate-800 text-slate-400 border-slate-600'
-                                                        }`}>{cp.status === 'SUBMITTED' ? 'ĐANG CHỜ DUYỆT' : (cp.status || 'PENDING')}</span>
+                                                        <span className="text-[10px] font-black font-mono text-cyan-500 uppercase tracking-widest">{t("job.stage")}{idx + 1}</span>
+                                                        <span className={`px-2 py-0.5 rounded border text-[9px] font-black font-mono tracking-widest uppercase ${cp.status === 'COMPLETED' || cp.status === 'APPROVED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/30' : cp.status === 'SUBMITTED' ? 'bg-amber-900/30 text-amber-400 border-amber-500/30' : cp.status === 'IN_PROGRESS' ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/30' : 'bg-slate-800 text-slate-400 border-slate-600'}`}>{cp.status === 'SUBMITTED' ? t("job.awaiting_approval") : cp.status || 'PENDING'}</span>
                                                     </div>
-                                                    <h3 className="text-sm font-black text-white tracking-wide uppercase">{cp.name || `Giai đoạn ${idx+1}`}</h3>
+                                                    <h3 className="text-sm font-black text-white tracking-wide uppercase">{cp.name || `Giai đoạn ${idx + 1}`}</h3>
                                                     {cp.description && <p className="text-[12px] text-slate-400 font-mono mt-2">{cp.description}</p>}
-                                                    {cp.due_date ? (
-                                                        <div className="flex flex-col gap-1 mt-2">
+                                                    {cp.due_date ? <div className="flex flex-col gap-1 mt-2">
                                                             <div className="flex items-center gap-2">
                                                                 <svg className="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                                <span className="text-[11px] text-cyan-400 font-mono font-bold uppercase tracking-wider">
-                                                                    HẠN CHÓT: {new Date(cp.due_date).toLocaleDateString()} {new Date(cp.due_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                                <span className="text-[11px] text-cyan-400 font-mono font-bold uppercase tracking-wider">{t("job.deadline")}{new Date(cp.due_date).toLocaleDateString()} {new Date(cp.due_date).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                                                                 </span>
                                                             </div>
-                                                            {cp.status === 'PENDING' && (
-                                                                <div className="text-[10px] text-rose-400 font-mono italic animate-pulse">
-                                                                    ⏳ Còn lại: {(() => {
-                                                                        const diff = new Date(cp.due_date) - new Date();
-                                                                        if (diff < 0) return "ĐÃ QUÁ HẠN";
-                                                                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                                                                        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                                                                        return `${days} ngày ${hours} giờ`;
-                                                                    })()}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ) : cp.duration_days && (
-                                                        <div className="flex items-center gap-2 mt-2">
+                                                            {cp.status === 'PENDING' && <div className="text-[10px] text-rose-400 font-mono italic animate-pulse">{t("job.time_remaining")}{(() => {
+                          const diff = new Date(cp.due_date) - new Date();
+                          if (diff < 0) return t("job.overdue");
+                          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                          const hours = Math.floor(diff % (1000 * 60 * 60 * 24) / (1000 * 60 * 60));
+                          return `${days} ngày ${hours} giờ`;
+                        })()}
+                                                                </div>}
+                                                        </div> : cp.duration_days && <div className="flex items-center gap-2 mt-2">
                                                             <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                            <span className="text-[11px] text-slate-500 font-mono italic">
-                                                                Dự kiến: {cp.duration_days} ngày thực hiện (sẽ bắt đầu sau Giai đoạn trước)
-                                                            </span>
-                                                        </div>
-                                                    )}
+                                                            <span className="text-[11px] text-slate-500 font-mono italic">{t("job.est_duration")}{cp.duration_days}{t("job.days_after_previous")}</span>
+                                                        </div>}
                                                 </div>
-                                                {cp.amount && (
-                                                    <div className="text-right shrink-0">
-                                                        <div className="text-lg font-black text-slate-500 font-mono line-through opacity-50">${Number(cp.amount).toLocaleString()}</div>
+                                                {cp.amount && <div className="text-right shrink-0">
+                                                        <div className="text-lg font-black text-slate-500 font-mono line-through opacity-50">{Number(cp.amount).toLocaleString()} CRED</div>
                                                         <div className="text-xl font-black text-cyan-400 font-mono">
                                                             ${Math.round(Number(cp.amount) * 0.95).toLocaleString()}
-                                                            <span className="text-[10px] text-cyan-500/70 block uppercase tracking-tighter">Thực nhận (-5% phí)</span>
+                                                            <span className="text-[10px] text-cyan-500/70 block uppercase tracking-tighter">{t("job.net_amount")}</span>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                    </div>}
                                             </div>
                                             
                                             {/* Submission Details */}
-                                            {cp.submission_url && (
-                                                <div className="mt-4 pt-4 border-t border-slate-700/50 bg-slate-900/30 rounded-lg p-3">
+                                            {cp.submission_url && <div className="mt-4 pt-4 border-t border-slate-700/50 bg-slate-900/30 rounded-lg p-3">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                                                        <span className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono">BÀI NỘP CỦA BẠN</span>
+                                                        <span className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono">{t("job.submission_link")}</span>
                                                     </div>
                                                     <div className="bg-[#02040a] border border-cyan-500/20 p-2.5 rounded text-[11px] font-mono mb-3 break-all">
                                                         <a href={cp.submission_url} target="_blank" rel="noreferrer" className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors">
                                                             {cp.submission_url}
                                                         </a>
                                                     </div>
-                                                    {cp.submission_notes && (
-                                                        <div className="mb-3 border-l-2 border-slate-600 pl-3">
-                                                            <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase block mb-1">GHI CHÚ:</span>
+                                                    {cp.submission_notes && <div className="mb-3 border-l-2 border-slate-600 pl-3">
+                                                            <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase block mb-1">{t("job.submission_notes")}</span>
                                                             <p className="text-sm text-slate-300 font-mono whitespace-pre-wrap">{cp.submission_notes}</p>
-                                                        </div>
-                                                    )}
-                                                    {cp.submitted_at && (
-                                                        <div className="text-[9px] font-mono text-slate-500 tracking-widest uppercase mt-2 border-t border-slate-700/50 pt-2 flex items-center gap-1.5">
-                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                            THỜI GIAN NỘP: {new Date(cp.submitted_at).toLocaleString()}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                                        </div>}
+                                                    {cp.submitted_at && <div className="text-[9px] font-mono text-slate-500 tracking-widest uppercase mt-2 border-t border-slate-700/50 pt-2 flex items-center gap-1.5">
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{t("job.submitted_at")}{new Date(cp.submitted_at).toLocaleString()}
+                                                        </div>}
+                                                </div>}
 
                                             {/* Review details */}
-                                            {cp.review_notes && (
-                                                <div className={`mt-3 border-l-[3px] p-3 rounded-r-lg ${cp.status === 'APPROVED' ? 'border-emerald-500 bg-emerald-900/10' : 'border-rose-500 bg-rose-900/10'}`}>
-                                                    <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono block mb-1">ĐÁNH GIÁ TỪ KHÁCH HÀNG:</span>
+                                            {cp.review_notes && <div className={`mt-3 border-l-[3px] p-3 rounded-r-lg ${cp.status === 'APPROVED' ? 'border-emerald-500 bg-emerald-900/10' : 'border-rose-500 bg-rose-900/10'}`}>
+                                                    <span className="text-[9px] font-black tracking-widest text-slate-400 uppercase font-mono block mb-1">{t("job.client_review")}</span>
                                                     <p className="text-sm text-slate-300 font-mono">{cp.review_notes}</p>
-                                                    {cp.reviewed_at && (
-                                                        <p className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">
-                                                            THỜI GIAN DUYỆT: {new Date(cp.reviewed_at).toLocaleString()}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                                    {cp.reviewed_at && <p className="text-[9px] font-mono text-slate-500 mt-1 uppercase tracking-widest">{t("job.reviewed_at")}{new Date(cp.reviewed_at).toLocaleString()}
+                                                        </p>}
+                                                </div>}
+                                        </div>)}
                                 </div>
-                            </div>
-                        )}
+                            </div>}
 
                         {/* Contract Document Preview if exists */}
-                        {contractDetail && (
-                            <div className="rounded-2xl border p-8" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(168,85,247,0.2)' }}>
+                        {contractDetail && <div className="rounded-2xl border p-8" style={{
+            background: 'linear-gradient(145deg,#0d1224,#0f172a)',
+            borderColor: 'rgba(168,85,247,0.2)'
+          }}>
                                 <div className="flex items-center justify-between mb-6">
-                                    <SectionLabel><span className="text-purple-400">TÀI LIỆU HỢP ĐỒNG</span></SectionLabel>
+                                    <SectionLabel><span className="text-purple-400">{t("job.contract_code")}</span></SectionLabel>
                                     <span className="px-2 py-1 bg-purple-900/30 border border-purple-500/30 rounded text-[9px] font-black text-purple-400 tracking-widest font-mono">
                                         {contractDetail.status || 'DRAFT'}
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 mb-6 p-4 rounded-xl border border-slate-700/50 bg-slate-800/30">
                                     <div>
-                                        <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mb-1">TỔNG GIÁ TRỊ</div>
-                                        <div className="text-xl font-black text-white font-mono">${Number(contractDetail.total_amount || 0).toLocaleString()}</div>
+                                        <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mb-1">{t("job.project_budget")}</div>
+                                        <div className="text-xl font-black text-white font-mono">{Number(contractDetail.total_amount || 0).toLocaleString()} CRED</div>
                                     </div>
                                     <div>
-                                        <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mb-1">MÃ HỢP ĐỒNG</div>
+                                        <div className="text-[10px] text-slate-500 font-mono tracking-widest uppercase mb-1">{t("job.contract_code")}</div>
                                         <div className="text-sm font-bold text-slate-300 font-mono">#{contractDetail.id}</div>
                                     </div>
                                 </div>
 
-                                {(contractDetail.contract_content || contractDetail.terms) && (
-                                    <div className="border border-slate-700/50 rounded-xl overflow-hidden bg-[#090e17]">
+                                {(contractDetail.contract_content || contractDetail.terms) && <div className="border border-slate-700/50 rounded-xl overflow-hidden bg-[#090e17]">
                                         <div className="bg-slate-800/80 px-4 py-3 border-b border-slate-700/50 flex items-center gap-3">
                                             <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                            <span className="text-[11px] font-black tracking-widest font-mono text-slate-300 uppercase">THỎA THUẬN TIÊU CHUẨN FAF</span>
+                                            <span className="text-[11px] font-black tracking-widest font-mono text-slate-300 uppercase">{t("job.standard_agreement")}</span>
                                         </div>
-                                        <div className="p-6 prose prose-invert prose-sm max-w-none prose-p:text-slate-400 prose-headings:text-slate-200" dangerouslySetInnerHTML={{ __html: contractDetail.contract_content || contractDetail.terms }} />
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                        <div className="p-6 prose prose-invert prose-sm max-w-none prose-p:text-slate-400 prose-headings:text-slate-200" dangerouslySetInnerHTML={{
+                __html: contractDetail.contract_content || contractDetail.terms
+              }} />
+                                    </div>}
+                            </div>}
                     </div>
 
                     {/* ── SIDEBAR ── */}
                     <aside className="space-y-6">
                         {/* Budget Card */}
-                        <div className="rounded-2xl border p-6 text-center" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.3)' }}>
-                            <div className="text-[10px] font-black tracking-widest text-slate-400 uppercase font-mono mb-2">NGÂN SÁCH DỰ ÁN</div>
+                        <div className="rounded-2xl border p-6 text-center" style={{
+            background: 'linear-gradient(145deg,#0d1224,#0f172a)',
+            borderColor: 'rgba(6,182,212,0.3)'
+          }}>
+                            <div className="text-[10px] font-black tracking-widest text-slate-400 uppercase font-mono mb-2">{t("job.project_budget")}</div>
                             <div className="text-4xl font-black text-white font-mono mb-1 tracking-tight">
                                 ${Number(job.budget || 0).toLocaleString()}
                             </div>
-                            <div className="text-[10px] font-mono text-cyan-500/70">BẢO ĐẢM BỞI FAF ESCROW</div>
+                            <div className="text-[10px] font-mono text-cyan-500/70">{t("job.escrow_guaranteed")}</div>
                         </div>
 
                         {/* Actions */}
                         <div className="space-y-3">
-                            {hasActiveContract ? (
-                                <div className="w-full py-4 rounded-xl font-black text-[12px] tracking-widest uppercase font-mono bg-red-900/20 text-red-400 border border-red-500/30 text-center cursor-not-allowed flex flex-col items-center gap-1">
-                                    <span>🚫 Đang Có Việc Làm</span>
-                                    <span className="text-[9px] font-mono text-red-500/60 tracking-widest normal-case">Hoàn thành hoặc thoát hợp đồng hiện tại để ứng tuyển.</span>
-                                </div>
-                            ) : hasApplied ? (
-                                <div className="w-full py-4 rounded-xl font-black text-[12px] tracking-widest uppercase font-mono bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 text-center flex flex-col items-center gap-1">
+                            {hasActiveContract ? <div className="w-full py-4 rounded-xl font-black text-[12px] tracking-widest uppercase font-mono bg-red-900/20 text-red-400 border border-red-500/30 text-center cursor-not-allowed flex flex-col items-center gap-1">
+                                    <span>{t("job.currently_working")}</span>
+                                    <span className="text-[9px] font-mono text-red-500/60 tracking-widest normal-case">{t("job.complete_current_to_apply")}</span>
+                                </div> : hasApplied ? <div className="w-full py-4 rounded-xl font-black text-[12px] tracking-widest uppercase font-mono bg-emerald-900/20 text-emerald-400 border border-emerald-500/30 text-center flex flex-col items-center gap-1">
                                     <span className="flex items-center gap-2">
-                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                                        Đã Ứng Tuyển
-                                    </span>
-                                    <span className="text-[9px] font-mono text-emerald-500/60 tracking-widest uppercase">Trạng thái: {myProposal?.status}</span>
-                                    <button onClick={() => navigate('/dashboard')} className="mt-2 text-[9px] text-cyan-400 hover:text-cyan-300 underline underline-offset-2">XEM TRONG BẢNG ĐIỀU KHIỂN</button>
-                                </div>
-                            ) : (
-                                <button onClick={() => navigate(`/apply/${id}`)}
-                                    className="w-full py-4 rounded-xl font-black text-[13px] tracking-widest uppercase font-mono bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] border border-cyan-400/50 transition-all hover:scale-[1.02]">
-                                    Ứng Tuyển Ngay
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>{t("job.applied")}</span>
+                                    <span className="text-[9px] font-mono text-emerald-500/60 tracking-widest uppercase">{t("job.status_label")}{myProposal?.status}</span>
+                                    <button onClick={() => navigate('/dashboard')} className="mt-2 text-[9px] text-cyan-400 hover:text-cyan-300 underline underline-offset-2">{t("job.view_in_dashboard")}</button>
+                                </div> : <button onClick={() => navigate(`/apply/${id}`)} className="w-full py-4 rounded-xl font-black text-[13px] tracking-widest uppercase font-mono bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] border border-cyan-400/50 transition-all hover:scale-[1.02]">{t("job.apply_now")}</button>}
+                            
+                            {job.status === 'COMPLETED' && isHired && !hasReviewed && (
+                                <button 
+                                    onClick={() => setIsReviewModalOpen(true)}
+                                    className="w-full py-4 rounded-xl font-black text-[13px] tracking-widest uppercase font-mono bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] border border-emerald-400/50 transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+                                >
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                    {t("auto.db_52659f", "Review Employer")}
                                 </button>
                             )}
-                            <button onClick={handleContactEmployer}
-                                className="w-full py-3.5 rounded-xl font-black text-[11px] tracking-widest uppercase font-mono bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-600/50 hover:border-cyan-500/50 hover:text-cyan-400 transition-all flex items-center justify-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                                Nhắn Tin Cho Khách Hàng
+
+                            <button 
+                                onClick={handleContactEmployer} 
+                                disabled={actionLoading}
+                                className="w-full py-3.5 rounded-xl font-black text-[11px] tracking-widest uppercase font-mono bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-600/50 hover:border-cyan-500/50 hover:text-cyan-400 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {actionLoading ? (
+                                    <div className="w-4 h-4 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                                )}
+                                {t("job.message_client")}
                             </button>
                         </div>
 
                         {/* About Client */}
-                        {job.client && (
-                            <div className="rounded-2xl border p-6" style={{ background: 'linear-gradient(145deg,#0d1224,#0f172a)', borderColor: 'rgba(6,182,212,0.15)' }}>
-                                <SectionLabel>THÔNG TIN KHÁCH HÀNG</SectionLabel>
-                                <div className="flex items-center gap-4 mb-5 mt-4">
-                                    <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-black text-lg text-slate-300">
-                                        {(job.client.full_name || job.client.email)?.charAt(0).toUpperCase()}
+                        {job.client && <div className="rounded-2xl border p-6" style={{
+            background: 'linear-gradient(145deg,#0d1224,#0f172a)',
+            borderColor: 'rgba(6,182,212,0.15)'
+          }}>
+                                <SectionLabel>{t("job.client_info")}</SectionLabel>
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="h-12 w-12 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center text-xl font-black text-cyan-500 font-mono">
+                                        {job.client.full_name?.charAt(0) || job.client.email?.charAt(0)}
                                     </div>
-                                    <div className="min-w-0">
-                                        <div className="font-bold text-[14px] text-white truncate">{job.client.full_name || job.client.email?.split('@')[0]}</div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="text-[13px] font-black text-white uppercase tracking-wider truncate mb-0.5">{job.client.full_name || t("job.anonymous_client")}</div>
                                         <div className="text-[11px] text-slate-500 font-mono truncate">{job.client.email}</div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="rounded-lg bg-slate-800/50 border border-slate-700/50 p-3 text-center">
-                                        <div className="text-[9px] font-mono text-slate-500 tracking-widest mb-1">POSTS</div>
+                                        <div className="text-[9px] font-mono text-slate-500 tracking-widest mb-1">{t("job.client_posts")}</div>
                                         <div className="text-lg font-black text-white">{job.client.total_jobs || 1}</div>
                                     </div>
                                     <div className="rounded-lg bg-slate-800/50 border border-slate-700/50 p-3 text-center">
-                                        <div className="text-[9px] font-mono text-slate-500 tracking-widest mb-1">JOINED</div>
+                                        <div className="text-[9px] font-mono text-slate-500 tracking-widest mb-1">{t("job.client_joined")}</div>
                                         <div className="text-sm font-black text-white mt-1">{job.client.created_at ? new Date(job.client.created_at).getFullYear() : '2024'}</div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            </div>}
                     </aside>
                 </div>
             </div>
-        </div>
-    );
-};
 
+            {isReviewModalOpen && (
+                <ReviewModal 
+                    isOpen={isReviewModalOpen} 
+                    onClose={() => setIsReviewModalOpen(false)} 
+                    contractId={job?.contract?.id} 
+                    jobId={id} 
+                    onSuccess={() => {
+                        setHasReviewed(true);
+                        // Reload data
+                        const fetchJobDetails = async () => {
+                            const res = await jobsApi.getJobDetail(id);
+                            setJob(res.data);
+                        };
+                        fetchJobDetails();
+                    }} 
+                />
+            )}
+        </div>;
+};
 export default WorkDetail;

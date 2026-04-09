@@ -35,7 +35,7 @@ const ManagerSidebar = () => {
             ),
         },
         {
-            label: "Work Hub",
+            label: t("auto.db_work_hub", "Work Hub"),
             path: "/manager/management/jobs",
             icon: (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,7 +105,7 @@ const ManagerSidebar = () => {
                         <img src={FAFLogo} alt="FAF" className="h-8 w-auto invert brightness-0" />
                         <div className="h-4 w-px bg-[#00f0ff]/30"></div>
                         <span className="text-[10px] font-black font-mono tracking-[0.3em] text-[#00f0ff] uppercase shadow-[0_0_10px_rgba(0,240,255,0.5)]">
-                            Admin_Node
+                            {t("auto.db_admin_node", "Admin_Node")}
                         </span>
                     </div>
 
@@ -137,7 +137,7 @@ const ManagerSidebar = () => {
                     </div>
 
                     <div className="space-y-1">
-                        <p className="text-[9px] font-black font-mono tracking-widest text-[#94a3b8] uppercase px-4 mb-3">COMMAND_MENU</p>
+                        <p className="text-[9px] font-black font-mono tracking-widest text-[#94a3b8] uppercase px-4 mb-3">{t("auto.db_command_menu", "COMMAND_MENU")}</p>
                         {menuItems.map((item) => (
                             <NavLink
                                 key={item.path}
@@ -178,7 +178,7 @@ const ManagerSidebar = () => {
                                 d="M17 16l4-4m0 0l-4-4m4 4H9m4 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                             />
                         </svg>
-                        TERMINATE_SESSION
+                        {t("auto.db_terminate_session", "TERMINATE_SESSION")}
                     </button>
                     <p className="text-[7px] font-mono text-[#00f0ff]/50 text-center mt-4 tracking-tighter uppercase opacity-50">
                         FAF_NET // MANAGER_v3.0 // SYSTEM_STABLE

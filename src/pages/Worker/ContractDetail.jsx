@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
@@ -6,340 +7,305 @@ import { reviewsApi } from '../../api/reviews.api';
 import ReviewsList from './components/ReviewsList';
 import axiosClient from '../../api/axiosClient';
 import JSZip from 'jszip';
-
-
 const ContractDetail = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const toast = useToast();
-    const [contract, setContract] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [reviewsData, setReviewsData] = useState({ reviews: [], summary: null });
-    const [disputeModal, setDisputeModal] = useState({ open: false, checkpointId: null });
-    const [disputeReason, setDisputeReason] = useState('');
-    const [submittingDispute, setSubmittingDispute] = useState(false);
-    const [currentUser, setCurrentUser] = useState(null);
-    const [isZipping, setIsZipping] = useState(false);
-
-
-    useEffect(() => {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-            try {
-                setCurrentUser(JSON.parse(userStr));
-            } catch (e) {
-                console.error("User parsing failed");
-            }
-        }
-
-        // Block Right Click
-        const handleContextMenu = (e) => e.preventDefault();
-        // Block Keyboard Shortcuts
-        const handleKeyDown = (e) => {
-            if (e.key === 'F12' || e.key === 'PrintScreen') {
-                e.preventDefault();
-                toast.info("Security Profile: Print/Inspect disabled.");
-            }
-            if (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || (e.shiftKey && e.key === 'I'))) {
-                e.preventDefault();
-                toast.info("Security Profile: Action restricted.");
-            }
-        };
-
-        window.addEventListener('contextmenu', handleContextMenu);
-        window.addEventListener('keydown', handleKeyDown);
-
-        fetchContractDetails();
-
-        return () => {
-            window.removeEventListener('contextmenu', handleContextMenu);
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [id]);
-
-    const fetchContractDetails = async () => {
-        try {
-            setLoading(true);
-            const res = await contractsApi.getContractById(id);
-            if (res.data) {
-                setContract(res.data);
-                
-                // Fetch reviews for this contract if it's completed (or generally to see if there are any)
-                try {
-                    const revRes = await reviewsApi.getContractReviews(id);
-                    setReviewsData({ reviews: revRes.data || [], summary: revRes.summary || null });
-                } catch(e) {
-                    console.error('Failed to fetch contract reviews', e);
-                }
-            } else {
-                toast.error('ERR: NO_CONTRACT_DATA_FOUND');
-                navigate(-1);
-            }
-        } catch (error) {
-            console.error('Error fetching contract details:', error);
-            toast.error('ERR: DATA_RETRIEVAL_FAILED');
-            navigate(-1);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'PENDING': return 'bg-amber-900/30 text-amber-500 border-amber-500/50';
-            case 'SUBMITTED': return 'bg-blue-900/30 text-blue-400 border-blue-500/50';
-            case 'APPROVED': return 'bg-emerald-900/30 text-emerald-400 border-emerald-500/50';
-            case 'REJECTED': return 'bg-rose-900/30 text-rose-400 border-rose-500/50';
-            default: return 'bg-slate-800 text-slate-400 border-slate-700';
-        }
-    };
-
-    const getStatusIconColor = (status) => {
-        switch (status) {
-            case 'PENDING': return 'text-amber-500 bg-amber-500/10 border-amber-500/30';
-            case 'SUBMITTED': return 'text-blue-400 bg-blue-500/10 border-blue-500/30';
-            case 'APPROVED': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
-            case 'REJECTED': return 'text-rose-400 bg-rose-500/10 border-rose-500/30';
-            default: return 'text-slate-400 bg-slate-800 border-slate-700';
-        }
+  const {
+    t
+  } = useTranslation();
+  const {
+    id
+  } = useParams();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const [contract, setContract] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [reviewsData, setReviewsData] = useState({
+    reviews: [],
+    summary: null
+  });
+  const [disputeModal, setDisputeModal] = useState({
+    open: false,
+    checkpointId: null
+  });
+  const [disputeReason, setDisputeReason] = useState('');
+  const [submittingDispute, setSubmittingDispute] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isZipping, setIsZipping] = useState(false);
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch (e) {
+        console.error("User parsing failed");
+      }
     }
 
-    const getStatusIcon = (status) => {
-        const baseClasses = `p-2 rounded border flex items-center justify-center ${getStatusIconColor(status)}`;
-        switch (status) {
-            case 'PENDING': 
-                return (
-                    <div className={baseClasses}>
+    // Block Right Click
+    const handleContextMenu = e => e.preventDefault();
+    // Block Keyboard Shortcuts
+    const handleKeyDown = e => {
+      if (e.key === 'F12' || e.key === 'PrintScreen') {
+        e.preventDefault();
+        toast.info("Security Profile: Print/Inspect disabled.");
+      }
+      if (e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'u' || e.shiftKey && e.key === 'I')) {
+        e.preventDefault();
+        toast.info("Security Profile: Action restricted.");
+      }
+    };
+    window.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
+    fetchContractDetails();
+    return () => {
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [id]);
+  const fetchContractDetails = async () => {
+    try {
+      setLoading(true);
+      const res = await contractsApi.getContractById(id);
+      if (res.data) {
+        setContract(res.data);
+
+        // Fetch reviews for this contract if it's completed (or generally to see if there are any)
+        try {
+          const revRes = await reviewsApi.getContractReviews(id);
+          setReviewsData({
+            reviews: revRes.data || [],
+            summary: revRes.summary || null
+          });
+        } catch (e) {
+          console.error('Failed to fetch contract reviews', e);
+        }
+      } else {
+        toast.error('ERR: NO_CONTRACT_DATA_FOUND');
+        navigate(-1);
+      }
+    } catch (error) {
+      console.error('Error fetching contract details:', error);
+      toast.error('ERR: DATA_RETRIEVAL_FAILED');
+      navigate(-1);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const getStatusColor = status => {
+    switch (status) {
+      case 'PENDING':
+        return 'bg-amber-900/30 text-amber-500 border-amber-500/50';
+      case 'SUBMITTED':
+        return 'bg-blue-900/30 text-blue-400 border-blue-500/50';
+      case 'APPROVED':
+        return 'bg-emerald-900/30 text-emerald-400 border-emerald-500/50';
+      case 'REJECTED':
+        return 'bg-rose-900/30 text-rose-400 border-rose-500/50';
+      default:
+        return 'bg-slate-800 text-slate-400 border-slate-700';
+    }
+  };
+  const getStatusIconColor = status => {
+    switch (status) {
+      case 'PENDING':
+        return 'text-amber-500 bg-amber-500/10 border-amber-500/30';
+      case 'SUBMITTED':
+        return 'text-blue-400 bg-blue-500/10 border-blue-500/30';
+      case 'APPROVED':
+        return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
+      case 'REJECTED':
+        return 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+      default:
+        return 'text-slate-400 bg-slate-800 border-slate-700';
+    }
+  };
+  const getStatusIcon = status => {
+    const baseClasses = `p-2 rounded border flex items-center justify-center ${getStatusIconColor(status)}`;
+    switch (status) {
+      case 'PENDING':
+        return <div className={baseClasses}>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                    </div>
-                );
-            case 'SUBMITTED':
-                return (
-                    <div className={baseClasses}>
+                    </div>;
+      case 'SUBMITTED':
+        return <div className={baseClasses}>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 00-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                    </div>
-                );
-            case 'APPROVED':
-                return (
-                    <div className={baseClasses}>
+                    </div>;
+      case 'APPROVED':
+        return <div className={baseClasses}>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
-                    </div>
-                );
-            case 'REJECTED':
-                return (
-                    <div className={baseClasses}>
+                    </div>;
+      case 'REJECTED':
+        return <div className={baseClasses}>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
-                    </div>
-                );
-            default: 
-                return (
-                    <div className={baseClasses}>
+                    </div>;
+      default:
+        return <div className={baseClasses}>
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                    </div>
-                );
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-transparent flex items-center justify-center relative overflow-hidden font-mono text-[10px] uppercase tracking-widest text-cyan-500">
+                    </div>;
+    }
+  };
+  if (loading) {
+    return <div className="min-h-screen bg-transparent flex items-center justify-center relative overflow-hidden font-mono text-[10px] uppercase tracking-widest text-cyan-500">
                 <div className="flex items-center gap-3 animate-pulse">
                     <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded flex animate-spin"></div>
                     ACCESSING_RECORDS...
                 </div>
-            </div>
-        );
+            </div>;
+  }
+  if (!contract) return <div className="min-h-screen bg-transparent flex items-center justify-center font-mono text-rose-500">ERROR_NO_DATA</div>;
+
+  // Calculate checkpoint progress
+  const totalCheckpoints = contract.checkpoints?.length || 0;
+  const completedCheckpoints = contract.checkpoints?.filter(cp => cp.status === 'APPROVED').length || 0;
+  const progress = totalCheckpoints > 0 ? completedCheckpoints / totalCheckpoints * 100 : 0;
+  const handleSubmitDispute = async () => {
+    if (!disputeReason.trim()) {
+      toast.error(t("auto.db_57dffd"));
+      return;
     }
-
-    if (!contract) return <div className="min-h-screen bg-transparent flex items-center justify-center font-mono text-rose-500">ERROR_NO_DATA</div>;
-
-    // Calculate checkpoint progress
-    const totalCheckpoints = contract.checkpoints?.length || 0;
-    const completedCheckpoints = contract.checkpoints?.filter(cp => cp.status === 'APPROVED').length || 0;
-    const progress = totalCheckpoints > 0 ? (completedCheckpoints / totalCheckpoints) * 100 : 0;
-
-    const handleSubmitDispute = async () => {
-        if (!disputeReason.trim()) {
-            toast.error('Vui lòng nhập lý do khiếu nại.');
-            return;
-        }
+    try {
+      setSubmittingDispute(true);
+      await axiosClient.post('/disputes', {
+        contractId: contract.id,
+        checkpointId: disputeModal.checkpointId,
+        reason: disputeReason.trim()
+      });
+      toast.success(t("auto.db_d15a6e"));
+      setDisputeModal({
+        open: false,
+        checkpointId: null
+      });
+      setDisputeReason('');
+      fetchContractDetails(); // refresh to show DISPUTED status
+    } catch (err) {
+      toast.error(err?.response?.data?.message || t("auto.db_083f7f"));
+    } finally {
+      setSubmittingDispute(false);
+    }
+  };
+  const getAttachmentUrl = url => {
+    if (!url || typeof url !== 'string') return url;
+    if (url.includes('cloudinary.com') && !url.includes('fl_attachment')) {
+      return url.replace('/upload/', '/upload/fl_attachment/');
+    }
+    return url;
+  };
+  const handleIndividualDownload = resource => {
+    const url = typeof resource === 'string' ? resource : resource.url;
+    window.open(getAttachmentUrl(url), '_blank');
+  };
+  const handleDownloadAll = async () => {
+    if (!contract.job_resource_urls && !contract.resource_urls) return;
+    let resources = contract.job_resource_urls || contract.resource_urls;
+    if (typeof resources === 'string') {
+      try {
+        resources = JSON.parse(resources);
+      } catch (e) {
+        resources = [];
+      }
+    }
+    if (!Array.isArray(resources) || resources.length === 0) return;
+    try {
+      setIsZipping(true);
+      toast.info(t("auto.db_0c9815"));
+      const zip = new JSZip();
+      const folder = zip.folder(`FAF_Project_Resources_${id}`);
+      const downloadPromises = resources.map(async (res, index) => {
+        const url = typeof res === 'object' ? res.url : res;
+        const name = typeof res === 'object' ? res.name : url.split('/').pop().split('?')[0];
+        const ext = url.split('.').pop().split('?')[0] || 'file';
+        const fileName = name.includes('.') ? name : `${name || `file_${index + 1}`}.${ext}`;
         try {
-            setSubmittingDispute(true);
-            await axiosClient.post('/disputes', {
-                contractId: contract.id,
-                checkpointId: disputeModal.checkpointId,
-                reason: disputeReason.trim()
-            });
-            toast.success('Khiếu nại đã được gửi! Manager sẽ xem xét và phản hồi sớm.');
-            setDisputeModal({ open: false, checkpointId: null });
-            setDisputeReason('');
-            fetchContractDetails(); // refresh to show DISPUTED status
+          const response = await fetch(url);
+          const blob = await response.blob();
+          folder.file(fileName, blob);
         } catch (err) {
-            toast.error(err?.response?.data?.message || 'Không thể gửi khiếu nại. Vui lòng thử lại.');
-        } finally {
-            setSubmittingDispute(false);
+          console.error(`Failed to download ${url}`, err);
         }
-    };
-
-
-    const getAttachmentUrl = (url) => {
-        if (!url || typeof url !== 'string') return url;
-        if (url.includes('cloudinary.com') && !url.includes('fl_attachment')) {
-            return url.replace('/upload/', '/upload/fl_attachment/');
-        }
-        return url;
-    };
-
-    const handleIndividualDownload = (resource) => {
-        const url = typeof resource === 'string' ? resource : resource.url;
-        window.open(getAttachmentUrl(url), '_blank');
-    };
-
-    const handleDownloadAll = async () => {
-        if (!contract.job_resource_urls && !contract.resource_urls) return;
-        
-        let resources = contract.job_resource_urls || contract.resource_urls;
-        if (typeof resources === 'string') {
-            try { resources = JSON.parse(resources); } catch (e) { resources = []; }
-        }
-        
-        if (!Array.isArray(resources) || resources.length === 0) return;
-
-        try {
-            setIsZipping(true);
-            toast.info("Đang nén tài liệu, vui lòng đợi...");
-            
-            const zip = new JSZip();
-            const folder = zip.folder(`FAF_Project_Resources_${id}`);
-
-            const downloadPromises = resources.map(async (res, index) => {
-                const url = typeof res === 'object' ? res.url : res;
-                const name = typeof res === 'object' ? res.name : (url.split('/').pop().split('?')[0]);
-                const ext = url.split('.').pop().split('?')[0] || 'file';
-                const fileName = name.includes('.') ? name : `${name || `file_${index+1}`}.${ext}`;
-
-                try {
-                    const response = await fetch(url);
-                    const blob = await response.blob();
-                    folder.file(fileName, blob);
-                } catch (err) {
-                    console.error(`Failed to download ${url}`, err);
-                }
-            });
-
-            await Promise.all(downloadPromises);
-            
-            const content = await zip.generateAsync({ type: "blob" });
-            const zipUrl = URL.createObjectURL(content);
-            const link = document.createElement('a');
-            link.href = zipUrl;
-            link.download = `FAF_Resources_Contract_${id}.zip`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            toast.success("Đã tải về toàn bộ tài nguyên!");
-        } catch (error) {
-            console.error("Zipping error:", error);
-            toast.error("Lỗi khi nén dữ liệu. Vui lòng thử tải từng file.");
-        } finally {
-            setIsZipping(false);
-        }
-    };
-
-    return (
-        <div className="min-h-screen bg-transparent text-slate-300 relative font-sans select-none" style={{ userSelect: 'none' }}>
+      });
+      await Promise.all(downloadPromises);
+      const content = await zip.generateAsync({
+        type: "blob"
+      });
+      const zipUrl = URL.createObjectURL(content);
+      const link = document.createElement('a');
+      link.href = zipUrl;
+      link.download = `FAF_Resources_Contract_${id}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success(t("auto.db_132850"));
+    } catch (error) {
+      console.error("Zipping error:", error);
+      toast.error(t("auto.db_9d18aa"));
+    } finally {
+      setIsZipping(false);
+    }
+  };
+  return <div className="min-h-screen bg-transparent text-slate-300 relative font-sans select-none" style={{
+    userSelect: 'none'
+  }}>
             {/* Watermark Overlay */}
-            {currentUser && (
-                <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] overflow-hidden flex flex-wrap gap-20 p-20 content-start">
-                    {Array.from({ length: 20 }).map((_, i) => (
-                        <div key={i} className="text-xl font-black font-mono rotate-[-30deg] whitespace-nowrap uppercase tracking-[0.5em]">
+            {currentUser && <div className="fixed inset-0 pointer-events-none z-[9999] opacity-[0.03] overflow-hidden flex flex-wrap gap-20 p-20 content-start">
+                    {Array.from({
+        length: 20
+      }).map((_, i) => <div key={i} className="text-xl font-black font-mono rotate-[-30deg] whitespace-nowrap uppercase tracking-[0.5em]">
                             {currentUser.full_name || currentUser.email} // ID_{currentUser.id} // SECURED_VIEW
-                        </div>
-                    ))}
-                </div>
-            )}
+                        </div>)}
+                </div>}
 
             <div className="max-w-6xl mx-auto px-4 py-8 relative z-10 w-full">
                 {/* Header Section */}
-                <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.1)] border p-6 mb-6 relative overflow-hidden" style={{ borderColor: 'rgba(6,182,212,0.2)' }}>
+                <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl shadow-[0_0_30px_rgba(6,182,212,0.1)] border p-6 mb-6 relative overflow-hidden" style={{
+        borderColor: 'rgba(6,182,212,0.2)'
+      }}>
                     <div className="absolute top-0 right-10 w-32 h-px bg-cyan-400/50" />
                     
                     <div className="flex items-center justify-between mb-6">
-                        <button 
-                            onClick={() => navigate(-1)}
-                            className="text-[10px] font-black font-mono text-cyan-500 hover:text-cyan-400 uppercase tracking-widest flex items-center gap-2 transition-colors group"
-                        >
+                        <button onClick={() => navigate(-1)} className="text-[10px] font-black font-mono text-cyan-500 hover:text-cyan-400 uppercase tracking-widest flex items-center gap-2 transition-colors group">
                             <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
-                            QUAY LẠI
-                        </button>
+                            </svg>{t("auto.db_69043b")}</button>
                     </div>
                     
                     <div className="flex items-start justify-between">
                         <div className="flex-1 pr-6">
                             <div className="flex items-center gap-4 mb-3">
                                 <h1 className="text-3xl font-black text-white tracking-widest uppercase font-mono">{contract.job_title}</h1>
-                                <span className={`px-3 py-1 rounded inline-flex shrink-0 items-center justify-center text-[10px] font-black font-mono tracking-widest uppercase border ${
-                                    contract.status === 'ACTIVE' ? 'bg-cyan-900/30 text-cyan-400 border-cyan-500/50' :
-                                    contract.status === 'COMPLETED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/50' :
-                                    contract.status === 'CANCELLED' || contract.status === 'TERMINATED' ? 'bg-rose-900/30 text-rose-400 border-rose-500/50' :
-                                    'bg-slate-800 text-slate-400 border-slate-700'
-                                }`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full mr-2 ${
-                                        contract.status === 'ACTIVE' ? 'bg-cyan-400 shadow-[0_0_5px_rgba(34,211,238,1)]' :
-                                        contract.status === 'COMPLETED' ? 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,1)]' :
-                                        contract.status === 'CANCELLED' || contract.status === 'TERMINATED' ? 'bg-rose-400 shadow-[0_0_5px_rgba(244,63,94,1)]' :
-                                        'bg-slate-500'
-                                    }`}></div>
-                                    {contract.status === 'DISPUTED' ? 'TRANH CHẤP' : contract.status}
+                                <span className={`px-3 py-1 rounded inline-flex shrink-0 items-center justify-center text-[10px] font-black font-mono tracking-widest uppercase border ${contract.status === 'ACTIVE' ? 'bg-cyan-900/30 text-cyan-400 border-cyan-500/50' : contract.status === 'COMPLETED' ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/50' : contract.status === 'CANCELLED' || contract.status === 'TERMINATED' ? 'bg-rose-900/30 text-rose-400 border-rose-500/50' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full mr-2 ${contract.status === 'ACTIVE' ? 'bg-cyan-400 shadow-[0_0_5px_rgba(34,211,238,1)]' : contract.status === 'COMPLETED' ? 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,1)]' : contract.status === 'CANCELLED' || contract.status === 'TERMINATED' ? 'bg-rose-400 shadow-[0_0_5px_rgba(244,63,94,1)]' : 'bg-slate-500'}`}></div>
+                                    {contract.status === 'DISPUTED' ? t("auto.db_507b58") : contract.status}
                                 </span>
                             </div>
                             
                             {/* DISPUTE STATUS ACTION */}
-                            {contract.status === 'DISPUTED' && (
-                                <div className="mb-8 p-5 bg-rose-900/20 border-l-4 border-rose-500 rounded-lg flex items-center justify-between shadow-[0_0_15px_rgba(244,63,94,0.1)]">
+                            {contract.status === 'DISPUTED' && <div className="mb-8 p-5 bg-rose-900/20 border-l-4 border-rose-500 rounded-lg flex items-center justify-between shadow-[0_0_15px_rgba(244,63,94,0.1)]">
                                     <div>
-                                        <h3 className="text-rose-400 font-bold font-mono tracking-widest text-sm mb-1 uppercase">Đang Tranh Chấp (Disputed)</h3>
-                                        <p className="text-slate-300 text-xs">Hợp đồng này đang trong quá trình khiếu nại. Manager đang xem xét bằng chứng từ 2 bên.</p>
+                                        <h3 className="text-rose-400 font-bold font-mono tracking-widest text-sm mb-1 uppercase">{t("auto.db_c9cad0")}</h3>
+                                        <p className="text-slate-300 text-xs">{t("auto.db_0e9133")}</p>
                                     </div>
-                                    <button 
-                                        onClick={() => navigate(`/dispute/${contract.dispute_id}`)}
-                                        className="shrink-0 px-6 py-2.5 bg-rose-500 hover:bg-rose-400 text-white font-black text-xs font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all"
-                                    >
-                                        Vào Phòng Chat Khiếu Nại
-                                    </button>
-                                </div>
-                            )}
+                                    <button onClick={() => navigate(`/dispute/${contract.dispute_id}`)} className="shrink-0 px-6 py-2.5 bg-rose-500 hover:bg-rose-400 text-white font-black text-xs font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all">{t("auto.db_f569cf")}</button>
+                                </div>}
 
                             <p className="text-sm text-slate-400 mb-8 leading-relaxed max-w-4xl">{contract.job_description}</p>
                             
                             {/* PENDING SIGNATURE ACTION */}
-                            {['PENDING', 'ACTIVE'].includes(contract.status) && !contract.signature_worker && (
-                                <div className="mb-8 p-5 bg-amber-900/20 border-l-4 border-amber-500 rounded-lg flex items-center justify-between shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+                            {['PENDING', 'ACTIVE'].includes(contract.status) && !contract.signature_worker && <div className="mb-8 p-5 bg-amber-900/20 border-l-4 border-amber-500 rounded-lg flex items-center justify-between shadow-[0_0_15px_rgba(245,158,11,0.1)]">
                                     <div>
-                                        <h3 className="text-amber-400 font-bold font-mono tracking-widest text-sm mb-1 uppercase">Yêu Cầu Chữ Ký (OTP)</h3>
-                                        <p className="text-slate-300 text-xs">Khách hàng đã chấp nhận đề xuất. Vui lòng ký điện tử để bắt đầu hợp đồng.</p>
+                                        <h3 className="text-amber-400 font-bold font-mono tracking-widest text-sm mb-1 uppercase">{t("auto.db_9b36ab")}</h3>
+                                        <p className="text-slate-300 text-xs">{t("auto.db_ef03fb")}</p>
                                     </div>
-                                    <button 
-                                        onClick={() => navigate(`/contract/${contract.id}/sign`)}
-                                        className="shrink-0 px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black text-xs font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all"
-                                    >
-                                        Ký Hợp Đồng Ngay
-                                    </button>
-                                </div>
-                            )}
+                                    <button onClick={() => navigate(`/contract/${contract.id}/sign`)} className="shrink-0 px-6 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-black text-xs font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all">{t("auto.db_4572c1")}</button>
+                                </div>}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#02040a] border border-slate-800 rounded-xl p-5">
                                 {/* Details Block */}
@@ -351,8 +317,8 @@ const ContractDetail = () => {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">KHÁCH HÀNG</p>
-                                            <p className="text-[14px] font-bold text-slate-200 mt-1">{contract.client_name || 'Đang cập nhật'}</p>
+                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">{t("auto.db_39242f")}</p>
+                                            <p className="text-[14px] font-bold text-slate-200 mt-1">{contract.client_name || t("auto.db_598479")}</p>
                                         </div>
                                     </div>
                                     
@@ -363,12 +329,10 @@ const ContractDetail = () => {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">TỔNG GIÁ TRỊ</p>
+                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">{t("auto.db_2cc30a")}</p>
                                             <div className="flex flex-col">
                                                 <p className="text-[18px] font-black font-mono text-emerald-400 mt-1">{Number(contract.total_amount || 0).toLocaleString()} CRED</p>
-                                                <p className="text-[10px] font-mono text-cyan-500 font-bold uppercase tracking-wider italic">
-                                                    Thực nhận: {Number((contract.total_amount || 0) * 0.95).toLocaleString()} CRED (-5% phí)
-                                                </p>
+                                                <p className="text-[10px] font-mono text-cyan-500 font-bold uppercase tracking-wider italic">{t("auto.db_2e103d")}{Number((contract.total_amount || 0) * 0.95).toLocaleString()}{t("auto.db_d40929")}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -382,11 +346,11 @@ const ContractDetail = () => {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">THỜI GIAN</p>
+                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest">{t("auto.db_f50a9a")}</p>
                                             <p className="text-[12px] font-bold text-slate-300 mt-1 uppercase tracking-wider">
-                                                {contract.job_start_date ? new Date(contract.job_start_date).toLocaleDateString() : 'CHƯA BẮT ĐẦU'} 
+                                                {contract.job_start_date ? new Date(contract.job_start_date).toLocaleDateString() : t("auto.db_82f3ba")} 
                                                 <span className="text-cyan-500 mx-2">-</span> 
-                                                {contract.job_end_date ? new Date(contract.job_end_date).toLocaleDateString() : 'MỞ'}
+                                                {contract.job_end_date ? new Date(contract.job_end_date).toLocaleDateString() : t("auto.db_157905")}
                                             </p>
                                         </div>
                                     </div>
@@ -398,14 +362,10 @@ const ContractDetail = () => {
                                             </svg>
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest mb-1.5">CHỮ KÝ XÁC NHẬN</p>
+                                            <p className="text-[10px] font-mono text-slate-500 font-black uppercase tracking-widest mb-1.5">{t("auto.db_1fe9f8")}</p>
                                             <div className="flex gap-2">
-                                                <span className={`text-[9px] uppercase font-black px-2 py-1 rounded inline-flex items-center border ${
-                                                    contract.signature_worker ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/50' : 'bg-slate-800 text-slate-500 border-slate-700'
-                                                }`}>NGƯỜI LÀM</span>
-                                                <span className={`text-[9px] uppercase font-black px-2 py-1 rounded inline-flex items-center border ${
-                                                    contract.signature_client ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/50' : 'bg-slate-800 text-slate-500 border-slate-700'
-                                                }`}>KHÁCH HÀNG</span>
+                                                <span className={`text-[9px] uppercase font-black px-2 py-1 rounded inline-flex items-center border ${contract.signature_worker ? 'bg-emerald-900/30 text-emerald-400 border-emerald-500/50' : 'bg-slate-800 text-slate-500 border-slate-700'}`}>{t("auto.db_12c22e")}</span>
+                                                <span className={`text-[9px] uppercase font-black px-2 py-1 rounded inline-flex items-center border ${contract.signature_client ? 'bg-indigo-900/30 text-indigo-400 border-indigo-500/50' : 'bg-slate-800 text-slate-500 border-slate-700'}`}>{t("auto.db_39242f")}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -422,200 +382,135 @@ const ContractDetail = () => {
 
                     <div className="flex justify-between items-end mb-4 relative z-10">
                         <h2 className="text-[12px] font-black text-white font-mono uppercase tracking-widest flex items-center gap-2">
-                            <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                            TIẾN ĐỘ CÔNG VIỆC
-                        </h2>
+                            <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>{t("auto.db_16f150")}</h2>
                         <span className="text-[10px] font-black text-cyan-500 uppercase tracking-widest font-mono">
-                            {completedCheckpoints} / {totalCheckpoints} HOÀN THÀNH
-                        </span>
+                            {completedCheckpoints} / {totalCheckpoints}{t("auto.db_cca467")}</span>
                     </div>
                     <div className="w-full bg-[#02040a] rounded h-2 relative border border-slate-800 overflow-hidden z-10 mb-2">
-                        <div 
-                            className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-cyan-500 to-indigo-500 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(6,182,212,0.8)]"
-                            style={{ width: `${progress}%` }}
-                        />
+                        <div className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-cyan-500 to-indigo-500 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(6,182,212,0.8)]" style={{
+            width: `${progress}%`
+          }} />
                     </div>
-                    <p className="text-[10px] text-slate-500 font-mono text-right flex justify-end gap-2 z-10 relative">
-                        TIẾN ĐỘ: <span className="text-cyan-400 font-bold">{progress.toFixed(0)}%</span>
+                    <p className="text-[10px] text-slate-500 font-mono text-right flex justify-end gap-2 z-10 relative">{t("auto.db_90be92")}<span className="text-cyan-400 font-bold">{progress.toFixed(0)}%</span>
                     </p>
                 </div>
 
                 {/* Project Resources Gallery - Enhanced Robustness */}
                 {(() => {
-                    // Try to get from either job_resource_urls (new alias) or resource_urls (fallback)
-                    let resources = contract.job_resource_urls || contract.resource_urls;
-                    
-                    if (typeof resources === 'string') {
-                        try { resources = JSON.parse(resources); } catch (e) { resources = []; }
-                    }
-                    if (!Array.isArray(resources) || resources.length === 0) return null;
-
-                    return (
-                        <div className="space-y-6 mb-6">
+        // Try to get from either job_resource_urls (new alias) or resource_urls (fallback)
+        let resources = contract.job_resource_urls || contract.resource_urls;
+        if (typeof resources === 'string') {
+          try {
+            resources = JSON.parse(resources);
+          } catch (e) {
+            resources = [];
+          }
+        }
+        if (!Array.isArray(resources) || resources.length === 0) return null;
+        return <div className="space-y-6 mb-6">
                             <div className="flex justify-between items-center">
                                 <div className="flex gap-2">
-                                    <button 
-                                        onClick={() => setIsRatingModalOpen(true)}
-                                        disabled={contract.is_reviewed}
-                                        className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all font-mono text-[9px] font-black uppercase tracking-widest ${
-                                            contract.is_reviewed 
-                                            ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 opacity-50 cursor-not-allowed' 
-                                            : 'bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500/20'
-                                        }`}
-                                    >
+                                    <button onClick={() => setIsRatingModalOpen(true)} disabled={contract.is_reviewed} className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all font-mono text-[9px] font-black uppercase tracking-widest ${contract.is_reviewed ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 opacity-50 cursor-not-allowed' : 'bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500/20'}`}>
                                         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                                        {contract.is_reviewed ? 'ĐÃ ĐÁNH GIÁ' : 'Đánh Giá'}
+                                        {contract.is_reviewed ? t("auto.db_692c1f") : t("auto.db_655515")}
                                     </button>
                                 </div>
-                                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">TRÌNH QUẢN LÝ TÀI NGUYÊN HỢP ĐỒNG</span>
-                                <button 
-                                    onClick={handleDownloadAll}
-                                    disabled={isZipping}
-                                    className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-black text-[10px] tracking-widest uppercase font-mono transition-all ${isZipping ? 'bg-slate-800 text-slate-500 cursor-wait' : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]'}`}
-                                >
-                                    {isZipping ? (
-                                        <>
-                                            <div className="w-3 h-3 border border-cyan-500/50 border-t-transparent rounded-full animate-spin" />
-                                            ĐANG NÉN...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                            TẢI TOÀN BỘ (.ZIP)
-                                        </>
-                                    )}
+                                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">{t("auto.db_e1cc3a")}</span>
+                                <button onClick={handleDownloadAll} disabled={isZipping} className={`flex items-center gap-2 px-4 py-1.5 rounded-lg font-black text-[10px] tracking-widest uppercase font-mono transition-all ${isZipping ? 'bg-slate-800 text-slate-500 cursor-wait' : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 shadow-[0_0_15px_rgba(6,182,212,0.1)]'}`}>
+                                    {isZipping ? <>
+                                            <div className="w-3 h-3 border border-cyan-500/50 border-t-transparent rounded-full animate-spin" />{t("auto.db_cb7a88")}</> : <>
+                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>{t("auto.db_ec5b17")}</>}
                                 </button>
                             </div>
 
                             {/* IMAGE GALLERY */}
                             {resources.some(r => {
-                                const url = typeof r === 'object' ? r.url : r;
-                                return /\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
-                            }) && (
-                                <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl border p-6 shadow-xl relative overflow-hidden" style={{ borderColor: 'rgba(6,182,212,0.15)' }}>
+            const url = typeof r === 'object' ? r.url : r;
+            return /\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
+          }) && <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl border p-6 shadow-xl relative overflow-hidden" style={{
+            borderColor: 'rgba(6,182,212,0.15)'
+          }}>
                                     <div className="absolute top-0 right-10 w-20 h-px bg-cyan-500/30"></div>
                                     <p className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-4 flex items-center gap-2">
-                                        <span className="text-cyan-400">//</span> TÀI NGUYÊN HÌNH ẢNH
-                                    </p>
+                                        <span className="text-cyan-400">//</span>{t("auto.db_925c45")}</p>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {resources.filter(r => {
-                                            const url = typeof r === 'object' ? r.url : r;
-                                            return /\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
-                                        }).map((resource, idx) => {
-                                            const url = typeof resource === 'object' ? resource.url : resource;
-                                            return (
-                                                <div key={`img-${idx}`} className="group relative aspect-video rounded-xl border border-white/5 overflow-hidden bg-black/40 shadow-inner">
-                                                    <img 
-                                                        src={url.replace('/upload/', '/upload/w_1000,c_limit,q_auto:best/')} 
-                                                        alt="Project Preview"
-                                                        className="w-full h-full object-contain pointer-events-none"
-                                                    />
+                const url = typeof r === 'object' ? r.url : r;
+                return /\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
+              }).map((resource, idx) => {
+                const url = typeof resource === 'object' ? resource.url : resource;
+                return <div key={`img-${idx}`} className="group relative aspect-video rounded-xl border border-white/5 overflow-hidden bg-black/40 shadow-inner">
+                                                    <img src={url.replace('/upload/', '/upload/w_1000,c_limit,q_auto:best/')} alt="Project Preview" className="w-full h-full object-contain pointer-events-none" />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                                                        <span className="text-[9px] font-black font-mono text-cyan-400 uppercase tracking-widest bg-[#090e17]/80 px-2.5 py-1 rounded border border-cyan-500/30">
-                                                            BẢN GỐC (SECURED)
-                                                        </span>
+                                                        <span className="text-[9px] font-black font-mono text-cyan-400 uppercase tracking-widest bg-[#090e17]/80 px-2.5 py-1 rounded border border-cyan-500/30">{t("auto.db_28ee0c")}</span>
                                                     </div>
                                                     <div className="absolute inset-0 pointer-events-none opacity-5 flex items-center justify-center">
                                                         <span className="text-xl font-black font-mono rotate-[-20deg] uppercase tracking-widest text-white">{currentUser?.full_name || 'SECURITY_VIEW'}</span>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
+                                                </div>;
+              })}
                                     </div>
-                                </div>
-                            )}
+                                </div>}
 
                             {/* OTHER DOCUMENTS */}
                             {resources.some(r => {
-                                const url = typeof r === 'object' ? r.url : r;
-                                return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
-                            }) && (
-                                <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl border p-6 shadow-xl relative overflow-hidden" style={{ borderColor: 'rgba(6,182,212,0.15)' }}>
+            const url = typeof r === 'object' ? r.url : r;
+            return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
+          }) && <div className="bg-[#090e17]/80 backdrop-blur-md rounded-2xl border p-6 shadow-xl relative overflow-hidden" style={{
+            borderColor: 'rgba(6,182,212,0.15)'
+          }}>
                                     <div className="absolute top-0 right-10 w-20 h-px bg-cyan-500/30"></div>
                                     <p className="text-[10px] font-black tracking-widest text-cyan-500 uppercase font-mono mb-4 flex items-center gap-2">
-                                        <span className="text-cyan-400">//</span> TẬP TIN DỰ ÁN
-                                    </p>
+                                        <span className="text-cyan-400">//</span>{t("auto.db_d6ac61")}</p>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {resources.filter(r => {
-                                            const url = typeof r === 'object' ? r.url : r;
-                                            return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
-                                        }).map((resource, idx) => {
-                                            const isObj = typeof resource === 'object' && resource !== null;
-                                            const url = isObj ? resource.url : resource;
-                                            const name = isObj ? resource.name : (url?.split('/').pop().split('?')[0] || `File ${idx + 1}`);
-                                            
-                                            const lowName = name?.toLowerCase() || "";
-                                            const isZip = lowName.endsWith('.zip') || lowName.endsWith('.rar');
-                                            const isPdf = lowName.endsWith('.pdf');
-                                            const isVid = /\.(mp4|webm|ogg)$/i.test(lowName);
-
-                                            return (
-                                                <div 
-                                                    key={`file-${idx}`} 
-                                                    className="group relative flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-xl p-4 hover:border-cyan-500/30 hover:bg-white/[0.05] transition-all"
-                                                >
+                const url = typeof r === 'object' ? r.url : r;
+                return !/\.(jpg|jpeg|png|gif|webp)$/i.test(url?.toLowerCase() || "");
+              }).map((resource, idx) => {
+                const isObj = typeof resource === 'object' && resource !== null;
+                const url = isObj ? resource.url : resource;
+                const name = isObj ? resource.name : url?.split('/').pop().split('?')[0] || `File ${idx + 1}`;
+                const lowName = name?.toLowerCase() || "";
+                const isZip = lowName.endsWith('.zip') || lowName.endsWith('.rar');
+                const isPdf = lowName.endsWith('.pdf');
+                const isVid = /\.(mp4|webm|ogg)$/i.test(lowName);
+                return <div key={`file-${idx}`} className="group relative flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-xl p-4 hover:border-cyan-500/30 hover:bg-white/[0.05] transition-all">
                                                     <div className="flex items-center gap-4 overflow-hidden">
                                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border border-white/5 ${isZip ? 'bg-amber-500/10 text-amber-500' : isPdf ? 'bg-rose-500/10 text-rose-500' : isVid ? 'bg-indigo-500/10 text-indigo-500' : 'bg-cyan-500/10 text-cyan-500'}`}>
-                                                            {isZip ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>
-                                                            : isPdf ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                                                            : isVid ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                                            : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+                                                            {isZip ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg> : isPdf ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg> : isVid ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                                                         </div>
                                                         <div className="flex flex-col min-w-0">
-                                                            <button 
-                                                                onClick={() => handleIndividualDownload(resource)}
-                                                                className="text-[12px] font-black text-white uppercase tracking-wider truncate hover:text-cyan-400 transition-colors text-left"
-                                                            >
+                                                            <button onClick={() => handleIndividualDownload(resource)} className="text-[12px] font-black text-white uppercase tracking-wider truncate hover:text-cyan-400 transition-colors text-left">
                                                                 {name}
                                                             </button>
                                                             <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">{isZip ? 'Archive' : isPdf ? 'PDF_Document' : isVid ? 'MP4_Video' : 'Project_Asset'}</span>
                                                         </div>
                                                     </div>
-                                                    <button 
-                                                        onClick={() => handleIndividualDownload(resource)}
-                                                        className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-                                                    >
+                                                    <button onClick={() => handleIndividualDownload(resource)} className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
                                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                                                     </button>
-                                                </div>
-                                            );
-                                        })}
+                                                </div>;
+              })}
                                     </div>
-                                </div>
-                            )}
-                        </div>
-                    );
-                })()}
+                                </div>}
+                        </div>;
+      })()}
 
                 {/* Checkpoints List (Read Only) */}
                 <div className="bg-[#090e17]/60 rounded-xl border border-slate-800 p-6 shadow-xl">
                     <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
-                        <h2 className="text-sm font-black text-white font-mono uppercase tracking-widest">DANH SÁCH CHECKPOINT</h2>
+                        <h2 className="text-sm font-black text-white font-mono uppercase tracking-widest">{t("auto.db_b67742")}</h2>
                         <span className={`px-3 py-1 bg-slate-800 border-l-2 ${contract.status === 'ACTIVE' ? 'border-cyan-500 text-cyan-400' : 'border-slate-500 text-slate-400'} font-black text-[9px] uppercase tracking-widest font-mono`}>
-                            {contract.status === 'ACTIVE' ? 'CẦN XỬ LÝ' : 'CHỈ XEM'}
+                            {contract.status === 'ACTIVE' ? t("auto.db_5aaa69") : t("auto.db_d20d90")}
                         </span>
                     </div>
                     
                     <div className="space-y-4">
-                        {contract.checkpoints && contract.checkpoints.length > 0 ? (
-                            contract.checkpoints.map((checkpoint, index) => {
-                                const canSubmit = contract.status === 'ACTIVE' && checkpoint.status === 'PENDING' && (index === 0 || contract.checkpoints[index - 1].status === 'APPROVED');
-                                return (
-                                <div 
-                                    key={checkpoint.id}
-                                    className={`relative border rounded-xl overflow-hidden transition-all duration-300 ${
-                                        checkpoint.status === 'APPROVED' ? 'border-emerald-500/30 bg-emerald-900/10' :
-                                        checkpoint.status === 'SUBMITTED' ? 'border-blue-500/30 bg-blue-900/10 hover:border-blue-500/50' :
-                                        'border-slate-800 bg-[#02040a] hover:border-slate-700'
-                                    }`}
-                                >
+                        {contract.checkpoints && contract.checkpoints.length > 0 ? contract.checkpoints.map((checkpoint, index) => {
+            const canSubmit = contract.status === 'ACTIVE' && checkpoint.status === 'PENDING' && (index === 0 || contract.checkpoints[index - 1].status === 'APPROVED');
+            return <div key={checkpoint.id} className={`relative border rounded-xl overflow-hidden transition-all duration-300 ${checkpoint.status === 'APPROVED' ? 'border-emerald-500/30 bg-emerald-900/10' : checkpoint.status === 'SUBMITTED' ? 'border-blue-500/30 bg-blue-900/10 hover:border-blue-500/50' : 'border-slate-800 bg-[#02040a] hover:border-slate-700'}`}>
                                     {/* Left highlight bar */}
-                                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-                                        checkpoint.status === 'APPROVED' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' :
-                                        checkpoint.status === 'SUBMITTED' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' :
-                                        checkpoint.status === 'REJECTED' ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]' :
-                                        'bg-slate-700'
-                                    }`}></div>
+                                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${checkpoint.status === 'APPROVED' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : checkpoint.status === 'SUBMITTED' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : checkpoint.status === 'REJECTED' ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]' : 'bg-slate-700'}`}></div>
 
                                     <div className="p-6 pl-8">
                                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
@@ -634,200 +529,117 @@ const ContractDetail = () => {
                                             
                                             <div className="text-left sm:text-right shrink-0 pl-14 sm:pl-0 flex flex-col items-end">
                                                 <p className="font-black text-emerald-400 font-mono text-xl">{Number(checkpoint.amount).toLocaleString()} CRED</p>
-                                                <p className="text-[9px] font-mono text-cyan-500/80 font-bold mb-2">Thực nhận: {Number(checkpoint.amount * 0.95).toLocaleString()} CRED</p>
+                                                <p className="text-[9px] font-mono text-cyan-500/80 font-bold mb-2">{t("auto.db_2e103d")}{Number(checkpoint.amount * 0.95).toLocaleString()} CRED</p>
                                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-black font-mono tracking-widest uppercase border ${getStatusColor(checkpoint.status)}`}>
                                                     {checkpoint.status}
                                                 </span>
-                                                {checkpoint.rework_count > 0 && (
-                                                    <span className="block mt-1 text-[8px] text-slate-500 font-mono tracking-tighter uppercase opacity-60">
+                                                {checkpoint.rework_count > 0 && <span className="block mt-1 text-[8px] text-slate-500 font-mono tracking-tighter uppercase opacity-60">
                                                         REWORK_COUNT: {checkpoint.rework_count}/3
-                                                    </span>
-                                                )}
+                                                    </span>}
 
-                                                {checkpoint.status === 'DISPUTED' && (
-                                                    <button 
-                                                        onClick={() => navigate(`/dispute/${contract.dispute_id}`)}
-                                                        className="block mt-3 px-3 py-1 bg-rose-500 hover:bg-rose-400 text-white font-black text-[9px] font-mono tracking-widest uppercase rounded shadow-[0_0_10px_rgba(244,63,94,0.3)] transition-all ml-auto"
-                                                    >
-                                                        Giải quyết tranh chấp
-                                                    </button>
-                                                )}
+                                                {checkpoint.status === 'DISPUTED' && <button onClick={() => navigate(`/dispute/${contract.dispute_id}`)} className="block mt-3 px-3 py-1 bg-rose-500 hover:bg-rose-400 text-white font-black text-[9px] font-mono tracking-widest uppercase rounded shadow-[0_0_10px_rgba(244,63,94,0.3)] transition-all ml-auto">{t("auto.db_a26623")}</button>}
 
-                                                {checkpoint.status === 'REJECTED' && contract.status !== 'DISPUTED' && (
-                                                    <div className="flex flex-col gap-2 mt-4">
-                                                        {!checkpoint.existing_dispute_id ? (
-                                                            <button 
-                                                                onClick={(e) => { e.stopPropagation(); setDisputeModal({ open: true, checkpointId: checkpoint.id }); }}
-                                                                className="block px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-black text-[10px] font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all border border-rose-400/30"
-                                                            >
-                                                                Khiếu nại (Dispute)
-                                                            </button>
-                                                        ) : (
-                                                            <div className="px-3 py-2 bg-slate-800 text-slate-500 font-black text-[9px] font-mono tracking-widest uppercase rounded border border-slate-700/50 flex flex-col items-center gap-1 opacity-70">
-                                                                <span>Hạn ngạch khiếu nại hết</span>
-                                                                <span className="text-[7px] tracking-normal font-normal text-slate-600 lowercase">(1 lần/checkpoint)</span>
-                                                            </div>
-                                                        )}
-                                                        {checkpoint.rework_count < 3 ? (
-                                                            <button 
-                                                                onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)}
-                                                                className="block px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/50 font-black text-[10px] font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all"
-                                                            >
-                                                                Làm lại (Rework)
-                                                            </button>
-                                                        ) : (
-                                                            <div className="px-3 py-2 bg-rose-900/20 text-rose-500 font-black text-[9px] font-mono tracking-widest uppercase rounded border border-rose-500/30 flex flex-col items-center gap-1 opacity-80">
-                                                                <span>Giới hạn làm lại đã hết</span>
-                                                                <span className="text-[7px] tracking-normal font-normal text-rose-400 lowercase">(3/3 lần đã sử dụng)</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                {checkpoint.status === 'REJECTED' && contract.status !== 'DISPUTED' && <div className="flex flex-col gap-2 mt-4">
+                                                        {!checkpoint.existing_dispute_id ? <button onClick={e => {
+                        e.stopPropagation();
+                        setDisputeModal({
+                          open: true,
+                          checkpointId: checkpoint.id
+                        });
+                      }} className="block px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-black text-[10px] font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(244,63,94,0.3)] transition-all border border-rose-400/30">{t("auto.db_b4fc72")}</button> : <div className="px-3 py-2 bg-slate-800 text-slate-500 font-black text-[9px] font-mono tracking-widest uppercase rounded border border-slate-700/50 flex flex-col items-center gap-1 opacity-70">
+                                                                <span>{t("auto.db_d865b4")}</span>
+                                                                <span className="text-[7px] tracking-normal font-normal text-slate-600 lowercase">{t("auto.db_2a7d8a")}</span>
+                                                            </div>}
+                                                        {checkpoint.rework_count < 3 ? <button onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)} className="block px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/50 font-black text-[10px] font-mono tracking-widest uppercase rounded shadow-[0_0_15px_rgba(79,70,229,0.3)] transition-all">{t("auto.db_5fa9fe")}</button> : <div className="px-3 py-2 bg-rose-900/20 text-rose-500 font-black text-[9px] font-mono tracking-widest uppercase rounded border border-rose-500/30 flex flex-col items-center gap-1 opacity-80">
+                                                                <span>{t("auto.db_61b968")}</span>
+                                                                <span className="text-[7px] tracking-normal font-normal text-rose-400 lowercase">{t("auto.db_d0152e")}</span>
+                                                            </div>}
+                                                    </div>}
                                             </div>
                                         </div>
 
-                                        {checkpoint.due_date ? (
-                                            <div className="pl-14 flex flex-col gap-1">
+                                        {checkpoint.due_date ? <div className="pl-14 flex flex-col gap-1">
                                                 <p className="text-[10px] text-cyan-400 font-mono flex items-center gap-2 uppercase tracking-widest font-bold">
-                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                                    HẠN CHÓT: {new Date(checkpoint.due_date).toLocaleDateString()} {new Date(checkpoint.due_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>{t("auto.db_4bebba")}{new Date(checkpoint.due_date).toLocaleDateString()} {new Date(checkpoint.due_date).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
                                                 </p>
-                                                {checkpoint.status === 'PENDING' && (
-                                                    <p className="text-[9px] font-bold text-rose-500 font-mono flex items-center gap-1.5 pl-5">
-                                                        <span className="animate-pulse">●</span> CÒN LẠI: {(() => {
-                                                            const diff = new Date(checkpoint.due_date) - new Date();
-                                                            if (diff < 0) return "ĐÃ QUÁ HẠN";
-                                                            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                                                            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                                                            return `${days} ngày ${hours} giờ`;
-                                                        })()}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        ) : checkpoint.duration_days && (
-                                            <div className="pl-14">
+                                                {checkpoint.status === 'PENDING' && <p className="text-[9px] font-bold text-rose-500 font-mono flex items-center gap-1.5 pl-5">
+                                                        <span className="animate-pulse">●</span>{t("auto.db_4ea01e")}{(() => {
+                      const diff = new Date(checkpoint.due_date) - new Date();
+                      if (diff < 0) return t("auto.db_8cd8d0");
+                      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                      const hours = Math.floor(diff % (1000 * 60 * 60 * 24) / (1000 * 60 * 60));
+                      return `${days} ngày ${hours} giờ`;
+                    })()}
+                                                    </p>}
+                                            </div> : checkpoint.duration_days && <div className="pl-14">
                                                 <p className="text-[10px] text-slate-500 font-mono flex items-center gap-2 uppercase tracking-widest italic opacity-70">
-                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                    Dự kiến: {checkpoint.duration_days} ngày thực hiện
-                                                </p>
-                                            </div>
-                                        )}
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{t("auto.db_516a4b")}{checkpoint.duration_days}{t("auto.db_0b7342")}</p>
+                                            </div>}
 
                                         {/* Submission Info */}
-                                        {checkpoint.submission_url && (
-                                            <div className="ml-14 mt-4 bg-[#090e17] rounded border border-slate-800 p-4 relative overflow-hidden">
+                                        {checkpoint.submission_url && <div className="ml-14 mt-4 bg-[#090e17] rounded border border-slate-800 p-4 relative overflow-hidden">
                                                 <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500/50"></div>
                                                 <p className="text-[10px] font-black text-blue-400 mb-2 font-mono uppercase tracking-widest flex items-center gap-2">
-                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                                                    BÀI NỘP CỦA BẠN
-                                                </p>
-                                                <a 
-                                                    href={checkpoint.submission_url} 
-                                                    target="_blank" 
-                                                    rel="noopener noreferrer"
-                                                    className="text-[12px] font-mono text-cyan-400 hover:text-cyan-300 underline break-all inline-block mb-3 bg-cyan-900/20 px-2 py-1 rounded"
-                                                >
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>{t("auto.db_59c26a")}</p>
+                                                <a href={checkpoint.submission_url} target="_blank" rel="noopener noreferrer" className="text-[12px] font-mono text-cyan-400 hover:text-cyan-300 underline break-all inline-block mb-3 bg-cyan-900/20 px-2 py-1 rounded">
                                                     {checkpoint.submission_url}
                                                 </a>
-                                                {checkpoint.submission_notes && (
-                                                    <div className="bg-[#02040a] p-3 rounded text-sm text-slate-300 border border-slate-800/50 mb-2">
-                                                        <span className="text-slate-500 font-mono text-[10px] uppercase block mb-1">GHI CHÚ:</span>
+                                                {checkpoint.submission_notes && <div className="bg-[#02040a] p-3 rounded text-sm text-slate-300 border border-slate-800/50 mb-2">
+                                                        <span className="text-slate-500 font-mono text-[10px] uppercase block mb-1">{t("auto.db_d8a2bf")}</span>
                                                         {checkpoint.submission_notes}
-                                                    </div>
-                                                )}
-                                                {checkpoint.submitted_at && (
-                                                    <p className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">
-                                                        THỜI GIAN NỘP: {new Date(checkpoint.submitted_at).toLocaleString()}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
+                                                    </div>}
+                                                {checkpoint.submitted_at && <p className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">{t("auto.db_32a1a3")}{new Date(checkpoint.submitted_at).toLocaleString()}
+                                                    </p>}
+                                            </div>}
 
                                         {/* Review Notes */}
-                                        {checkpoint.review_notes && (
-                                            <div className={`ml-14 mt-4 rounded border p-4 relative overflow-hidden ${
-                                                checkpoint.status === 'APPROVED' 
-                                                    ? 'bg-emerald-900/10 border-emerald-500/20' 
-                                                    : 'bg-rose-900/10 border-rose-500/20'
-                                            }`}>
+                                        {checkpoint.review_notes && <div className={`ml-14 mt-4 rounded border p-4 relative overflow-hidden ${checkpoint.status === 'APPROVED' ? 'bg-emerald-900/10 border-emerald-500/20' : 'bg-rose-900/10 border-rose-500/20'}`}>
                                                 <div className={`absolute left-0 top-0 bottom-0 w-0.5 ${checkpoint.status === 'APPROVED' ? 'bg-emerald-500/50' : 'bg-rose-500/50'}`}></div>
                                                 <p className={`text-[10px] font-black mb-2 font-mono uppercase tracking-widest flex items-center gap-2 ${checkpoint.status === 'APPROVED' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                    ĐÁNH GIÁ TỪ KHÁCH HÀNG
-                                                </p>
+                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{t("auto.db_b8c83d")}</p>
                                                 <div className="bg-[#02040a] p-3 rounded text-sm text-slate-300 border border-slate-800/50 mb-2">
                                                     {checkpoint.review_notes}
                                                 </div>
-                                                {checkpoint.reviewed_at && (
-                                                    <p className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">
-                                                        THỜI GIAN DUYỆT: {new Date(checkpoint.reviewed_at).toLocaleString()}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
+                                                {checkpoint.reviewed_at && <p className="text-[9px] text-slate-500 font-mono tracking-widest uppercase">{t("auto.db_521943")}{new Date(checkpoint.reviewed_at).toLocaleString()}
+                                                    </p>}
+                                            </div>}
 
                                         {/* Submit Button */}
-                                        {canSubmit && (
-                                            <button
-                                                onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)}
-                                                className="mt-6 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black rounded-xl hover:from-cyan-500 hover:to-blue-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transform active:scale-[0.98] text-[11px] font-mono tracking-widest uppercase border border-cyan-400/50"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                BẮT ĐẦU LÀM
-                                            </button>
-                                        )}
+                                        {canSubmit && <button onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)} className="mt-6 w-full py-3.5 bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-black rounded-xl hover:from-cyan-500 hover:to-blue-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transform active:scale-[0.98] text-[11px] font-mono tracking-widest uppercase border border-cyan-400/50">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>{t("auto.db_19490e")}</button>}
 
-                                        {!canSubmit && contract.status === 'ACTIVE' && checkpoint.status === 'PENDING' && index > 0 && (
-                                            <p className="mt-4 text-[10px] text-slate-500 font-mono tracking-widest uppercase text-center w-full block">
-                                                Vui lòng hoàn thành checkpoint trước đó
-                                            </p>
-                                        )}
+                                        {!canSubmit && contract.status === 'ACTIVE' && checkpoint.status === 'PENDING' && index > 0 && <p className="mt-4 text-[10px] text-slate-500 font-mono tracking-widest uppercase text-center w-full block">{t("auto.db_06312e")}</p>}
 
-                                        {checkpoint.status === 'SUBMITTED' && (
-                                            <div className="mt-4 pt-4 border-t border-slate-700/50 flex flex-col items-center gap-3">
+                                        {checkpoint.status === 'SUBMITTED' && <div className="mt-4 pt-4 border-t border-slate-700/50 flex flex-col items-center gap-3">
                                                 <p className="text-[10px] text-amber-500 font-mono tracking-widest uppercase flex items-center justify-center gap-2">
-                                                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                                    ĐANG CHỜ KHÁCH HÀNG KIỂM DUYỆT...
-                                                </p>
-                                                {contract.status === 'ACTIVE' && (
-                                                    <button
-                                                        onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)}
-                                                        className="w-full py-3 border border-amber-500/50 text-amber-400 bg-amber-900/20 hover:bg-amber-900/40 hover:text-amber-300 font-black rounded-xl flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(245,158,11,0.2)] text-[11px] font-mono uppercase tracking-widest transition-all"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                                        CHỈNH SỬA LẠI (EDIT)
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
+                                                    <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>{t("auto.db_cb3bf5")}</p>
+                                                {contract.status === 'ACTIVE' && <button onClick={() => navigate(`/workspace/checkpoint/${checkpoint.id}`)} className="w-full py-3 border border-amber-500/50 text-amber-400 bg-amber-900/20 hover:bg-amber-900/40 hover:text-amber-300 font-black rounded-xl flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(245,158,11,0.2)] text-[11px] font-mono uppercase tracking-widest transition-all">
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>{t("auto.db_9ff62a")}</button>}
+                                            </div>}
                                     </div>
-                                </div>
-                                );
-                            })
-                        ) : (
-                            <div className="text-center py-12 bg-[#02040a] border border-slate-800 rounded-xl border-dashed">
+                                </div>;
+          }) : <div className="text-center py-12 bg-[#02040a] border border-slate-800 rounded-xl border-dashed">
                                 <svg className="w-8 h-8 mx-auto text-slate-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                                 <p className="text-[12px] font-mono text-slate-500 uppercase tracking-widest">NO_NODES_CONFIGURED</p>
-                            </div>
-                        )}
+                            </div>}
                     </div>
                 </div>
 
                 {/* Contract Reviews Section */}
-                {contract.status === 'COMPLETED' && reviewsData.reviews.length > 0 && (
-                    <div className="mt-8">
+                {contract.status === 'COMPLETED' && reviewsData.reviews.length > 0 && <div className="mt-8">
                         <ReviewsList data={reviewsData} type="contract" />
-                    </div>
-                )}
+                    </div>}
             </div>
 
             {/* Dispute Modal */}
-            {disputeModal.open && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div 
-                        className="absolute inset-0 bg-slate-900/80 backdrop-blur-md"
-                        onClick={() => setDisputeModal({ open: false, checkpointId: null })}
-                    />
+            {disputeModal.open && <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => setDisputeModal({
+        open: false,
+        checkpointId: null
+      })} />
                     <div className="relative w-full max-w-lg bg-[#090e17] border border-rose-500/30 rounded-2xl shadow-[0_0_50px_rgba(244,63,94,0.2)] overflow-hidden animate-in fade-in zoom-in duration-300">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 via-transparent to-rose-500" />
                         
@@ -838,54 +650,33 @@ const ContractDetail = () => {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                     </svg>
                                 </div>
-                                <h2 className="text-xl font-black text-white font-mono tracking-widest uppercase">GỬI KHIẾU NẠI_</h2>
+                                <h2 className="text-xl font-black text-white font-mono tracking-widest uppercase">{t("auto.db_941f99")}</h2>
                             </div>
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-[10px] font-black text-rose-500 font-mono uppercase tracking-[0.2em] mb-2">LÝ DO KHIẾU NẠI:</label>
-                                    <textarea
-                                        value={disputeReason}
-                                        onChange={(e) => setDisputeReason(e.target.value)}
-                                        rows="5"
-                                        placeholder="Mô tả chi tiết vấn đề bạn đang gặp phải. Tại sao bạn cảm thấy cần phải khiếu nại checkpoint này?..."
-                                        className="w-full bg-[#02040a] border border-slate-800 rounded-xl p-4 text-sm text-slate-300 focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/20 transition-all outline-none resize-none placeholder:text-slate-700"
-                                    />
+                                    <label className="block text-[10px] font-black text-rose-500 font-mono uppercase tracking-[0.2em] mb-2">{t("auto.db_a29b45")}</label>
+                                    <textarea value={disputeReason} onChange={e => setDisputeReason(e.target.value)} rows="5" placeholder={t("auto.db_841850")} className="w-full bg-[#02040a] border border-slate-800 rounded-xl p-4 text-sm text-slate-300 focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/20 transition-all outline-none resize-none placeholder:text-slate-700" />
                                 </div>
                                 
                                 <div className="bg-rose-900/10 border border-rose-500/20 rounded-lg p-3">
                                     <p className="text-[10px] text-rose-400/80 font-mono leading-relaxed uppercase tracking-wider">
-                                        <span className="font-black text-rose-500 mr-2">[ CẢNH BÁO ]</span> 
-                                        KHIẾU NẠI SẼ ĐƯỢC CHUYỂN ĐẾN MANAGER ĐỂ GIẢI QUYẾT. TRANH CHẤP CÓ THỂ MẤT 1-3 NGÀY ĐỂ XỬ LÝ.
-                                    </p>
+                                        <span className="font-black text-rose-500 mr-2">{t("auto.db_1b5919")}</span>{t("auto.db_af8caa")}</p>
                                 </div>
                             </div>
 
                             <div className="flex gap-3 mt-8">
-                                <button
-                                    onClick={() => setDisputeModal({ open: false, checkpointId: null })}
-                                    className="flex-1 py-3 border border-slate-800 text-slate-500 font-black font-mono text-xs tracking-widest uppercase rounded-xl hover:bg-slate-800 transition-all"
-                                >
-                                    HỦY BỎ
-                                </button>
-                                <button
-                                    onClick={handleSubmitDispute}
-                                    disabled={submittingDispute || !disputeReason.trim()}
-                                    className="flex-1 py-3 bg-rose-600 text-white font-black font-mono text-xs tracking-widest uppercase rounded-xl hover:bg-rose-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(244,63,94,0.3)] disabled:opacity-30 disabled:cursor-not-allowed"
-                                >
-                                    {submittingDispute ? (
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        'GỬI KHIẾU NẠI'
-                                    )}
+                                <button onClick={() => setDisputeModal({
+              open: false,
+              checkpointId: null
+            })} className="flex-1 py-3 border border-slate-800 text-slate-500 font-black font-mono text-xs tracking-widest uppercase rounded-xl hover:bg-slate-800 transition-all">{t("auto.db_20fefd")}</button>
+                                <button onClick={handleSubmitDispute} disabled={submittingDispute || !disputeReason.trim()} className="flex-1 py-3 bg-rose-600 text-white font-black font-mono text-xs tracking-widest uppercase rounded-xl hover:bg-rose-500 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(244,63,94,0.3)] disabled:opacity-30 disabled:cursor-not-allowed">
+                                    {submittingDispute ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : t("auto.db_8652f5")}
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
-    );
+                </div>}
+        </div>;
 };
-
 export default ContractDetail;

@@ -1,176 +1,157 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import managerApi from "../../api/manager.api";
 import { useToast } from "../../contexts/ToastContext";
 import { useAuth } from "../../auth/AuthContext";
-
 const DisputeDetail = () => {
-    const toast = useToast();
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const { user } = useAuth();
-    const [dispute, setDispute] = useState(null);
-    const [messages, setMessages] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [resolving, setResolving] = useState(false);
-    const [newMessage, setNewMessage] = useState("");
-    const [summary, setSummary] = useState("");
-    const [confirmModal, setConfirmModal] = useState({ open: false, resolution: '', message: '' });
-    const [selectedFiles, setSelectedFiles] = useState([]);
-    const fileInputRef = React.useRef(null);
-
-    useEffect(() => {
-        fetchData();
-    }, [id]);
-
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const detailRes = await managerApi.getDisputeDetail(id);
-            setDispute(detailRes.data);
-            setMessages(detailRes.data?.messages || []);
-            if (detailRes.data.resolution_summary) {
-                setSummary(detailRes.data.resolution_summary);
-            }
-        } catch (error) {
-            console.error("Failed to fetch dispute details:", error);
-            toast.error("Hệ thống: Không thể tải chi tiết tranh chấp.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (!newMessage.trim() && selectedFiles.length === 0) return;
-        
-        try {
-            const formData = new FormData();
-            formData.append("message", newMessage);
-            selectedFiles.forEach(file => {
-                formData.append("attachments", file);
-            });
-
-            await managerApi.addDisputeMessage(id, formData);
-            setNewMessage("");
-            setSelectedFiles([]);
-            fetchData();
-        } catch (error) {
-            console.error("Failed to send message:", error);
-            toast.error("Hệ thống: Không thể gửi tin nhắn hoặc tệp đính kèm.");
-        }
-    };
-
-    const handleFileSelect = (e) => {
-        const files = Array.from(e.target.files);
-        const validFiles = files.filter(file => {
-            const sizeMB = file.size / (1024 * 1024);
-            if (sizeMB > 10) {
-                toast.warning(`File ${file.name} quá lớn (>10MB).`);
-                return false;
-            }
-            return true;
-        });
-        setSelectedFiles(prev => [...prev, ...validFiles]);
-    };
-
-    const removeFile = (index) => {
-        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    };
-
-    const handleResolve = (resolution) => {
-        if (!summary.trim()) {
-            toast.error("Hệ thống: Vui lòng nhập bản tóm tắt phán quyết (RESOLUTION_SUMMARY).");
-            return;
-        }
-
-        const confirmMsg = resolution === 'CLIENT_WINS' 
-            ? "XÁC NHẬN: CHỦ DỰ ÁN THẮNG? TIỀN SẼ ĐƯỢC HOÀN LẠI CHO CHỦ DỰ ÁN. GIAO THỨC NÀY KHÔNG THỂ HOÀN TÁC." 
-            : "XÁC NHẬN: WORKER THẮNG? TIỀN SẼ ĐƯỢC THANH TOÁN CHO WORKER. GIAO THỨC NÀY KHÔNG THỂ HOÀN TÁC.";
-            
-        setConfirmModal({
-            open: true,
-            resolution,
-            message: confirmMsg
-        });
-    };
-
-    const executeResolve = async () => {
-        const { resolution } = confirmModal;
-        setConfirmModal({ ...confirmModal, open: false });
-
-        try {
-            setResolving(true);
-            await managerApi.resolveDispute(id, resolution, summary);
-            toast.success("Hệ thống: Tranh chấp đã được xử lý thành công. Network_Sync_Complete.");
-            navigate("/manager/disputes");
-        } catch (error) {
-            console.error("Failed to resolve dispute:", error);
-            toast.error("Hệ thống: Lỗi nghiêm trọng khi thực thi giao thức xử lý.");
-        } finally {
-            setResolving(false);
-        }
-    };
-
-    const isManager = user?.role?.toLowerCase() === 'manager' || user?.role?.toLowerCase() === 'admin';
-
-    const handleBack = () => {
-        if (isManager) {
-            navigate("/manager/disputes");
-        } else if (user?.role?.toLowerCase() === 'employer') {
-            navigate("/task-owner/contracts");
-        } else {
-            navigate("/dashboard");
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="p-8 text-center font-mono text-rose-500 animate-pulse py-40 uppercase tracking-[0.3em]">
-                Deep_Scanning_Conflict_Node...
-            </div>
-        );
+  const {
+    t
+  } = useTranslation();
+  const toast = useToast();
+  const {
+    id
+  } = useParams();
+  const navigate = useNavigate();
+  const {
+    user
+  } = useAuth();
+  const [dispute, setDispute] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [resolving, setResolving] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  const [summary, setSummary] = useState("");
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    resolution: '',
+    message: ''
+  });
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const fileInputRef = React.useRef(null);
+  useEffect(() => {
+    fetchData();
+  }, [id]);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const detailRes = await managerApi.getDisputeDetail(id);
+      setDispute(detailRes.data);
+      setMessages(detailRes.data?.messages || []);
+      if (detailRes.data.resolution_summary) {
+        setSummary(detailRes.data.resolution_summary);
+      }
+    } catch (error) {
+      console.error("Failed to fetch dispute details:", error);
+      toast.error(t("auto.db_3e1a81"));
+    } finally {
+      setLoading(false);
     }
-
-    if (!dispute) {
-        return (
-            <div className="p-8 text-center font-mono py-40 flex flex-col items-center gap-6">
+  };
+  const handleSendMessage = async e => {
+    e.preventDefault();
+    if (!newMessage.trim() && selectedFiles.length === 0) return;
+    try {
+      const formData = new FormData();
+      formData.append("message", newMessage);
+      selectedFiles.forEach(file => {
+        formData.append("attachments", file);
+      });
+      await managerApi.addDisputeMessage(id, formData);
+      setNewMessage("");
+      setSelectedFiles([]);
+      fetchData();
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      toast.error(t("auto.db_101985"));
+    }
+  };
+  const handleFileSelect = e => {
+    const files = Array.from(e.target.files);
+    const validFiles = files.filter(file => {
+      const sizeMB = file.size / (1024 * 1024);
+      if (sizeMB > 10) {
+        toast.warning(`File ${file.name} quá lớn (>10MB).`);
+        return false;
+      }
+      return true;
+    });
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+  };
+  const removeFile = index => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+  const handleResolve = resolution => {
+    if (!summary.trim()) {
+      toast.error(t("auto.db_ae0af6"));
+      return;
+    }
+    const confirmMsg = resolution === 'CLIENT_WINS' ? t("auto.db_9c660f") : t("auto.db_21f76d");
+    setConfirmModal({
+      open: true,
+      resolution,
+      message: confirmMsg
+    });
+  };
+  const executeResolve = async () => {
+    const {
+      resolution
+    } = confirmModal;
+    setConfirmModal({
+      ...confirmModal,
+      open: false
+    });
+    try {
+      setResolving(true);
+      await managerApi.resolveDispute(id, resolution, summary);
+      toast.success(t("auto.db_a33b56"));
+      navigate("/manager/disputes");
+    } catch (error) {
+      console.error("Failed to resolve dispute:", error);
+      toast.error(t("auto.db_0fdd57"));
+    } finally {
+      setResolving(false);
+    }
+  };
+  const isManager = user?.role?.toLowerCase() === 'manager' || user?.role?.toLowerCase() === 'admin';
+  const handleBack = () => {
+    if (isManager) {
+      navigate("/manager/disputes");
+    } else if (user?.role?.toLowerCase() === 'employer') {
+      navigate("/task-owner/contracts");
+    } else {
+      navigate("/dashboard");
+    }
+  };
+  if (loading) {
+    return <div className="p-8 text-center font-mono text-rose-500 animate-pulse py-40 uppercase tracking-[0.3em]">
+                Deep_Scanning_Conflict_Node...
+            </div>;
+  }
+  if (!dispute) {
+    return <div className="p-8 text-center font-mono py-40 flex flex-col items-center gap-6">
                 <div className="text-rose-500 text-4xl">⚠</div>
                 <p className="text-rose-500 uppercase tracking-[0.3em] text-sm">
                     Error: Conflict_Registry_Not_Found
                 </p>
-                <p className="text-slate-500 text-xs uppercase tracking-widest">
-                    Tranh chấp không tồn tại hoặc bạn không có quyền truy cập.
-                </p>
+                <p className="text-slate-500 text-xs uppercase tracking-widest">{t("auto.db_a1ab89")}</p>
                 <div className="flex gap-4">
-                    <button
-                        onClick={fetchData}
-                        className="px-6 py-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-500 text-[10px] font-black font-mono tracking-widest uppercase hover:bg-rose-500/30 transition-all"
-                    >
+                    <button onClick={fetchData} className="px-6 py-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-500 text-[10px] font-black font-mono tracking-widest uppercase hover:bg-rose-500/30 transition-all">
                         RETRY
                     </button>
-                    <button
-                        onClick={handleBack}
-                        className="px-6 py-3 rounded-xl border border-slate-700 text-slate-400 text-[10px] font-black font-mono tracking-widest uppercase hover:border-slate-500 hover:text-white transition-all"
-                    >
-                        {isManager ? 'BACK_TO_LIST' : 'QUAY LẠI'}
+                    <button onClick={handleBack} className="px-6 py-3 rounded-xl border border-slate-700 text-slate-400 text-[10px] font-black font-mono tracking-widest uppercase hover:border-slate-500 hover:text-white transition-all">
+                        {isManager ? 'BACK_TO_LIST' : t("auto.db_69043b")}
                     </button>
                 </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className={`p-8 space-y-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700 ${resolving ? 'opacity-50 pointer-events-none' : ''}`}>
+            </div>;
+  }
+  return <div className={`p-8 space-y-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700 ${resolving ? 'opacity-50 pointer-events-none' : ''}`}>
             <header className="relative flex flex-col md:flex-row md:items-center justify-between gap-6 p-8 rounded-2xl border border-rose-500/10 bg-transparent/40 backdrop-blur-md overflow-hidden">
                 <div className="relative z-10">
                     <div className="flex items-center gap-2 mb-3">
-                        <button 
-                            onClick={handleBack}
-                            className="group flex items-center gap-2 text-rose-500/50 hover:text-rose-400 transition-colors text-[10px] font-black font-mono tracking-widest uppercase"
-                        >
-                            <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
-                            {isManager ? 'BACK_TO_CONFLICT_REGISTRY' : 'QUAY LẠI'}
+                        <button onClick={handleBack} className="group flex items-center gap-2 text-rose-500/50 hover:text-rose-400 transition-colors text-[10px] font-black font-mono tracking-widest uppercase">
+                            <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                            {isManager ? 'BACK_TO_CONFLICT_REGISTRY' : t("auto.db_69043b")}
                         </button>
                     </div>
                     <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none mb-2">
@@ -211,41 +192,34 @@ const DisputeDetail = () => {
 
                             {/* Job Resources Gallery */}
                             {(() => {
-                                let resources = dispute.job_resource_urls;
-                                if (typeof resources === 'string') {
-                                    try { resources = JSON.parse(resources); } catch (e) { resources = []; }
-                                }
-                                if (!Array.isArray(resources) || resources.length === 0) return null;
-
-                                return (
-                                    <div className="space-y-4">
+              let resources = dispute.job_resource_urls;
+              if (typeof resources === 'string') {
+                try {
+                  resources = JSON.parse(resources);
+                } catch (e) {
+                  resources = [];
+                }
+              }
+              if (!Array.isArray(resources) || resources.length === 0) return null;
+              return <div className="space-y-4">
                                         <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Primary_Project_Assets</p>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {resources.map((res, idx) => {
-                                                const url = typeof res === 'object' ? res.url : res;
-                                                const name = typeof res === 'object' ? res.name : (url.split('/').pop());
-                                                return (
-                                                    <a 
-                                                        key={idx}
-                                                        href={url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex items-center gap-3 p-3 bg-cyan-500/5 border border-cyan-500/10 rounded-xl hover:bg-cyan-500/10 transition-all group"
-                                                    >
+                    const url = typeof res === 'object' ? res.url : res;
+                    const name = typeof res === 'object' ? res.name : url.split('/').pop();
+                    return <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 bg-cyan-500/5 border border-cyan-500/10 rounded-xl hover:bg-cyan-500/10 transition-all group">
                                                         <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                                                         </div>
                                                         <div className="flex flex-col min-w-0">
                                                             <span className="text-[10px] font-black text-cyan-200 uppercase tracking-wider truncate">{name}</span>
                                                             <span className="text-[8px] font-mono text-cyan-700 uppercase">Project_Asset_Secured</span>
                                                         </div>
-                                                    </a>
-                                                );
-                                            })}
+                                                    </a>;
+                  })}
                                         </div>
-                                    </div>
-                                );
-                            })()}
+                                    </div>;
+            })()}
                         </div>
                     </section>
 
@@ -253,11 +227,9 @@ const DisputeDetail = () => {
                     <section className="bg-transparent/40 border border-rose-500/10 rounded-2xl overflow-hidden backdrop-blur-sm">
                         <div className="p-6 border-b border-rose-500/5 bg-rose-500/[0.02] flex justify-between items-center">
                             <h2 className="text-xs font-black text-rose-500 uppercase tracking-[0.2em] font-mono">Conflict_Parameters</h2>
-                            {dispute.checkpoint_deadline && (
-                                <span className="text-[9px] font-mono text-rose-400 uppercase tracking-widest bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                            {dispute.checkpoint_deadline && <span className="text-[9px] font-mono text-rose-400 uppercase tracking-widest bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
                                     DEADLINE_EXPIRED: {new Date(dispute.checkpoint_deadline).toLocaleDateString()}
-                                </span>
-                            )}
+                                </span>}
                         </div>
                         
                         <div className="p-8 space-y-8">
@@ -271,7 +243,7 @@ const DisputeDetail = () => {
                                     <div className="text-right space-y-1">
                                         <p className="text-[9px] font-mono font-black text-rose-500/50 uppercase tracking-widest">Registry_Value</p>
                                         <div className="flex flex-col items-end gap-1">
-                                            <p className="text-lg font-black text-rose-400 uppercase tracking-tight">${Number(dispute.checkpoint_amount || 0).toLocaleString()} CRED</p>
+                                            <p className="text-lg font-black text-rose-400 uppercase tracking-tight">{Number(dispute.checkpoint_amount || 0).toLocaleString()} CRED</p>
                                             <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest border border-slate-800 px-1.5 py-0.5 rounded">
                                                 Est_Duration: {dispute.checkpoint_duration_days || 'N/A'} Days
                                             </span>
@@ -330,20 +302,19 @@ const DisputeDetail = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Registry_Value</p>
-                                    <p className="text-xl font-black text-emerald-400 uppercase tracking-tight">${Number(dispute.contract_total_amount || 0).toLocaleString()} CRED</p>
+                                    <p className="text-xl font-black text-emerald-400 uppercase tracking-tight">{Number(dispute.contract_total_amount || 0).toLocaleString()} CRED</p>
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Conflict_Node_Value</p>
-                                    <p className="text-xl font-black text-rose-500 uppercase tracking-tight">${Number(dispute.checkpoint_amount || 0).toLocaleString()} CRED</p>
+                                    <p className="text-xl font-black text-rose-500 uppercase tracking-tight">{Number(dispute.checkpoint_amount || 0).toLocaleString()} CRED</p>
                                 </div>
                             </div>
 
                             <div className="space-y-3">
                                 <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Contract_Verbatim_Content</p>
-                                <div 
-                                    className="p-6 rounded-xl bg-slate-950/40 border border-emerald-500/5 text-xs text-slate-300 font-mono leading-relaxed uppercase tracking-wider max-h-[300px] overflow-y-auto custom-scrollbar prose prose-invert prose-xs max-w-none prose-p:my-1 prose-headings:my-2 prose-headings:text-emerald-400 prose-strong:text-white"
-                                    dangerouslySetInnerHTML={{ __html: dispute.contract_content || "NO_CONTRACT_DATA_FOUND" }}
-                                />
+                                <div className="p-6 rounded-xl bg-slate-950/40 border border-emerald-500/5 text-xs text-slate-300 font-mono leading-relaxed uppercase tracking-wider max-h-[300px] overflow-y-auto custom-scrollbar prose prose-invert prose-xs max-w-none prose-p:my-1 prose-headings:my-2 prose-headings:text-emerald-400 prose-strong:text-white" dangerouslySetInnerHTML={{
+                __html: dispute.contract_content || "NO_CONTRACT_DATA_FOUND"
+              }} />
                             </div>
                         </div>
                     </section>
@@ -355,15 +326,10 @@ const DisputeDetail = () => {
                             <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest animate-pulse">Live_Feed_Enabled</span>
                         </div>
                         <div className="p-6 max-h-[400px] overflow-y-auto space-y-4 custom-scrollbar">
-                            {messages.length > 0 ? messages.map((m, idx) => (
-                                <div key={idx} className="flex flex-col gap-1">
+                            {messages.length > 0 ? messages.map((m, idx) => <div key={idx} className="flex flex-col gap-1">
                                     <div className="flex items-center justify-between mb-1 px-1">
                                         <div className="flex items-center gap-2">
-                                            <span className={`text-[9px] font-mono font-black uppercase px-1.5 py-0.5 rounded ${
-                                                m.role?.toLowerCase() === 'manager' || m.role?.toLowerCase() === 'admin' 
-                                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                                            }`}>
+                                            <span className={`text-[9px] font-mono font-black uppercase px-1.5 py-0.5 rounded ${m.role?.toLowerCase() === 'manager' || m.role?.toLowerCase() === 'admin' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
                                                 {m.role}
                                             </span>
                                             <span className="text-[9px] font-mono text-slate-400 font-bold">{m.email}</span>
@@ -376,89 +342,51 @@ const DisputeDetail = () => {
                                         {m.message}
                                         
                                         {/* Attachments Rendering */}
-                                        {m.attachments && (typeof m.attachments === 'string' ? JSON.parse(m.attachments) : m.attachments).length > 0 && (
-                                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {m.attachments && (typeof m.attachments === 'string' ? JSON.parse(m.attachments) : m.attachments).length > 0 && <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                 {(typeof m.attachments === 'string' ? JSON.parse(m.attachments) : m.attachments).map((url, i) => {
-                                                    const isImg = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                                                    return (
-                                                        <div key={i} className="relative group/attach">
-                                                            {isImg ? (
-                                                                <a href={url} target="_blank" rel="noreferrer" className="block rounded-lg overflow-hidden border border-white/10 hover:border-rose-500/50 transition-all">
+                    const isImg = url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                    return <div key={i} className="relative group/attach">
+                                                            {isImg ? <a href={url} target="_blank" rel="noreferrer" className="block rounded-lg overflow-hidden border border-white/10 hover:border-rose-500/50 transition-all">
                                                                     <img src={url} alt="Evidence" className="w-full h-32 object-cover" />
-                                                                </a>
-                                                            ) : (
-                                                                <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[8px] truncate">
+                                                                </a> : <a href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[8px] truncate">
                                                                     <svg className="w-4 h-4 shrink-0 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                                                                    ATTACHMENT_{i+1}
-                                                                </a>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                                                                    ATTACHMENT_{i + 1}
+                                                                </a>}
+                                                        </div>;
+                  })}
+                                            </div>}
                                     </div>
-                                </div>
-                            )) : (
-                                <p className="text-center py-10 text-[10px] font-mono text-slate-600 uppercase tracking-widest italic">No communication logs detected in this node</p>
-                            )}
+                                </div>) : <p className="text-center py-10 text-[10px] font-mono text-slate-600 uppercase tracking-widest italic">No communication logs detected in this node</p>}
                         </div>
  
                         {/* Mediation Input */}
-                        {dispute.status === 'OPEN' && (
-                            <div className="p-4 bg-rose-500/[0.03] border-t border-rose-500/10 space-y-3">
+                        {dispute.status === 'OPEN' && <div className="p-4 bg-rose-500/[0.03] border-t border-rose-500/10 space-y-3">
                                 {/* Selected Files Preview */}
-                                {selectedFiles.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 px-2">
-                                        {selectedFiles.map((f, i) => (
-                                            <div key={i} className="flex items-center gap-2 px-2 py-1 rounded bg-rose-500/10 border border-rose-500/20 text-[8px] font-mono text-rose-400">
+                                {selectedFiles.length > 0 && <div className="flex flex-wrap gap-2 px-2">
+                                        {selectedFiles.map((f, i) => <div key={i} className="flex items-center gap-2 px-2 py-1 rounded bg-rose-500/10 border border-rose-500/20 text-[8px] font-mono text-rose-400">
                                                 <span className="truncate max-w-[100px]">{f.name}</span>
                                                 <button onClick={() => removeFile(i)} className="hover:text-white transition-colors">✕</button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            </div>)}
+                                    </div>}
 
                                 <form onSubmit={handleSendMessage} className="flex gap-4">
                                     <div className="flex-1 relative">
-                                        <input 
-                                            value={newMessage}
-                                            onChange={(e) => setNewMessage(e.target.value)}
-                                            placeholder="ENTER_MEDIATION_COMMAND_OR_QUERY..."
-                                            className="w-full bg-slate-950/50 border border-rose-500/20 rounded-xl pl-12 pr-4 py-3 text-[10px] font-mono text-rose-400 placeholder:text-rose-900 outline-none focus:border-rose-500/50 transition-all uppercase tracking-widest"
-                                        />
-                                        <button 
-                                            type="button"
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-all border border-rose-500/20"
-                                            title="ATTACH_EVIDENCE"
-                                        >
+                                        <input value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="ENTER_MEDIATION_COMMAND_OR_QUERY..." className="w-full bg-slate-950/50 border border-rose-500/20 rounded-xl pl-12 pr-4 py-3 text-[10px] font-mono text-rose-400 placeholder:text-rose-900 outline-none focus:border-rose-500/50 transition-all uppercase tracking-widest" />
+                                        <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 transition-all border border-rose-500/20" title="ATTACH_EVIDENCE">
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
                                         </button>
-                                        <input 
-                                            type="file"
-                                            ref={fileInputRef}
-                                            onChange={handleFileSelect}
-                                            multiple
-                                            className="hidden"
-                                            accept="image/*,.pdf,.doc,.docx"
-                                        />
+                                        <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple className="hidden" accept="image/*,.pdf,.doc,.docx" />
                                     </div>
-                                    <button 
-                                        type="submit"
-                                        className="px-6 py-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-500 text-[10px] font-black font-mono tracking-widest uppercase hover:bg-rose-500/30 transition-all shadow-[0_0_15px_rgba(244,63,94,0.1)] active:scale-95"
-                                    >
+                                    <button type="submit" className="px-6 py-3 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-500 text-[10px] font-black font-mono tracking-widest uppercase hover:bg-rose-500/30 transition-all shadow-[0_0_15px_rgba(244,63,94,0.1)] active:scale-95">
                                         TRANSMIT
                                     </button>
                                 </form>
-                            </div>
-                        )}
+                            </div>}
                     </section>
                 </div>
 
                 {/* Arbitration Actions */}
-                {isManager && (
-                <div className="space-y-8">
+                {isManager && <div className="space-y-8">
                     <section className="bg-transparent/40 border border-rose-500/10 rounded-2xl p-8 backdrop-blur-sm sticky top-8">
                         <div className="mb-8 p-6 rounded-xl bg-rose-500/[0.03] border border-rose-500/10">
                             <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest mb-4">Final_Arbitration</p>
@@ -470,43 +398,26 @@ const DisputeDetail = () => {
                             </div>
                         </div>
 
-                        {dispute.status === 'OPEN' ? (
-                            <div className="space-y-6">
+                        {dispute.status === 'OPEN' ? <div className="space-y-6">
                                 <div className="space-y-2">
                                     <p className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Resolution_Summary (Required)</p>
-                                    <textarea
-                                        value={summary}
-                                        onChange={(e) => setSummary(e.target.value)}
-                                        placeholder="PROVIDE_FORMAL_ARBITRATION_RATIONALE..."
-                                        className="w-full min-h-[120px] bg-slate-950/50 border border-rose-500/20 rounded-xl p-4 text-[10px] font-mono text-slate-300 placeholder:text-rose-900 outline-none focus:border-rose-500/50 transition-all uppercase tracking-wider leading-relaxed"
-                                    />
+                                    <textarea value={summary} onChange={e => setSummary(e.target.value)} placeholder="PROVIDE_FORMAL_ARBITRATION_RATIONALE..." className="w-full min-h-[120px] bg-slate-950/50 border border-rose-500/20 rounded-xl p-4 text-[10px] font-mono text-slate-300 placeholder:text-rose-900 outline-none focus:border-rose-500/50 transition-all uppercase tracking-wider leading-relaxed" />
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4">
-                                    <button 
-                                        onClick={() => handleResolve('CLIENT_WINS')}
-                                        disabled={resolving}
-                                        className="w-full py-4 rounded-xl border border-rose-500/50 text-rose-500 text-[10px] font-black font-mono tracking-[0.3em] uppercase hover:bg-rose-500/10 transition-all active:scale-95 disabled:opacity-50"
-                                    >
+                                    <button onClick={() => handleResolve('CLIENT_WINS')} disabled={resolving} className="w-full py-4 rounded-xl border border-rose-500/50 text-rose-500 text-[10px] font-black font-mono tracking-[0.3em] uppercase hover:bg-rose-500/10 transition-all active:scale-95 disabled:opacity-50">
                                         {resolving ? 'ARBITRATING...' : 'CLIENT_WINS_PROTOCOL'}
                                     </button>
-                                    <button 
-                                        onClick={() => handleResolve('WORKER_WINS')}
-                                        disabled={resolving}
-                                        className="w-full py-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-[#020617] text-[10px] font-black font-mono tracking-[0.3em] uppercase shadow-[0_0_30px_rgba(244,63,94,0.2)] transition-all active:scale-95 disabled:opacity-50"
-                                    >
+                                    <button onClick={() => handleResolve('WORKER_WINS')} disabled={resolving} className="w-full py-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-[#020617] text-[10px] font-black font-mono tracking-[0.3em] uppercase shadow-[0_0_30px_rgba(244,63,94,0.2)] transition-all active:scale-95 disabled:opacity-50">
                                         {resolving ? 'ARBITRATING...' : 'WORKER_WINS_PROTOCOL'}
                                     </button>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
+                            </div> : <div className="space-y-4">
                                 <p className="text-[9px] font-mono font-black text-emerald-500 uppercase tracking-widest">Final_Ruling_Summary</p>
                                 <div className="p-5 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/20 text-[10px] font-mono text-slate-300 italic leading-relaxed uppercase">
                                     {summary || "NO_SUMMARY_DATA_RECORDED"}
                                 </div>
-                            </div>
-                        )}
+                            </div>}
 
                         <div className="mt-10 p-4 rounded-xl border border-rose-500/5 bg-rose-500/[0.01]">
                             <p className="text-[7px] font-mono text-slate-600 uppercase leading-relaxed tracking-wider">
@@ -514,17 +425,15 @@ const DisputeDetail = () => {
                             </p>
                         </div>
                     </section>
-                </div>
-                )}
+                </div>}
             </div>
 
             {/* Custom Confirmation Modal */}
-            {confirmModal.open && (
-                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
-                    <div 
-                        className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300"
-                        onClick={() => setConfirmModal({ ...confirmModal, open: false })}
-                    />
+            {confirmModal.open && <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300" onClick={() => setConfirmModal({
+        ...confirmModal,
+        open: false
+      })} />
                     <div className="relative w-full max-w-md bg-[#020617] border border-rose-500/30 rounded-2xl shadow-[0_0_50px_rgba(244,63,94,0.3)] overflow-hidden animate-in zoom-in duration-300">
                         {/* Header decor */}
                         <div className="h-1 w-full bg-gradient-to-r from-rose-500 via-transparent to-rose-500" />
@@ -545,25 +454,19 @@ const DisputeDetail = () => {
                             </p>
                             
                             <div className="flex gap-4 mt-8">
-                                <button
-                                    onClick={() => setConfirmModal({ ...confirmModal, open: false })}
-                                    className="flex-1 py-4 border border-slate-800 text-slate-500 font-black font-mono text-[10px] tracking-[0.2em] uppercase rounded-xl hover:bg-slate-800 transition-all active:scale-95"
-                                >
+                                <button onClick={() => setConfirmModal({
+              ...confirmModal,
+              open: false
+            })} className="flex-1 py-4 border border-slate-800 text-slate-500 font-black font-mono text-[10px] tracking-[0.2em] uppercase rounded-xl hover:bg-slate-800 transition-all active:scale-95">
                                     ABORT
                                 </button>
-                                <button
-                                    onClick={executeResolve}
-                                    className="flex-1 py-4 bg-rose-600 text-[#020617] font-black font-mono text-[10px] tracking-[0.2em] uppercase rounded-xl hover:bg-rose-500 transition-all shadow-[0_0_20px_rgba(244,63,94,0.3)] active:scale-95"
-                                >
+                                <button onClick={executeResolve} className="flex-1 py-4 bg-rose-600 text-[#020617] font-black font-mono text-[10px] tracking-[0.2em] uppercase rounded-xl hover:bg-rose-500 transition-all shadow-[0_0_20px_rgba(244,63,94,0.3)] active:scale-95">
                                     AUTHORIZE_PROT.
                                 </button>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
-    );
+                </div>}
+        </div>;
 };
-
 export default DisputeDetail;

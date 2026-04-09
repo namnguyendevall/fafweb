@@ -1,40 +1,34 @@
+import { useTranslation } from 'react-i18next';
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import managerApi from "../../api/manager.api";
 import { useToast } from "../../contexts/ToastContext";
-
 const Disputes = () => {
-    const toast = useToast();
-    const navigate = useNavigate();
-    const [disputes, setDisputes] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [query, setQuery] = useState("");
-
-    useEffect(() => {
-        fetchDisputes();
-    }, []);
-
-    const fetchDisputes = async () => {
-        try {
-            setLoading(true);
-            const response = await managerApi.listDisputes();
-            setDisputes(response.data || []);
-        } catch (error) {
-            console.error("Failed to fetch disputes:", error);
-            toast.error("Hệ thống: Không thể tải danh sách tranh chấp.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const filteredDisputes = disputes.filter(d => 
-        d.id.toString().includes(query) || 
-        d.reason?.toLowerCase().includes(query.toLowerCase()) ||
-        d.raiser_email?.toLowerCase().includes(query.toLowerCase())
-    );
-
-    return (
-        <div className="p-8 space-y-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+  const {
+    t
+  } = useTranslation();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [disputes, setDisputes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    fetchDisputes();
+  }, []);
+  const fetchDisputes = async () => {
+    try {
+      setLoading(true);
+      const response = await managerApi.listDisputes();
+      setDisputes(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch disputes:", error);
+      toast.error(t("auto.db_052a3f"));
+    } finally {
+      setLoading(false);
+    }
+  };
+  const filteredDisputes = disputes.filter(d => d.id.toString().includes(query) || d.reason?.toLowerCase().includes(query.toLowerCase()) || d.raiser_email?.toLowerCase().includes(query.toLowerCase()));
+  return <div className="p-8 space-y-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
             <header className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <div className="flex items-center gap-2 mb-3">
@@ -57,28 +51,15 @@ const Disputes = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
-                        <input
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="SEARCH_BY_ID_OR_RAISER..."
-                            className="w-full bg-transparent px-4 py-4 text-xs font-mono font-black text-rose-400 placeholder:text-slate-700 outline-none uppercase tracking-widest"
-                        />
+                        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="SEARCH_BY_ID_OR_RAISER..." className="w-full bg-transparent px-4 py-4 text-xs font-mono font-black text-rose-400 placeholder:text-slate-700 outline-none uppercase tracking-widest" />
                     </div>
                 </div>
             </header>
 
             <div className="grid grid-cols-1 gap-4">
-                {loading ? (
-                    <div className="py-20 text-center font-mono text-rose-500 animate-pulse uppercase tracking-[0.3em]">
+                {loading ? <div className="py-20 text-center font-mono text-rose-500 animate-pulse uppercase tracking-[0.3em]">
                         Scanning_Conflict_Nodes...
-                    </div>
-                ) : filteredDisputes.length > 0 ? (
-                    filteredDisputes.map((d) => (
-                        <div 
-                            key={d.id}
-                            onClick={() => navigate(`/dispute/${d.id}`)}
-                            className="group relative bg-transparent/40 border border-rose-500/10 rounded-2xl p-6 hover:border-rose-500/40 hover:bg-rose-500/[0.03] transition-all duration-300 cursor-pointer overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6"
-                        >
+                    </div> : filteredDisputes.length > 0 ? filteredDisputes.map(d => <div key={d.id} onClick={() => navigate(`/dispute/${d.id}`)} className="group relative bg-transparent/40 border border-rose-500/10 rounded-2xl p-6 hover:border-rose-500/40 hover:bg-rose-500/[0.03] transition-all duration-300 cursor-pointer overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div className="flex items-center gap-6">
                                 <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 font-mono font-black text-lg">
                                     !
@@ -107,16 +88,10 @@ const Disputes = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                 </svg>
                             </div>
-                        </div>
-                    ))
-                ) : (
-                    <div className="p-20 text-center rounded-3xl border border-dashed border-rose-500/20 bg-rose-500/[0.01]">
+                        </div>) : <div className="p-20 text-center rounded-3xl border border-dashed border-rose-500/20 bg-rose-500/[0.01]">
                         <p className="text-slate-500 text-xs font-mono font-black uppercase tracking-widest">NO_ACTIVE_DISPUTES_DETECTED</p>
-                    </div>
-                )}
+                    </div>}
             </div>
-        </div>
-    );
+        </div>;
 };
-
 export default Disputes;

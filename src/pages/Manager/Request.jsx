@@ -3,37 +3,37 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import managerApi from "../../api/manager.api";
 import { useToast } from "../../contexts/ToastContext";
-
 const Request = () => {
-    const toast = useToast();
-    const navigate = useNavigate();
-    const { t } = useTranslation();
-    const [requests, setRequests] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        fetchRequests();
-    }, []);
-
-    const fetchRequests = async () => {
-        try {
-            setLoading(true);
-            const response = await managerApi.getPendingJobs();
-            setRequests(response.data || []);
-        } catch (error) {
-            console.error("Failed to fetch pending jobs:", error);
-            toast.error("Hệ thống: Không thể tải danh sách yêu cầu.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="p-8 space-y-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+  const toast = useToast();
+  const navigate = useNavigate();
+  const {
+    t
+  } = useTranslation();
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const response = await managerApi.getPendingJobs();
+      setRequests(response.data || []);
+    } catch (error) {
+      console.error("Failed to fetch pending jobs:", error);
+      toast.error(t("auto.db_4dda0d"));
+    } finally {
+      setLoading(false);
+    }
+  };
+  return <div className="p-8 space-y-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header Section */}
             <header className="relative p-8 rounded-2xl border border-[#00f0ff]/20 bg-[#050810]/80 backdrop-blur-xl overflow-hidden group shadow-[0_0_30px_rgba(0,240,255,0.05)]">
                 {/* Background Grid */}
-                <div className="absolute inset-0 z-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at center, #00f0ff 0%, transparent 1px)', backgroundSize: '20px 20px' }} />
+                <div className="absolute inset-0 z-0 opacity-20" style={{
+        backgroundImage: 'radial-gradient(circle at center, #00f0ff 0%, transparent 1px)',
+        backgroundSize: '20px 20px'
+      }} />
                 
                 <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none group-hover:scale-110 group-hover:opacity-20 transition-all duration-700">
                     <svg className="w-40 h-40 text-[#00f0ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,37 +59,45 @@ const Request = () => {
 
             {/* Holographic Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {[
-                    { label: 'TOTAL_NODES', value: requests.length, color: '#00f0ff' },
-                    { label: 'PENDING_MOD', value: requests.length, color: '#00f0ff' },
-                    { label: 'RESOLVED_24H', value: '0', color: '#64748b' },
-                    { label: 'AVG_LATENCY', value: '1.2s', color: '#64748b' }
-                ].map((stat, i) => (
-                    <div key={i} className="group relative bg-[#0a1128]/50 border border-gray-800 p-6 rounded-xl flex flex-col items-center justify-center hover:-translate-y-1 transition-all duration-300 hover:border-[#00f0ff]/40 hover:shadow-[0_10px_30px_rgba(0,240,255,0.1)] overflow-hidden">
+                {[{
+        label: 'TOTAL_NODES',
+        value: requests.length,
+        color: '#00f0ff'
+      }, {
+        label: 'PENDING_MOD',
+        value: requests.length,
+        color: '#00f0ff'
+      }, {
+        label: 'RESOLVED_24H',
+        value: '0',
+        color: '#64748b'
+      }, {
+        label: 'AVG_LATENCY',
+        value: '1.2s',
+        color: '#64748b'
+      }].map((stat, i) => <div key={i} className="group relative bg-[#0a1128]/50 border border-gray-800 p-6 rounded-xl flex flex-col items-center justify-center hover:-translate-y-1 transition-all duration-300 hover:border-[#00f0ff]/40 hover:shadow-[0_10px_30px_rgba(0,240,255,0.1)] overflow-hidden">
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#00f0ff]/5 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                         <p className="text-[10px] font-mono text-[#94a3b8] tracking-[0.2em] mb-2 relative z-10">{stat.label}</p>
-                        <p className="text-3xl font-black font-mono relative z-10" style={{ color: stat.color, textShadow: stat.color === '#00f0ff' ? '0 0 15px rgba(0,240,255,0.5)' : 'none' }}>{stat.value}</p>
+                        <p className="text-3xl font-black font-mono relative z-10" style={{
+          color: stat.color,
+          textShadow: stat.color === '#00f0ff' ? '0 0 15px rgba(0,240,255,0.5)' : 'none'
+        }}>{stat.value}</p>
                         {/* Hexagon tech accent */}
-                        <svg className="absolute bottom-[-10px] right-[-10px] w-16 h-16 opacity-5 group-hover:opacity-20 group-hover:rotate-45 transition-all duration-700" style={{ fill: stat.color }} viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                    </div>
-                ))}
+                        <svg className="absolute bottom-[-10px] right-[-10px] w-16 h-16 opacity-5 group-hover:opacity-20 group-hover:rotate-45 transition-all duration-700" style={{
+          fill: stat.color
+        }} viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
+                    </div>)}
             </div>
 
             {/* Main Content: Encrypted Data Packets */}
             <div className="space-y-4 perspective-1000">
-                {loading ? (
-                    <div className="text-center py-20 font-mono text-[#00f0ff] animate-pulse uppercase tracking-[0.3em]">
+                {loading ? <div className="text-center py-20 font-mono text-[#00f0ff] animate-pulse uppercase tracking-[0.3em]">
                         <span className="inline-block border border-[#00f0ff]/30 px-6 py-3 bg-[#00f0ff]/5 shadow-[0_0_20px_rgba(0,240,255,0.2)]">
                             Scanning_Database_Registry...
                         </span>
-                    </div>
-                ) : (
-                    requests.map((req, i) => (
-                        <div 
-                            key={req.id}
-                            className="group relative p-6 bg-[#050810]/60 backdrop-blur-sm border border-gray-800 rounded-xl hover:border-[#00f0ff]/40 transition-all duration-500 overflow-hidden preserve-3d hover:translate-z-4 hover:shadow-[0_15px_30px_rgba(0,0,0,0.5)]"
-                            style={{ animationDelay: `${i * 100}ms` }}
-                        >
+                    </div> : requests.map((req, i) => <div key={req.id} className="group relative p-6 bg-[#050810]/60 backdrop-blur-sm border border-gray-800 rounded-xl hover:border-[#00f0ff]/40 transition-all duration-500 overflow-hidden preserve-3d hover:translate-z-4 hover:shadow-[0_15px_30px_rgba(0,0,0,0.5)]" style={{
+        animationDelay: `${i * 100}ms`
+      }}>
                             {/* Glowing Left Status Bar */}
                             <div className={`absolute left-0 top-0 bottom-0 w-1 ${req.budget > 1000 ? 'bg-[#fbbf24]' : 'bg-[#00f0ff]'} group-hover:w-2 transition-all shadow-[0_0_15px_rgba(0,240,255,0.8)]`}></div>
                             
@@ -120,7 +128,7 @@ const Request = () => {
                                             {req.title}
                                         </h3>
                                         <p className="text-xs text-[#94a3b8] font-mono flex items-center gap-2 uppercase tracking-widest">
-                                            <svg className="w-4 h-4 text-[#bf00ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                            <svg className="w-4 h-4 text-[#bf00ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                                             Origin: <span className="text-white ml-1">{req.client_email}</span>
                                         </p>
                                     </div>
@@ -133,10 +141,7 @@ const Request = () => {
                                             {req.status}
                                         </span>
                                     </div>
-                                    <button
-                                        onClick={() => navigate(`/manager/request/${req.id}`)}
-                                        className="relative group/btn bg-transparent border border-[#00f0ff] px-6 py-3 font-black text-[10px] text-[#00f0ff] uppercase tracking-[0.2em] font-mono transition-all overflow-hidden shadow-[0_0_15px_rgba(0,240,255,0.1)] hover:shadow-[0_0_30px_rgba(0,240,255,0.4)]"
-                                    >
+                                    <button onClick={() => navigate(`/manager/request/${req.id}`)} className="relative group/btn bg-transparent border border-[#00f0ff] px-6 py-3 font-black text-[10px] text-[#00f0ff] uppercase tracking-[0.2em] font-mono transition-all overflow-hidden shadow-[0_0_15px_rgba(0,240,255,0.1)] hover:shadow-[0_0_30px_rgba(0,240,255,0.4)]">
                                         <div className="absolute inset-0 bg-[#00f0ff] scale-x-0 origin-left group-hover/btn:scale-x-100 transition-transform duration-300 ease-out z-0 pointer-events-none" />
                                         <span className="relative z-10 group-hover/btn:text-black transition-colors duration-300 pointer-events-none">
                                             INITIALIZE
@@ -147,12 +152,9 @@ const Request = () => {
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                    ))
-                )}
+                        </div>)}
 
-                {!loading && requests.length === 0 && (
-                    <div className="p-20 text-center rounded-2xl border-2 border-dashed border-gray-800 bg-[#050810]/50 relative overflow-hidden group">
+                {!loading && requests.length === 0 && <div className="p-20 text-center rounded-2xl border-2 border-dashed border-gray-800 bg-[#050810]/50 relative overflow-hidden group">
                         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none" />
                         <svg className="w-16 h-16 text-[#00f0ff]/20 mx-auto mb-6 group-hover:scale-110 group-hover:text-[#00f0ff]/40 transition-all duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={0.5} d="M5 13l4 4L19 7" />
@@ -160,12 +162,8 @@ const Request = () => {
                         <p className="text-[#00f0ff]/50 text-sm font-mono font-black uppercase tracking-[0.3em] group-hover:text-[#00f0ff] transition-colors duration-500 drop-shadow-[0_0_10px_rgba(0,240,255,0.5)]">
                             QUEUE_EMPTY // ALL_NODES_STABLE
                         </p>
-                    </div>
-                )}
+                    </div>}
             </div>
-        </div>
-    );
+        </div>;
 };
-
 export default Request;
-

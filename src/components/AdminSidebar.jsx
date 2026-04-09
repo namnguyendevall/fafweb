@@ -1,9 +1,12 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import FAFLogo from '../assets/FAF-Logo.png';
+import LangToggle from './LangToggle';
 
 const AdminSidebar = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { user, logout } = useAuth();
 
@@ -28,19 +31,22 @@ const AdminSidebar = () => {
                             AD
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-white truncate">Admin</p>
+                            <p className="text-sm font-bold text-white truncate">{t("auto.db_569941", "Admin")}</p>
                             <p className="text-[10px] text-slate-400 truncate">{user.email || 'admin@faf.com'}</p>
                         </div>
                     </div>
-                    <button
-                        onClick={handleLogout}
-                        className="text-slate-500 hover:text-red-400 transition-colors"
-                        aria-label="Log out"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H9m4 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                        </svg>
-                    </button>
+                    <div className="flex bg-cyan-500/20 border border-cyan-500/50 rounded shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                        <LangToggle className="w-8 h-8 !border-0 !bg-transparent text-[10px]" />
+                        <button
+                            onClick={handleLogout}
+                            className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-red-400 transition-colors"
+                            aria-label={t("auto.db_76361b", "Log out")}
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H9m4 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="mb-6">
@@ -51,11 +57,11 @@ const AdminSidebar = () => {
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                         </svg>
-                        Public Home
+                        {t("auto.db_76361a", "Public Home")}
                     </button>
                 </div>
 
-                <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-500/70 mb-4 px-2">SYSTEM MENU</h2>
+                <h2 className="text-xs font-bold uppercase tracking-widest text-cyan-500/70 mb-4 px-2">{t("auto.db_426090", "SYSTEM MENU")}</h2>
                 <nav className="space-y-2">
                     <NavLink
                         to="/admin/dashboard"
@@ -70,7 +76,7 @@ const AdminSidebar = () => {
                         <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                         </svg>
-                        <span className="font-semibold text-sm">Dashboard</span>
+                        <span className="font-semibold text-sm">{t("auto.db_09059e", "Dashboard")}</span>
                     </NavLink>
                     <NavLink
                         to="/admin/user-management"
@@ -84,7 +90,7 @@ const AdminSidebar = () => {
                         <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                         </svg>
-                        <span className="font-semibold text-sm">User Management</span>
+                        <span className="font-semibold text-sm">{t("auto.db_85868a", "User Management")}</span>
                     </NavLink>
                     <NavLink
                         to="/admin/moderation"
@@ -98,7 +104,7 @@ const AdminSidebar = () => {
                         <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
-                        <span className="font-semibold text-sm">Moderation</span>
+                        <span className="font-semibold text-sm">{t("auto.db_307466", "Moderation")}</span>
                     </NavLink>
                     <NavLink
                         to="/admin/finance"
@@ -112,7 +118,7 @@ const AdminSidebar = () => {
                         <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        <span className="font-semibold text-sm">Escrow & Finance</span>
+                        <span className="font-semibold text-sm">{t("auto.db_f01205", "Escrow & Finance")}</span>
                     </NavLink>
                     <NavLink
                         to="/admin/withdrawals"
@@ -124,9 +130,9 @@ const AdminSidebar = () => {
                         }
                     >
                         <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 11-4 0 2 2 0 014 0z" />
                         </svg>
-                        <span className="font-semibold text-sm">Withdrawal Mgmt</span>
+                        <span className="font-semibold text-sm">{t("auto.db_9cea34", "Withdrawal Mgmt")}</span>
                     </NavLink>
                     <NavLink
                         to="/admin/managers"
@@ -140,7 +146,7 @@ const AdminSidebar = () => {
                         <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m16-10a4 4 0 11-8 0 4 4 0 018 0z" />
                         </svg>
-                        <span className="font-semibold text-sm">Manager Mgmt</span>
+                        <span className="font-semibold text-sm">{t("auto.db_70535c", "Manager Mgmt")}</span>
                     </NavLink>
                     <NavLink
                         to="/admin/skills"
@@ -154,7 +160,7 @@ const AdminSidebar = () => {
                         <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                         </svg>
-                        <span className="font-semibold text-sm">Skill Mgmt</span>
+                        <span className="font-semibold text-sm">{t("auto.db_792348", "Skill Mgmt")}</span>
                     </NavLink>
                     <NavLink
                         to="/admin/categories"
@@ -168,7 +174,7 @@ const AdminSidebar = () => {
                         <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                         </svg>
-                        <span className="font-semibold text-sm">Category Mgmt</span>
+                        <span className="font-semibold text-sm">{t("auto.db_79e33d", "Category Mgmt")}</span>
                     </NavLink>
                     <NavLink
                         to="/admin/notifications"
@@ -182,7 +188,7 @@ const AdminSidebar = () => {
                         <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
-                        <span className="font-semibold text-sm">Notifications</span>
+                        <span className="font-semibold text-sm">{t("auto.db_6a849d", "Notifications")}</span>
                     </NavLink>
                 </nav>
             </div>

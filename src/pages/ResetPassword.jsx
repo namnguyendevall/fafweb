@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import LangToggle from '../components/LangToggle';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import FAFLogo from '../assets/FAF-Logo.png';
 import { authApi } from '../api/auth.api';

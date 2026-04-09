@@ -23,7 +23,7 @@ const Jobs = () => {
         message: '',
         type: 'info',
         onConfirm: () => {},
-        confirmText: 'CONFIRM'
+        confirmText: t('task_owner.confirm', 'CONFIRM')
     });
 
     const closeConfirmModal = () => setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -52,10 +52,10 @@ const Jobs = () => {
     const handleDeleteJob = async (id) => {
         setConfirmModal({
             isOpen: true,
-            title: "DESTRUCT_JOB",
+            title: t('task_owner.destruct_job', 'DESTRUCT_JOB'),
             message: t('task_owner.confirm_delete_job', 'Are you sure you want to delete this job? This action is permanent and will remove all associated data.'),
             type: "danger",
-            confirmText: "DESTRUCT",
+            confirmText: t('task_owner.destruct', 'DESTRUCT'),
             onConfirm: async () => {
                 try {
                     await jobsApi.deleteJob(id);
@@ -78,13 +78,13 @@ const Jobs = () => {
                 <header className="px-8 py-6 flex items-center justify-between border-b border-white/5 bg-transparent/50 backdrop-blur-md sticky top-0 z-50">
                     <div className="flex flex-col">
                         <p className="text-[10px] font-mono tracking-widest text-cyan-500 uppercase font-black">{t('task_owner.module_name', 'JOB COMMAND')}</p>
-                        <h1 className="text-2xl font-black text-white uppercase tracking-wider">{t('task_owner.my_jobs_title', 'My Job Listings')}</h1>
+                        <h1 className="text-2xl font-black text-white uppercase tracking-wider">{t('task_owner.my_jobs_title', 'Việc làm của tôi')}</h1>
                     </div>
                     <button
                         onClick={() => navigate("/task-owner/post-job")}
                         className="group relative px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-[#020617] font-black text-[11px] tracking-widest uppercase rounded shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all"
                     >
-                        {t('task_owner.post_job_btn', '+ POST_NEW_JOB')}
+                        {t('task_owner.post_job_btn', '+ ĐĂNG CÔNG VIỆC MỚI')}
                     </button>
                 </header>
 
@@ -160,7 +160,7 @@ const Jobs = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
-                                                    <span className="text-sm font-black text-emerald-400 font-mono">${Number(job.budget).toLocaleString()}</span>
+                                                    <span className="text-sm font-black text-emerald-400 font-mono">{Number(job.budget).toLocaleString()} CRED</span>
                                                 </td>
                                                 <td className="px-6 py-5">
                                                     <div className="flex items-center gap-2">

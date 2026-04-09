@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import LangToggle from '../../components/LangToggle';
 import { useParams, useNavigate } from 'react-router-dom';
 import { contractsApi } from '../../api/contracts.api';
 import { workSessionsApi } from '../../api/workSessions.api';

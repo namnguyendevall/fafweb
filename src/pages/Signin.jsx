@@ -5,6 +5,7 @@ import Loading from "../components/Loading";
 import { authApi } from "../api/auth.api";
 import { useAuth } from "../auth/AuthContext";
 import { useTranslation } from "react-i18next";
+import LangToggle from "../components/LangToggle";
 import { useToast } from "../contexts/ToastContext";
 
 const Signin = () => {
@@ -63,6 +64,7 @@ const Signin = () => {
 
   return (
         <div className="min-h-screen bg-[#030014] text-slate-300 font-sans selection:bg-purple-500/30 selection:text-white relative overflow-hidden flex items-center justify-center p-4">
+            <LangToggle className="absolute top-6 right-6 z-50 text-slate-400 border-white/20 bg-black/40 hover:bg-black/60" />
             {/* ... Web3 Background (from original Phase 2 implementation) ... */}
             <div className="fixed inset-0 z-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-slate-900 to-blue-900/20"></div>

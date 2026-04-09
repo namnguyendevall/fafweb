@@ -2,22 +2,43 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-const JobTable = ({ contracts = [] }) => {
+const JobTable = ({ contracts = [], loading = false, type = 'worker' }) => {
     const navigate = useNavigate();
     const [filter, setFilter] = useState('ALL');
     const { t } = useTranslation();
 
     const filteredContracts = contracts.filter(c => {
+        if (!c.status) return filter === 'ALL';
+        const status = c.status.toUpperCase();
+        
         if (filter === 'ALL') return true;
-        return c.status === filter;
+        
+        if (filter === 'ACTIVE') {
+            return ['ACTIVE', 'IN_PROGRESS', 'PENDING', 'PENDING_SIGNATURE'].includes(status);
+        }
+        
+        if (filter === 'COMPLETED') {
+            return status === 'COMPLETED';
+        }
+        
+        if (filter === 'CANCELLED') {
+            return ['CANCELLED', 'TERMINATED', 'REJECTED'].includes(status);
+        }
+        
+        return status === filter;
     });
 
     const getStatusBadge = (status) => {
-        switch (status) {
-            case 'ACTIVE': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-cyan-900/30 text-cyan-400 border border-cyan-500/30">{t('dashboard.job_table.active')}</span>;
+        const s = status?.toUpperCase();
+        switch (s) {
+            case 'ACTIVE':
+            case 'IN_PROGRESS': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-cyan-900/30 text-cyan-400 border border-cyan-500/30">{t('dashboard.job_table.active')}</span>;
+            case 'PENDING':
+            case 'PENDING_SIGNATURE': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-amber-900/30 text-amber-400 border border-amber-500/30">WAITING</span>;
             case 'COMPLETED': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-emerald-900/30 text-emerald-400 border border-emerald-500/30">{t('dashboard.job_table.completed')}</span>;
             case 'CANCELLED': 
-            case 'TERMINATED': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-rose-900/30 text-rose-400 border border-rose-500/30">{t('dashboard.job_table.cancelled')}</span>;
+            case 'TERMINATED': 
+            case 'REJECTED': return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-rose-900/30 text-rose-400 border border-rose-500/30">{t('dashboard.job_table.cancelled')}</span>;
             default: return <span className="inline-block px-2 py-0.5 rounded text-[9px] font-black font-mono tracking-widest uppercase bg-slate-800 text-slate-400 border border-slate-700">{status}</span>;
         }
     };
@@ -61,7 +82,13 @@ const JobTable = ({ contracts = [] }) => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/50">
-                        {filteredContracts.length === 0 ? (
+                        {loading ? (
+                            <tr>
+                                <td colSpan="5" className="px-6 py-12 text-center text-[10px] font-mono tracking-widest uppercase text-cyan-500 animate-pulse">
+                                    {t('dashboard.loading_contracts')}
+                                </td>
+                            </tr>
+                        ) : filteredContracts.length === 0 ? (
                             <tr>
                                 <td colSpan="5" className="px-6 py-12 text-center text-[10px] font-mono tracking-widest uppercase text-slate-500 italic">
                                     {t('dashboard.job_table.no_data')}
@@ -83,7 +110,19 @@ const JobTable = ({ contracts = [] }) => {
                                         {getStatusBadge(contract.status)}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <p className="font-black text-cyan-400 font-mono">${Number(contract.total_amount || 0).toLocaleString()}</p>
+                                        <div className="flex flex-col items-end">
+                                            <p className="font-black text-cyan-400 font-mono">
+                                                {type === 'worker' 
+                                                    ? (Number(contract.total_amount || 0) * 0.95).toLocaleString() 
+                                                    : Number(contract.total_amount || 0).toLocaleString()} 
+                                                CRED
+                                            </p>
+                                            {type === 'worker' && Number(contract.total_amount || 0) > 0 && (
+                                                <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest mt-0.5">
+                                                    {t('job.net_amount', 'NET RECEIVED (-5%)')}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <button 

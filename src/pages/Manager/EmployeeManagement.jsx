@@ -1,55 +1,52 @@
+import { useTranslation } from 'react-i18next';
 import React, { useMemo, useState, useEffect } from "react";
 import managerApi from "../../api/manager.api";
 import { useToast } from "../../contexts/ToastContext";
-
 const EmployeeManagement = () => {
-    const toast = useToast();
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [query, setQuery] = useState("");
-
-    useEffect(() => {
-        fetchUsers();
-    }, []);
-
-    const fetchUsers = async () => {
-        try {
-            setLoading(true);
-            const response = await managerApi.listUsers(1, 100);
-            // Map backend users to UI fields
-            const mapped = (response.data?.users || []).map(u => ({
-                id: `USR_${u.id}`,
-                fullName: u.full_name || "Khách hàng ẩn danh",
-                email: u.email,
-                phone: u.phone || "HIDDEN_CONTACT",
-                department: u.role.toUpperCase(),
-                status: "ACTIVE", // For now
-                createdAt: new Date(u.created_at).toLocaleDateString(),
-                reliability: "100%" // Placeholder
-            }));
-            setUsers(mapped);
-        } catch (error) {
-            console.error("Failed to fetch users:", error);
-            toast.error("Hệ thống: Không thể tải danh sách nhân sự.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const employees = users;
-
-    const filteredEmployees = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        if (!q) return employees;
-
-        return employees.filter((e) => {
-            const haystack = `${e.id} ${e.fullName} ${e.email} ${e.phone} ${e.department} ${e.status}`.toLowerCase();
-            return haystack.includes(q);
-        });
-    }, [employees, query]);
-
-    return (
-        <div className="p-8 space-y-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
+  const {
+    t
+  } = useTranslation();
+  const toast = useToast();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await managerApi.listUsers(1, 100);
+      // Map backend users to UI fields
+      const mapped = (response.data?.users || []).map(u => ({
+        id: `USR_${u.id}`,
+        fullName: u.full_name || t("auto.db_235a50"),
+        email: u.email,
+        phone: u.phone || "HIDDEN_CONTACT",
+        department: u.role.toUpperCase(),
+        status: "ACTIVE",
+        // For now
+        createdAt: new Date(u.created_at).toLocaleDateString(),
+        reliability: "100%" // Placeholder
+      }));
+      setUsers(mapped);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      toast.error(t("auto.db_3b41c2"));
+    } finally {
+      setLoading(false);
+    }
+  };
+  const employees = users;
+  const filteredEmployees = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return employees;
+    return employees.filter(e => {
+      const haystack = `${e.id} ${e.fullName} ${e.email} ${e.phone} ${e.department} ${e.status}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [employees, query]);
+  return <div className="p-8 space-y-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header section with high-tech search */}
             <header className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
                 <div>
@@ -73,12 +70,7 @@ const EmployeeManagement = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
-                        <input
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="QUERY_BY_ID_NAME_OR_DEPT..."
-                            className="w-full bg-transparent px-4 py-4 text-xs font-mono font-black text-emerald-400 placeholder:text-slate-700 outline-none uppercase tracking-widest"
-                        />
+                        <input value={query} onChange={e => setQuery(e.target.value)} placeholder="QUERY_BY_ID_NAME_OR_DEPT..." className="w-full bg-transparent px-4 py-4 text-xs font-mono font-black text-emerald-400 placeholder:text-slate-700 outline-none uppercase tracking-widest" />
                         <div className="pr-4">
                             <span className="text-[8px] font-black font-mono text-slate-500 bg-slate-800/50 px-2 py-1 rounded">SEARCH_MOD</span>
                         </div>
@@ -88,22 +80,14 @@ const EmployeeManagement = () => {
 
             {/* Employee Tech Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {loading ? (
-                    <div className="col-span-full py-20 text-center font-mono text-emerald-500 animate-pulse uppercase tracking-[0.3em]">
+                {loading ? <div className="col-span-full py-20 text-center font-mono text-emerald-500 animate-pulse uppercase tracking-[0.3em]">
                         Scanning_Neural_Personnel_Index...
-                    </div>
-                ) : (
-                    filteredEmployees.map((emp) => (
-                        <div 
-                            key={emp.id}
-                            className="group relative bg-transparent/40 border border-emerald-500/10 rounded-2xl p-6 hover:border-emerald-500/40 hover:bg-emerald-500/[0.03] transition-all duration-500 overflow-hidden"
-                        >
+                    </div> : filteredEmployees.map(emp => <div key={emp.id} className="group relative bg-transparent/40 border border-emerald-500/10 rounded-2xl p-6 hover:border-emerald-500/40 hover:bg-emerald-500/[0.03] transition-all duration-500 overflow-hidden">
                             {/* Reliability Bar */}
                             <div className="absolute top-0 right-0 left-0 h-1 bg-slate-800 overflow-hidden">
-                                <div 
-                                    className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all duration-1000" 
-                                    style={{ width: emp.reliability }}
-                                ></div>
+                                <div className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] transition-all duration-1000" style={{
+            width: emp.reliability
+          }}></div>
                             </div>
 
                             <div className="flex items-start justify-between mb-6">
@@ -153,22 +137,15 @@ const EmployeeManagement = () => {
                                     MSG_NODE
                                 </button>
                             </div>
-                        </div>
-                    ))
-                )}
+                        </div>)}
             </div>
 
-            {filteredEmployees.length === 0 && (
-                <div className="p-20 text-center rounded-3xl border border-dashed border-emerald-500/20 bg-emerald-500/[0.01]">
+            {filteredEmployees.length === 0 && <div className="p-20 text-center rounded-3xl border border-dashed border-emerald-500/20 bg-emerald-500/[0.01]">
                     <svg className="w-12 h-12 text-emerald-500/20 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                     <p className="text-slate-500 text-xs font-mono font-black uppercase tracking-widest">NODE_NOT_FOUND_EXECUTE_RETRY</p>
-                </div>
-            )}
-        </div>
-    );
+                </div>}
+        </div>;
 };
-
 export default EmployeeManagement;
-

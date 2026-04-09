@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import LangToggle from "../components/LangToggle";
 import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "../contexts/ToastContext";
 import FAFLogo from "../assets/FAF-Logo.png";
