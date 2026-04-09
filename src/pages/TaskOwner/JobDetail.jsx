@@ -10,7 +10,83 @@ import ReviewModal from "../../components/Reviews/ReviewModal";
 import CyberModal from "../../components/CyberModal";
 import { reviewsApi } from "../../api/reviews.api";
 import { useAuth } from "../../auth/AuthContext";
+const ProposalItem = ({
+  proposal,
+  handleStartChat,
+  handleAcceptProposal,
+  handleRejectProposal,
+  t,
+  navigate
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const maxChars = 200;
+  const showReadMore = proposal.cover_letter?.length > maxChars;
+  const coverLetter = isExpanded ? proposal.cover_letter : proposal.cover_letter?.slice(0, maxChars);
+  return <div className="group relative rounded-2xl border border-white/5 bg-slate-900/40 p-6 transition-all hover:bg-slate-900/60 hover:border-cyan-500/20 shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
+      <div className="flex flex-col sm:flex-row gap-6">
+        {/* Avatar Section */}
+        <div className="flex flex-col items-center gap-2">
+            <div onClick={() => navigate(`/profile/${proposal.worker_id}`)} className="relative group/avatar cursor-pointer">
+                <div className="absolute -inset-1 border border-cyan-500/20 rounded-full animate-[spin_10s_linear_infinite] border-dashed group-hover/avatar:border-cyan-400/40 transition-colors"></div>
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#0f172a] via-cyan-950 to-blue-900 flex items-center justify-center text-cyan-400 text-xl font-black shadow-[0_0_20px_rgba(6,182,212,0.2)] relative border border-cyan-500/30">
+                    {proposal.worker_avatar ? <img src={proposal.worker_avatar} alt={proposal.worker_name} className="w-full h-full rounded-full object-cover" /> : <span>{(proposal.worker_name || proposal.worker_email || 'W').charAt(0).toUpperCase()}</span>}
+                </div>
+            </div>
+            <span className={`px-2 py-0.5 rounded text-[8px] font-black font-mono tracking-widest uppercase ${proposal.status === 'ACCEPTED' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30' : 'bg-amber-900/30 text-amber-400 border border-amber-500/30'}`}>
+                {proposal.status}
+            </span>
+        </div>
 
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+            <div className="min-w-0">
+              <h3 onClick={() => navigate(`/profile/${proposal.worker_id}`)} className="text-base font-black text-white hover:text-cyan-400 cursor-pointer transition-colors uppercase tracking-tight truncate">
+                {proposal.worker_name || t("task_owner.unknown_worker")}
+              </h3>
+              <div className="flex items-center gap-3 mt-1 text-[10px] font-mono text-slate-500 uppercase tracking-widest">
+                <span className="flex items-center gap-1"><span className="text-cyan-500 opacity-50">#</span> {proposal.worker_email}</span>
+                <span className="flex items-center gap-1"><span className="text-cyan-500 opacity-50">@</span> {t("job_detail.applied_on")} {new Date(proposal.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xl font-black text-cyan-400 font-mono tracking-tighter">{Number(proposal.proposed_price || 0).toLocaleString()} CRED</p>
+            </div>
+          </div>
+
+          <div className="relative rounded-xl border border-white/5 bg-slate-950/40 p-4 group-hover:bg-slate-950/60 transition-colors">
+            <p className="text-[9px] font-mono font-black text-slate-500 mb-2 uppercase tracking-[0.2em] flex items-center gap-2">
+                <span className="text-cyan-500 opacity-50">&gt;&gt;</span> {t("job_detail.cover_letter")}
+            </p>
+            <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap break-all pr-2">
+              {coverLetter || t("job_detail.no_cover_letter")}
+              {showReadMore && !isExpanded && "..."}
+            </div>
+            {showReadMore && <button onClick={() => setIsExpanded(!isExpanded)} className="mt-2 text-[10px] font-black text-cyan-500 uppercase tracking-widest font-mono hover:text-cyan-400 transition-colors">
+                {isExpanded ? "[ THU GỌN ]" : "[ ĐỌC THÊM ]"}
+              </button>}
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-4">
+            <button onClick={() => navigate(`/profile/${proposal.worker_id}`)} className="flex-1 min-w-[120px] px-4 py-2 border border-white/10 text-slate-400 font-mono text-[9px] font-black tracking-widest uppercase hover:bg-white/5 hover:text-white transition-all rounded-lg">
+                {t("job_detail.view_profile")}
+            </button>
+            <button onClick={() => handleStartChat(proposal.worker_id)} className="flex-1 min-w-[120px] px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-mono text-[9px] font-black tracking-widest uppercase hover:bg-cyan-500/20 transition-all rounded-lg flex items-center justify-center gap-2">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+              {t("job_detail.chat")}
+            </button>
+            {proposal.status === 'PENDING' && <>
+                <button onClick={() => handleAcceptProposal(proposal.id)} className="flex-1 min-w-[120px] px-4 py-2 bg-emerald-600 text-[#020617] font-mono text-[9px] font-black tracking-widest uppercase hover:bg-emerald-500 transition-all rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                  {t("job_detail.accept_proposal")}
+                </button>
+                <button onClick={() => handleRejectProposal(proposal.id)} className="flex-1 min-w-[120px] px-4 py-2 border border-rose-500/20 text-rose-500 font-mono text-[9px] font-black tracking-widest uppercase hover:bg-rose-500/10 transition-all rounded-lg">
+                  {t("job_detail.reject")}
+                </button>
+              </>}
+          </div>
+        </div>
+      </div>
+    </div>;
+};
 const JobDetail = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -185,9 +261,9 @@ const JobDetail = () => {
 
   return (
     <>
-      <div className="flex-1 flex flex-col bg-transparent min-h-screen overflow-x-hidden">
+      <div className="flex-1 flex flex-col bg-transparent min-h-full">
         {/* Header */}
-        <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 px-6 sm:px-10 py-6 sticky top-0 z-20 shadow-sm">
+        <header className="bg-[#090e17]/80 backdrop-blur-xl border-b border-white/5 px-6 sm:px-10 py-6 sticky top-0 z-20">
           <div className="flex items-center justify-between gap-4">
             <div>
               <button onClick={() => navigate("/task-owner/jobs")} className="inline-flex items-center text-xs font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-1">
@@ -229,25 +305,32 @@ const JobDetail = () => {
         </header>
 
         {/* Main content */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left: job details */}
             <div className="lg:col-span-2 space-y-6 min-w-0">
               {/* Overview */}
-              <section className="bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-700 p-8 shadow-sm hover:shadow-md transition-shadow">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t("job_detail.description")}</h2>
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-all">
+              <section className="relative group rounded-3xl border border-white/5 bg-[#0f172a]/40 p-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-sm transition-all hover:bg-[#0f172a]/60">
+                <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
+                   <svg className="w-24 h-24 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                </div>
+                <h2 className="text-xs font-black tracking-widest text-cyan-500 uppercase font-mono mb-4 flex items-center gap-2">
+                   <span className="text-cyan-400 opacity-50">//</span> {t("job_detail.description")}
+                </h2>
+                <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap break-all">
                   {job.description || t("job_detail.no_desc")}
                 </p>
               </section>
 
               {/* Skills */}
               {job.skills && job.skills.length > 0 && (
-                <section className="bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-700 p-8 shadow-sm hover:shadow-md transition-shadow">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t("job_detail.skills_req")}</h2>
+                <section className="rounded-3xl border border-white/5 bg-[#0f172a]/40 p-8 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-sm transition-all hover:bg-[#0f172a]/60">
+                  <h2 className="text-xs font-black tracking-widest text-cyan-500 uppercase font-mono mb-4 flex items-center gap-2">
+                    <span className="text-cyan-400 opacity-50">//</span> {t("job_detail.skills_req")}
+                  </h2>
                   <div className="flex flex-wrap gap-2">
                     {job.skills.map(skill => (
-                      <span key={skill.id} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200">
+                      <span key={skill.id} className="inline-flex items-center px-3 py-1 rounded-lg text-[10px] font-black font-mono tracking-widest uppercase bg-cyan-950/30 text-cyan-400 border border-cyan-500/20">
                         {skill.name}
                       </span>
                     ))}
@@ -256,14 +339,16 @@ const JobDetail = () => {
               )}
 
               {/* Tabs Section */}
-              <section className="bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <div className="border-b border-gray-100 dark:border-slate-700 flex overflow-x-auto">
+              <section className="rounded-3xl border border-white/5 bg-[#0f172a]/40 shadow-[0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-sm overflow-hidden transition-all">
+                <div className="flex border-b border-white/5 bg-slate-900/40 overflow-x-auto no-scrollbar">
                   {['proposals', 'recommended', 'checkpoints', 'contract'].map(tab => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`flex-1 min-w-[120px] py-4 text-sm font-semibold text-center transition-colors whitespace-nowrap capitalize ${
-                        activeTab === tab ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-900/20' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
+                      className={`whitespace-nowrap px-8 py-4 text-[10px] font-black font-mono tracking-widest uppercase border-b-2 transition-all ${
+                        activeTab === tab 
+                        ? 'border-cyan-400 text-cyan-400 bg-cyan-950/40' 
+                        : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-800/40'
                       }`}
                     >
                       {tab === 'proposals' ? `${t("job_detail.tab_proposals")} (${proposals.length})` : 
@@ -274,51 +359,15 @@ const JobDetail = () => {
                   ))}
                 </div>
                 
-                <div className="p-8">
+                <div className="p-6">
                   {activeTab === 'proposals' && (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       {proposals.length === 0 ? (
-                        <div className="text-center py-10 bg-gray-50/50 dark:bg-slate-900/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-slate-700">
-                          <p className="text-gray-500 dark:text-gray-400 text-sm italic">{t("job_detail.no_proposals")}</p>
+                        <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-2xl bg-slate-900/20">
+                          <p className="text-slate-500 text-[10px] font-mono tracking-widest uppercase italic">{t("job_detail.no_proposals")}</p>
                         </div>
                       ) : (
-                        proposals.map(proposal => (
-                          <div key={proposal.id} className="flex gap-4 p-5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm hover:shadow-md transition-all group">
-                            <div onClick={() => navigate(`/profile/${proposal.worker_id}`)} className="cursor-pointer hover:opacity-80 transition-opacity">
-                              {proposal.worker_avatar ? <img src={proposal.worker_avatar} alt={proposal.worker_name} className="w-12 h-12 rounded-full object-cover border-2 border-gray-200" /> : <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg border-2 border-gray-200">{(proposal.worker_name || proposal.worker_email || 'W').charAt(0).toUpperCase()}</div>}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex justify-between items-start mb-2">
-                                <div>
-                                  <h3 onClick={() => navigate(`/profile/${proposal.worker_id}`)} className="font-bold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors text-base">{proposal.worker_name || t("task_owner.unknown_worker")}</h3>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{proposal.worker_email}</p>
-                                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t("job_detail.applied_on")} {new Date(proposal.created_at).toLocaleDateString()}</p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="font-bold text-gray-900 dark:text-white text-lg">{Number(proposal.proposed_price || 0).toLocaleString()} CRED</p>
-                                  <span className={`inline-block text-xs font-bold px-2.5 py-1 rounded-full mt-1 ${proposal.status === 'ACCEPTED' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400'}`}>{proposal.status}</span>
-                                </div>
-                              </div>
-                              <div className="mt-4 p-4 bg-gray-50/50 dark:bg-slate-900/50 rounded-xl border border-gray-100 dark:border-slate-700 group-hover:bg-white dark:group-hover:bg-slate-800 transition-colors">
-                                <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">{t("job_detail.cover_letter")}</p>
-                                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{proposal.cover_letter || t("job_detail.no_cover_letter")}</p>
-                              </div>
-                              <div className="flex gap-2 mt-3">
-                                <button onClick={() => navigate(`/profile/${proposal.worker_id}`)} className="flex-1 px-3 py-2 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">{t("job_detail.view_profile")}</button>
-                                <button onClick={() => handleStartChat(proposal.worker_id)} className="flex-1 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-semibold rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center justify-center gap-1">
-                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                                  {t("job_detail.chat")}
-                                </button>
-                                {proposal.status === 'PENDING' && (
-                                  <>
-                                    <button onClick={() => handleAcceptProposal(proposal.id)} className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs font-bold rounded-xl">{t("job_detail.accept_proposal")}</button>
-                                    <button onClick={() => handleRejectProposal(proposal.id)} className="flex-1 px-4 py-2.5 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl">{t("job_detail.reject")}</button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))
+                        proposals.map(proposal => <ProposalItem key={proposal.id} proposal={proposal} handleStartChat={handleStartChat} handleAcceptProposal={handleAcceptProposal} handleRejectProposal={handleRejectProposal} t={t} navigate={navigate} />)
                       )}
                     </div>
                   )}
@@ -326,24 +375,31 @@ const JobDetail = () => {
                   {activeTab === 'recommended' && (
                     <div className="space-y-4">
                       {recommendedWorkers.length === 0 ? (
-                        <p className="text-gray-500 dark:text-gray-400 text-sm italic text-center py-4">{t("job_detail.no_recommendations")}</p>
+                        <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-2xl bg-slate-900/20">
+                          <p className="text-slate-500 text-[10px] font-mono tracking-widest uppercase italic">{t("job_detail.no_recommendations")}</p>
+                        </div>
                       ) : (
                         recommendedWorkers.map(worker => (
-                          <div key={worker.id} className="border border-gray-100 dark:border-slate-700 rounded-2xl p-5 bg-gradient-to-r from-blue-50/50 dark:from-blue-900/10 to-white dark:to-slate-800 hover:shadow-md transition-all">
+                          <div key={worker.id} className="relative group p-5 rounded-2xl border border-white/5 bg-slate-900/30 hover:bg-slate-900/50 hover:border-cyan-500/30 transition-all">
                             <div className="flex justify-between items-start">
-                              <div className="flex gap-3">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-sm">
+                              <div className="flex gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-600 to-blue-700 flex items-center justify-center text-white font-black text-xl shadow-lg border border-white/10 shrink-0">
                                   {worker.full_name?.charAt(0) || "W"}
                                 </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-blue-600 dark:hover:text-blue-400" onClick={() => navigate(`/profile/${worker.id}`)}>{worker.full_name}</h3>
-                                    <span className="bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold px-1.5 py-0.5 rounded">{worker.match_score}% {t("job_detail.match")}</span>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-3">
+                                    <h3 className="font-black text-white uppercase tracking-wider truncate hover:text-cyan-400 cursor-pointer" onClick={() => navigate(`/profile/${worker.id}`)}>{worker.full_name}</h3>
+                                    <span className="bg-emerald-500/10 text-emerald-400 text-[8px] font-black font-mono tracking-widest uppercase px-2 py-0.5 rounded border border-emerald-500/20">{worker.match_score}% {t("job_detail.match")}</span>
                                   </div>
-                                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{worker.bio || t("job_detail.no_bio")}</p>
+                                  <p className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mt-1 mb-2 line-clamp-1">{worker.bio || t("job_detail.no_bio")}</p>
+                                  <div className="flex flex-wrap gap-2">
+                                     {worker.skills?.slice(0, 3).map(s => <span key={s.id} className="text-[8px] font-mono bg-white/5 text-slate-400 px-2 py-1 rounded border border-white/5 uppercase font-black">{s.name}</span>)}
+                                  </div>
                                 </div>
                               </div>
-                              <button onClick={() => handleInviteWorker(worker.id)} className="text-xs font-semibold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-3 py-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">{t("job_detail.invite_to_apply")}</button>
+                              <button onClick={() => handleInviteWorker(worker.id)} className="px-4 py-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 font-mono text-[9px] font-black tracking-widest uppercase hover:bg-cyan-500/20 transition-all rounded-lg shrink-0">
+                                {t("job_detail.invite_to_apply")}
+                              </button>
                             </div>
                           </div>
                         ))
@@ -432,20 +488,34 @@ const JobDetail = () => {
 
             {/* Right: summary card */}
             <div className="space-y-6">
-              <section className="bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-700 p-8 shadow-sm hover:shadow-md sticky top-[100px]">
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t("job_detail.summary_title")}</h2>
-                <div className="space-y-2 text-sm text-gray-900 dark:text-slate-200">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">{t("job_detail.duration")}</span>
-                    <span className="font-medium text-right">{job.start_date ? new Date(job.start_date).toLocaleDateString() : 'ASAP'} - {job.end_date ? new Date(job.end_date).toLocaleDateString() : 'Open'}</span>
+              <section className="relative rounded-3xl border border-white/10 bg-[#0f172a]/80 p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl sticky top-[100px] overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <h2 className="text-[10px] font-mono font-black text-cyan-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse"></span>
+                    {t("job_detail.summary_title")}
+                </h2>
+                <div className="space-y-5">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase">{t("job_detail.duration")}</span>
+                    <span className="text-xs font-black text-white uppercase tracking-tight">
+                        {job.start_date ? new Date(job.start_date).toLocaleDateString() : 'ASAP'} - {job.end_date ? new Date(job.end_date).toLocaleDateString() : 'Open'}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">{t("job_detail.budget")}</span>
-                    <span className="font-bold">{Number(job.budget).toLocaleString()} CRED</span>
+                  <div className="flex flex-col gap-1 p-3 rounded-xl bg-cyan-500/5 border border-cyan-500/10">
+                    <span className="text-[9px] font-mono text-cyan-600 tracking-widest uppercase">{t("job_detail.budget")}</span>
+                    <span className="text-2xl font-black text-cyan-400 font-mono tracking-tighter">
+                        {Number(job.budget).toLocaleString()} CRED
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">{t("job_detail.status")}</span>
-                    <span className="font-medium">{job.status}</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase">{t("job_detail.status")}</span>
+                    <span className={`inline-flex px-3 py-1 rounded w-fit text-[9px] font-black font-mono tracking-widest uppercase ${
+                        job.status === "OPEN" ? "bg-emerald-900/30 text-emerald-400 border border-emerald-500/30" :
+                        job.status === "IN_PROGRESS" ? "bg-cyan-900/30 text-cyan-400 border border-cyan-500/30" :
+                        "bg-slate-800 text-slate-400 border border-slate-700"
+                    }`}>
+                        {job.status}
+                    </span>
                   </div>
                 </div>
               </section>
